@@ -41,8 +41,8 @@ For general information about Terraform, visit the [official website](https://ww
 
 Resources
 - [cluster](./docs/resources/cluster.md)
-- [backup](./docs/resources/backup.md)
-- [restore](./docs/resources/restore.md)
+- [backup](./docs/resources/backup.md) (not support update)
+- [restore](./docs/resources/restore.md) (not support update and delete)
 
 DataSource
 - [project](./docs/data-sources/project.md)

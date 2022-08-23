@@ -50,7 +50,7 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	// User must provide a user to the provider
+	// User must provide a username to the provider
 	var username string
 	if data.Username.Unknown {
 		// Cannot connect to client with an unknown value

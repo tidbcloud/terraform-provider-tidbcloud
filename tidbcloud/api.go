@@ -13,7 +13,7 @@ func NewTiDBCloudClient(publicKey, privateKey string) (*TiDBCloudClient, error) 
 	return &c, nil
 }
 
-// getSpecifications returns all the available specifications
+// GetSpecifications returns all the available specifications
 func (c *TiDBCloudClient) GetSpecifications() (*GetSpecificationsResp, error) {
 	var (
 		url    = fmt.Sprintf("%s/api/v1beta/clusters/provider/regions", host)
@@ -28,16 +28,7 @@ func (c *TiDBCloudClient) GetSpecifications() (*GetSpecificationsResp, error) {
 	return &result, nil
 }
 
-func (c *TiDBCloudClient) GetDedicatedSpec(specifications *GetSpecificationsResp) (*Specification, error) {
-	for _, i := range specifications.Items {
-		if i.ClusterType == "DEDICATED" {
-			return &i, nil
-		}
-	}
-
-	return nil, fmt.Errorf("No specification found")
-}
-
+// GetAllProjects  returns all the projects
 func (c *TiDBCloudClient) GetAllProjects(page, pageSize int64) (*GetAllProjectsResp, error) {
 	var (
 		url    = fmt.Sprintf("%s/api/v1beta/projects?page=%d&page_size=%d", host, page, pageSize)
@@ -52,7 +43,7 @@ func (c *TiDBCloudClient) GetAllProjects(page, pageSize int64) (*GetAllProjectsR
 	return &result, nil
 }
 
-// createDedicatedCluster create a cluster in the given project
+// CreateDedicatedCluster create a dedicated cluster in the given project
 func (c *TiDBCloudClient) CreateDedicatedCluster(projectID string, spec *Specification) (*CreateClusterResp, error) {
 	var (
 		url    = fmt.Sprintf("%s/api/v1beta/projects/%s/clusters", host, projectID)
@@ -99,7 +90,7 @@ func (c *TiDBCloudClient) CreateDedicatedCluster(projectID string, spec *Specifi
 	return &result, nil
 }
 
-// createCuster create a cluster in the given project
+// CreateCluster create a cluster in the given project
 func (c *TiDBCloudClient) CreateCluster(projectID string, clusterReq *CreateClusterReq) (*CreateClusterResp, error) {
 	var (
 		url    = fmt.Sprintf("%s/api/v1beta/projects/%s/clusters", host, projectID)
@@ -114,7 +105,7 @@ func (c *TiDBCloudClient) CreateCluster(projectID string, clusterReq *CreateClus
 	return &result, nil
 }
 
-// getClusterByID return detail status of given cluster
+// GetClusterById return detail status of given cluster
 func (c *TiDBCloudClient) GetClusterById(projectID string, clusterID string) (*GetClusterResp, error) {
 	var (
 		url    = fmt.Sprintf("%s/api/v1beta/projects/%s/clusters/%s", host, projectID, clusterID)
@@ -129,7 +120,7 @@ func (c *TiDBCloudClient) GetClusterById(projectID string, clusterID string) (*G
 	return &result, nil
 }
 
-// deleteClusterByID delete a cluster
+// DeleteClusterById delete a cluster by the given ID
 func (c *TiDBCloudClient) DeleteClusterById(projectID, clusterID string) error {
 	url := fmt.Sprintf("%s/api/v1beta/projects/%s/clusters/%s", host, projectID, clusterID)
 	_, err := doDELETE(url, nil, nil)
@@ -140,7 +131,7 @@ func (c *TiDBCloudClient) DeleteClusterById(projectID, clusterID string) error {
 	return nil
 }
 
-// updateClusterByID delete a cluster
+// UpdateClusterById can only scale out now
 func (c *TiDBCloudClient) UpdateClusterById(projectID, clusterID string, components Components) error {
 	url := fmt.Sprintf("%s/api/v1beta/projects/%s/clusters/%s", host, projectID, clusterID)
 	payload := UpdateClusterReq{
@@ -156,7 +147,7 @@ func (c *TiDBCloudClient) UpdateClusterById(projectID, clusterID string, compone
 	return nil
 }
 
-// create a backup
+// CreateBackup can create a backup for the cluster
 func (c *TiDBCloudClient) CreateBackup(projectID, clusterID string, req CreateBackupReq) (*CreateBackupResp, error) {
 	var (
 		url    = fmt.Sprintf("%s/api/v1beta/projects/%s/clusters/%s/backups", host, projectID, clusterID)
@@ -171,7 +162,7 @@ func (c *TiDBCloudClient) CreateBackup(projectID, clusterID string, req CreateBa
 	return &result, nil
 }
 
-// getBackupByID
+// GetBackupById show the detail of the bakcup
 func (c *TiDBCloudClient) GetBackupById(projectID, clusterID, backupID string) (*GetBackupResp, error) {
 	var (
 		url    = fmt.Sprintf("%s/api/v1beta/projects/%s/clusters/%s/backups/%s", host, projectID, clusterID, backupID)
@@ -186,7 +177,7 @@ func (c *TiDBCloudClient) GetBackupById(projectID, clusterID, backupID string) (
 	return &result, nil
 }
 
-// deleteBackupByID
+// DeleteBackupById delete a backup
 func (c *TiDBCloudClient) DeleteBackupById(projectID, clusterID, backupID string) error {
 	url := fmt.Sprintf("%s/api/v1beta/projects/%s/clusters/%s/backups/%s", host, projectID, clusterID, backupID)
 	_, err := doDELETE(url, nil, nil)
@@ -197,6 +188,7 @@ func (c *TiDBCloudClient) DeleteBackupById(projectID, clusterID, backupID string
 	return nil
 }
 
+// GetBackups get all the backups
 func (c *TiDBCloudClient) GetBackups(projectID, clusterID string, page, pageSize int64) (*GetBackupsResp, error) {
 	var (
 		url    = fmt.Sprintf("%s/api/v1beta/projects/%s/clusters/%s/backups?page=%d&page_size=%d", host, projectID, clusterID, page, pageSize)
@@ -211,6 +203,7 @@ func (c *TiDBCloudClient) GetBackups(projectID, clusterID string, page, pageSize
 	return &result, nil
 }
 
+// CreateRestoreTask create a restore task from a backup
 func (c *TiDBCloudClient) CreateRestoreTask(projectID string, req CreateRestoreTaskReq) (*CreateRestoreTaskResp, error) {
 	var (
 		url    = fmt.Sprintf("%s/api/v1beta/projects/%s/restores", host, projectID)
@@ -225,6 +218,7 @@ func (c *TiDBCloudClient) CreateRestoreTask(projectID string, req CreateRestoreT
 	return &result, nil
 }
 
+// GetRestoreTask show the details of the restore task
 func (c *TiDBCloudClient) GetRestoreTask(projectID, restoreId string) (*GetRestoreTaskResp, error) {
 	var (
 		url    = fmt.Sprintf("%s/api/v1beta/projects/%s/restores/%s", host, projectID, restoreId)
@@ -239,6 +233,7 @@ func (c *TiDBCloudClient) GetRestoreTask(projectID, restoreId string) (*GetResto
 	return &result, nil
 }
 
+// GetRestoreTasks get All the restore tasks
 func (c *TiDBCloudClient) GetRestoreTasks(projectID string, page, pageSize int64) (*GetRestoreTasksResp, error) {
 	var (
 		url    = fmt.Sprintf("%s/api/v1beta/projects/%s/restores?page=%d&page_size=%d", host, projectID, page, pageSize)
