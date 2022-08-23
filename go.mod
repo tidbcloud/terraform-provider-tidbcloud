@@ -1,13 +1,15 @@
-module github.com/hashicorp/terraform-provider-scaffolding-framework
+module github.com/tidbcloud/terraform-provider-tidbcloud
 
 go 1.17
 
 require (
+	github.com/go-resty/resty/v2 v2.7.0
 	github.com/hashicorp/terraform-plugin-docs v0.13.0
 	github.com/hashicorp/terraform-plugin-framework v0.11.0
 	github.com/hashicorp/terraform-plugin-go v0.13.0
 	github.com/hashicorp/terraform-plugin-log v0.7.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.20.0
+	github.com/icholy/digest v0.1.15
 )
 
 require (

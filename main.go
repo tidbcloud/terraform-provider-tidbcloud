@@ -3,10 +3,9 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
-
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/hashicorp/terraform-provider-scaffolding-framework/internal/provider"
+	"github.com/tidbcloud/terraform-provider-tidbcloud/internal/provider"
+	"log"
 )
 
 // Run "go generate" to format example terraform files and generate the docs for the registry/website
@@ -22,7 +21,7 @@ import (
 var (
 	// these will be set by the goreleaser configuration
 	// to appropriate values for the compiled binary
-	version string = "dev"
+	version string = "0.0.1"
 
 	// goreleaser can also pass the specific commit if you want
 	// commit  string = ""
@@ -36,7 +35,7 @@ func main() {
 
 	opts := providerserver.ServeOpts{
 		// TODO: Update this string with the published name of your provider.
-		Address: "registry.terraform.io/hashicorp/scaffolding",
+		Address: "registry.terraform.io/tidbcloud/terraform-provider-tidbcloud",
 		Debug:   debug,
 	}
 
@@ -45,4 +44,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+
 }
