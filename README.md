@@ -35,7 +35,7 @@ For general information about Terraform, visit the [official website](https://ww
 ## Requirements
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.17 (if you want to build the provider plugin)
+- [Go](https://golang.org/doc/install) >= 1.18 (if you want to build the provider plugin)
 
 ## Support
 
