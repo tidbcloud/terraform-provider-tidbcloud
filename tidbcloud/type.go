@@ -21,19 +21,19 @@ type IPAccess struct {
 
 type ComponentTiDB struct {
 	NodeSize     string `json:"node_size"`
-	NodeQuantity int    `json:"node_quantity"`
+	NodeQuantity int    `json:"node_quantity,omitempty"`
 }
 
 type ComponentTiKV struct {
 	NodeSize       string `json:"node_size"`
 	StorageSizeGib int    `json:"storage_size_gib"`
-	NodeQuantity   int    `json:"node_quantity"`
+	NodeQuantity   int    `json:"node_quantity,omitempty"`
 }
 
 type ComponentTiFlash struct {
 	NodeSize       string `json:"node_size"`
 	StorageSizeGib int    `json:"storage_size_gib"`
-	NodeQuantity   int    `json:"node_quantity"`
+	NodeQuantity   int    `json:"node_quantity,omitempty"`
 }
 
 type Components struct {
@@ -72,7 +72,8 @@ type UpdateClusterReq struct {
 }
 
 type UpdateClusterConfig struct {
-	Components Components `json:"components"`
+	Paused     *bool       `json:"paused,omitempty"`
+	Components *Components `json:"components,omitempty"`
 }
 
 type GetAllProjectsResp struct {

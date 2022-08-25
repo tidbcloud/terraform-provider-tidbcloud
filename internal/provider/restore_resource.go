@@ -219,7 +219,7 @@ func (t restoreResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 						},
 					},
 					"status": {
-						MarkdownDescription: "The status of the restored cluster. Possible values are \"AVAILABLE\", \"CREATING\", \"MODIFYING\", \"PAUSED\", \"RESUMING\", and \"CLEARED\".",
+						MarkdownDescription: "The status of the restored cluster. Possible values are \"AVAILABLE\", \"CREATING\", \"MODIFYING\", \"PAUSED\", \"RESUMING\",\"UNAVAILABLE\", \"IMPORTING\" and \"CLEARED\".",
 						Computed:            true,
 						Type:                types.StringType,
 						PlanModifiers: tfsdk.AttributePlanModifiers{

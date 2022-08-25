@@ -26,10 +26,12 @@ type clusterResourceData struct {
 	ClusterType   string        `tfsdk:"cluster_type"`
 	CloudProvider string        `tfsdk:"cloud_provider"`
 	Region        string        `tfsdk:"region"`
+	Status        types.String  `tfsdk:"status"`
 	Config        ClusterConfig `tfsdk:"config"`
 }
 
 type ClusterConfig struct {
+	Paused       *bool        `tfsdk:"paused"`
 	RootPassword types.String `tfsdk:"root_password"`
 	Port         types.Int64  `tfsdk:"port"`
 	Components   *Components  `tfsdk:"components"`
@@ -103,6 +105,11 @@ func (t clusterResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				Required:            true,
 				Type:                types.StringType,
 			},
+			"status": {
+				MarkdownDescription: "the status of the cluster.",
+				Computed:            true,
+				Type:                types.StringType,
+			},
 			"config": {
 				MarkdownDescription: "The configuration of the cluster.",
 				Required:            true,
@@ -121,6 +128,13 @@ func (t clusterResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 						PlanModifiers: tfsdk.AttributePlanModifiers{
 							resource.UseStateForUnknown(),
 						},
+					},
+					"paused": {
+						MarkdownDescription: "lag that indicates whether the cluster is paused. true means to pause the cluster, and false means to resume the cluster.\n" +
+							"  - The cluster can be paused only when the cluster_status is \"AVAILABLE\"." +
+							"  - The cluster can be resumed only when the cluster_status is \"PAUSED\".",
+						Optional: true,
+						Type:     types.BoolType,
 					},
 					"components": {
 						MarkdownDescription: "The components of the cluster.\n" +
@@ -281,11 +295,11 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 	// set clusterId. other computed attributes are not returned by create, they will be set when refresh
 	data.ClusterId = types.String{Value: strconv.FormatUint(createClusterResp.ClusterId, 10)}
 
-	// we refresh in create now. if someone has other opinions which is better, he can delete the refresh logic
+	// we refresh in create for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
 	tflog.Trace(ctx, "read cluster_resource")
 	cluster, err := r.provider.client.GetClusterById(data.ProjectId, data.ClusterId.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
+		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
 		return
 	}
 	refreshClusterResourceData(cluster, &data)
@@ -370,14 +384,17 @@ func (r clusterResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	// refresh data with read result
 	var data clusterResourceData
-	// root_password and ip_access_list will not return by read api, so we just use state's value even it changed!
+	// root_password, ip_access_list and pause will not return by read api, so we just use state's value even it changed on console!
 	// use types.String in case ImportState method throw unhandled null value
 	var rootPassword types.String
 	var iPAccessList []IPAccess
+	var paused *bool
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("config").AtName("root_password"), &rootPassword)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("config").AtName("ip_access_list"), &iPAccessList)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("config").AtName("paused"), &paused)...)
 	data.Config.RootPassword = rootPassword
 	data.Config.IPAccessList = iPAccessList
+	data.Config.Paused = paused
 
 	refreshClusterResourceData(cluster, &data)
 
@@ -408,6 +425,7 @@ func refreshClusterResourceData(resp *tidbcloud.GetClusterResp, data *clusterRes
 			StorageSizeGib: tikv.StorageSizeGib,
 		},
 	}
+	data.Status = types.String{Value: resp.Status.ClusterStatus}
 	// may return
 	tiflash := resp.Config.Components.TiFlash
 	if tiflash != nil {
@@ -419,11 +437,13 @@ func refreshClusterResourceData(resp *tidbcloud.GetClusterResp, data *clusterRes
 	}
 
 	// not return
-	// IPAccessList and password will not update for it will not return by read api(in GetClusterResp)
+	// IPAccessList, password and pause will not update for it will not return by read api(in GetClusterResp)
 
 }
 
 // Update since open api is patch without check for the invalid parameter. we do a lot of check here to avoid inconsistency
+// check the date can't be updated
+// if plan and state is different, we can execute updated
 func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// get plan
 	var data clusterResourceData
@@ -449,7 +469,7 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	// only components can be changed now
+	// only components and paused can be changed now
 	if data.Name != state.Name || data.ClusterType != state.ClusterType || data.Region != state.Region || data.CloudProvider != state.CloudProvider ||
 		data.ProjectId != state.ProjectId || data.ClusterId != state.ClusterId {
 		resp.Diagnostics.AddError(
@@ -477,23 +497,13 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		}
 	}
 
-	if data.Config.Components == nil {
-		resp.Diagnostics.AddError(
-			"Update error",
-			"nothing to update, it will not happen in theory",
-		)
-		return
-	}
-
-	// check and build components
+	// check Components
 	tidb := data.Config.Components.TiDB
 	tikv := data.Config.Components.TiKV
 	tiflash := data.Config.Components.TiFlash
-
 	tidbState := state.Config.Components.TiDB
 	tikvState := state.Config.Components.TiKV
 	tiflashState := state.Config.Components.TiFlash
-
 	if tidb.NodeSize != tidbState.NodeSize {
 		resp.Diagnostics.AddError(
 			"Update error",
@@ -508,42 +518,74 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		)
 		return
 	}
-	components := tidbcloud.Components{
-		TiDB: tidbcloud.ComponentTiDB{
-			NodeQuantity: tidb.NodeQuantity,
-		},
-		TiKV: tidbcloud.ComponentTiKV{
-			NodeQuantity: tikv.NodeQuantity,
-		},
+	if tiflash != nil && tiflashState != nil {
+		// if cluster have tiflash already, then we can't specify NodeSize and StorageSizeGib
+		if tiflash.NodeSize != tiflashState.NodeSize || tiflash.StorageSizeGib != tiflashState.StorageSizeGib {
+			resp.Diagnostics.AddError(
+				"Update error",
+				"tiflash node_size or storage_size_gib can't be changed",
+			)
+			return
+		}
 	}
+
+	// build UpdateClusterReq
+	var updateClusterReq tidbcloud.UpdateClusterReq
+	// build paused
+	if data.Config.Paused != nil {
+		if state.Config.Paused == nil || *data.Config.Paused != *state.Config.Paused {
+			updateClusterReq.Config.Paused = data.Config.Paused
+		}
+	}
+	// build components
+	var isComponentsChanged = false
+	if tidb.NodeQuantity != tidbState.NodeQuantity || tikv.NodeQuantity != tikvState.NodeQuantity {
+		isComponentsChanged = true
+	}
+
+	var componentTiFlash *tidbcloud.ComponentTiFlash
 	if tiflash != nil {
-		if tiflashState != nil {
-			// if cluster have tiflash already, then we can't specify NodeSize and StorageSizeGib
-			if tiflash.NodeSize != tiflashState.NodeSize || tiflash.StorageSizeGib != tiflashState.StorageSizeGib {
-				resp.Diagnostics.AddError(
-					"Update error",
-					"tiflash node_size or storage_size_gib can't be changed",
-				)
-				return
-			}
-			components.TiFlash = &tidbcloud.ComponentTiFlash{
-				NodeQuantity: tiflash.NodeQuantity,
-			}
-		} else {
-			components.TiFlash = &tidbcloud.ComponentTiFlash{
+		if tiflashState == nil {
+			isComponentsChanged = true
+			componentTiFlash = &tidbcloud.ComponentTiFlash{
+				NodeQuantity:   tiflash.NodeQuantity,
 				NodeSize:       tiflash.NodeSize,
 				StorageSizeGib: tiflash.StorageSizeGib,
-				NodeQuantity:   tiflash.NodeQuantity,
 			}
+		} else if tiflash.NodeQuantity != tiflashState.NodeQuantity {
+			isComponentsChanged = true
+			componentTiFlash = &tidbcloud.ComponentTiFlash{
+				NodeQuantity: tiflash.NodeQuantity,
+			}
+		}
+	}
+	if isComponentsChanged {
+		updateClusterReq.Config.Components = &tidbcloud.Components{
+			TiDB: tidbcloud.ComponentTiDB{
+				NodeQuantity: tidb.NodeQuantity,
+			},
+			TiKV: tidbcloud.ComponentTiKV{
+				NodeQuantity: tikv.NodeQuantity,
+			},
+			TiFlash: componentTiFlash,
 		}
 	}
 
 	tflog.Trace(ctx, "update cluster_resource")
-	err := r.provider.client.UpdateClusterById(data.ProjectId, data.ClusterId.Value, components)
+	err := r.provider.client.UpdateClusterById(data.ProjectId, data.ClusterId.Value, updateClusterReq)
 	if err != nil {
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateClusterById, got error: %s", err))
 		return
 	}
+
+	// we refresh for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
+	tflog.Trace(ctx, "read cluster_resource")
+	cluster, err := r.provider.client.GetClusterById(data.ProjectId, data.ClusterId.Value)
+	if err != nil {
+		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
+		return
+	}
+	refreshClusterResourceData(cluster, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)

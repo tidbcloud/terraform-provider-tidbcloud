@@ -131,15 +131,10 @@ func (c *TiDBCloudClient) DeleteClusterById(projectID, clusterID string) error {
 	return nil
 }
 
-// UpdateClusterById can only scale out now
-func (c *TiDBCloudClient) UpdateClusterById(projectID, clusterID string, components Components) error {
+// UpdateClusterById can only scale out and set pause now
+func (c *TiDBCloudClient) UpdateClusterById(projectID, clusterID string, updateClusterReq UpdateClusterReq) error {
 	url := fmt.Sprintf("%s/api/v1beta/projects/%s/clusters/%s", host, projectID, clusterID)
-	payload := UpdateClusterReq{
-		Config: UpdateClusterConfig{
-			Components: components,
-		},
-	}
-	resp, err := doPATCH(url, payload, nil)
+	resp, err := doPATCH(url, updateClusterReq, nil)
 	if err != nil {
 		return err
 	}
