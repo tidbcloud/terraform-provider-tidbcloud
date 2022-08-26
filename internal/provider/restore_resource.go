@@ -19,11 +19,18 @@ type restoreResourceData struct {
 	ProjectId       string        `tfsdk:"project_id"`
 	Name            string        `tfsdk:"name"`
 	BackupId        string        `tfsdk:"backup_id"`
-	Config          ClusterConfig `tfsdk:"config"`
+	Config          RestoreConfig `tfsdk:"config"`
 	CreateTimestamp types.String  `tfsdk:"create_timestamp"`
 	Status          types.String  `tfsdk:"status"`
 	Cluster         *cluster      `tfsdk:"cluster"`
 	ErrorMessage    types.String  `tfsdk:"error_message"`
+}
+
+type RestoreConfig struct {
+	RootPassword types.String `tfsdk:"root_password"`
+	Port         types.Int64  `tfsdk:"port"`
+	Components   *Components  `tfsdk:"components"`
+	IPAccessList []IPAccess   `tfsdk:"ip_access_list"`
 }
 
 type cluster struct {
@@ -375,7 +382,7 @@ func (r restoreResource) Update(ctx context.Context, req resource.UpdateRequest,
 }
 
 func (r restoreResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	resp.Diagnostics.AddError("Unsupported", fmt.Sprintf("restore can't be delete"))
+	resp.Diagnostics.AddWarning("Unsupported", fmt.Sprintf("restore can't be deleted"))
 }
 
 func (r restoreResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

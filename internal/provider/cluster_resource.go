@@ -116,7 +116,7 @@ func (t clusterResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"root_password": {
 						MarkdownDescription: "The root password to access the cluster. It must be 8-64 characters.",
-						Required:            true,
+						Optional:            true,
 						Type:                types.StringType,
 					},
 					"port": {
