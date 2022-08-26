@@ -63,9 +63,9 @@ In this example, you will create and manage a dedicated cluster, create a backup
 
 ### Set up
 
-TiDBCloud provider has released to terraform registry. All you need to do is install to terraform(>=1.0).
+TiDBCloud provider has released to terraform registry. All you need to do is install terraform (>=1.0).
 
-For Mac user, you can install it with Homebrew. About other installation method, see [official doc](https://learn.hashicorp.com/tutorials/terraform/install-cli?in=terraform/aws-get-started)
+For Mac user, you can install it with Homebrew.
 
 First, install the HashiCorp tap, a repository of all our Homebrew packages.
 ```shell
@@ -75,6 +75,8 @@ Now, install Terraform with hashicorp/tap/terraform.
 ```shell
 brew install hashicorp/tap/terraform
 ```
+
+See [official doc](https://learn.hashicorp.com/tutorials/terraform/install-cli?in=terraform/aws-get-started) for other installation methods.
 
 ### Create an API key
 
@@ -92,7 +94,7 @@ However, terraform-provider-tidbcloud does not support managing API key now. So 
 
 ### Get TiDBCloud provider
 
-Create a main.tf file to get the TiDBCloud provider like:
+Create a main.tf file to get the TiDBCloud provider with API key:
 
 ```
 terraform {
@@ -130,19 +132,22 @@ provider "tidbcloud" {
 }
 ```
 
-username and password are the API key's public key and private key, or you can pass them with the environment:
+username and password are the API key's public key and private key, you can also pass them with the environment:
 
 ```
 export TiDBCLOUD_USERNAME = ${public_key}
 export TiDBCLOUD_PASSWORD = ${private_key}
 ```
 
+Now, you can use the tidbcloud provider!
+
 ### Get projectId with project Data Source
 
-You can use the tidbcloud provider now. First, let us get all the projects by project data source:
-- We use `data` block to define the data source of tidbcloud, it consists of the data source type and the data source name. In this example, data source type is `tidbcloud_project` and the name is `example_project`. The prefix of the type maps to the name of the provider 
-- You can find all the supported configs for project data source [here](./docs/data-sources/project.md)
-- We use `output` block to get the information, and can expose information for other Terraform configurations to use. It is similar to return values in programming languages. see [official doc](https://www.terraform.io/language/values/outputs) for more detail
+Let us get all the projects by project data source first:
+- Use `data` block to define the data source of tidbcloud, it consists of the data source type and the data source name. In this example, data source type is `tidbcloud_project` and the name is `example_project`. The prefix of the type maps to the name of the provider.
+- Use `output` block to get the information, and can expose information for other Terraform configurations to use. It is similar to return values in programming languages. see [official doc](https://www.terraform.io/language/values/outputs) for more detail
+
+Besides, you can find all the supported configs for the data source and resource [here](./docs)
 
 ```
 terraform {
@@ -170,7 +175,7 @@ output "projects" {
 }
 ```
 
-Then you can apply the configuration with the `terraform apply`, you need to type `yes` at the confirmation prompt to proceed. You can also use `terraform apply --auto-approve` to skip the type.
+Then you can apply the configuration with the `terraform apply`, you need to type `yes` at the confirmation prompt to proceed. Use `terraform apply --auto-approve` to skip the type.
 
 ```shell
 $ terraform apply --auto-approve
@@ -223,7 +228,7 @@ projects = tolist([
 ])
 ```
 
-Now, you get all the available projects, copy one of the id you need. Here we use the default project's id.
+Now, you get all the available projects, copy one of the id you need. Here we use the default project's ID.
 
 ### Get cluster spec info with cluster-spec Data Source
 
@@ -371,8 +376,11 @@ Execute the `terraform apply --auto-approve`, we will get all the specifications
 > Make sure you have set a Project CIDR on TiDB Cloud console first.
 
 Now, you can create a dedicated cluster with the projectId and the spec info:
-- We use `resource` block to define the resource of tidbcloud, it consists of the resource type and the resource name. In this example, resource type is `tidbcloud_cluster` and the name is `example_cluster`
-- You can find all the supported configs [here](./docs/resources/cluster.md)
+- Use `resource` block to define the resource of tidbcloud, it consists of the resource type and the resource name. In this example, resource type is `tidbcloud_cluster` and the name is `example_cluster`
+
+Once again, you can find all the supported configs for the data source and resource [here](./docs)
+
+Here I give an example for tidbcloud_cluster:
 
 ```
 resource "tidbcloud_cluster" "example_cluster" {
@@ -559,9 +567,9 @@ We can also use terraform to manage the resource. As for cluster resource, we ca
 - Scale the TiDB cluster
 - Pause or resume the cluster
 
-1. Increase TiFlash component
+**Increase TiFlash component**
 
-First, add tiflash config in components to increase TiFlash component:
+First, add tiflash config in components:
 
 ```
     components = {
@@ -582,7 +590,7 @@ First, add tiflash config in components to increase TiFlash component:
     }
 ```
 
-Execute `terraform apply`:
+Then, execute `terraform apply`:
 
 ```
 $ terraform apply
@@ -674,11 +682,13 @@ resource "tidbcloud_cluster" "example_cluster" {
 }
 ```
 
-The `MODIFYING` status shows the cluster is changed.Wait for the status to changed to `AVAILABLE`.
+The `MODIFYING` status shows the cluster is changing now. Wait for a moment, the status will be changed to `AVAILABLE`.
 
-2. Scale the TiDB cluster
+**Scale the TiDB cluster**
 
-After the status is `AVAILABLE`, let us try to scale the TiDB cluster. Add one node for TiDB and TiFlash, TiKV needs to add at least 3 nodes for its step is 3.
+After the status is `AVAILABLE`, let us try to scale the TiDB cluster. 
+
+Add one node for TiDB and TiFlash, TiKV needs to add at least 3 nodes for its step is 3.
 
 ```
     components = {
@@ -752,7 +762,7 @@ Apply complete! Resources: 0 added, 1 changed, 0 destroyed.
 
 Wait for the status from `MODIFYING` to `AVAILABLE`.
 
-3. Pause or resume the cluster
+**Pause or resume the cluster**
 
 The cluster can also be paused when the status is `AVAILABLE` or be resumed when the status is `PAUSED`.
 - set `paused = true ` to pause the cluster
@@ -896,9 +906,11 @@ resource "tidbcloud_cluster" "example_cluster" {
 }
 ```
 
+Wait for a moment, the status will be changed to AVAILABLE again.
+
 ### Create a backup with backup resource
 
-You have created and managed a dedicated cluster with terraform. 
+You have created and managed a dedicated cluster with terraform now.
 
 Next, you will create a backup for the cluster by the backup resource.
 
@@ -913,7 +925,7 @@ resource "tidbcloud_backup" "example_backup" {
 }
 ```
 
-You can also get project_id and cluster_id from cluster resource like:
+You can also get project_id and cluster_id from the cluster resource like:
 
 ```
 resource "tidbcloud_backup" "example_backup" {
@@ -1011,7 +1023,7 @@ resource "tidbcloud_backup" "example_backup" {
 
 ```
 
-Congratulations! You have create a backup for your cluster. Pay attention that the backup can not be updated now.
+Congratulations! You have create a backup for your cluster. Pay attention that the backup can not be updated.
 
 
 ### Create a restore task with restore resource
@@ -1158,7 +1170,11 @@ resource "tidbcloud_restore" "example_restore" {
 
 You can see the restore task's status is `PENDING` and the cluster's status is `INITIALIZING`.
 
-The bad news is the restored cluster is not managed by terraform. Don't worry, we can solve it in the next section.
+After the cluster is `AVAILABLE`, the restore task will be `RUNNING` and turn to `SUCCESS` at last.
+
+It is everything ok? No, the bad news is the restored cluster is not managed by terraform. 
+
+Don't worry, we can solve it in the next section.
 
 ### Importing the restore cluster
 
@@ -1258,7 +1274,7 @@ $ terraform fmt
 main.tf
 ```
 
-To ensure the consistency of the config and state, you can execute `terraform apply`. If you see `No changes`, the import is successful.
+To ensure the consistency of the config and state, you can execute `terraform plan` or `terraform apply`. If you see `No changes`, the import is successful.
 
 ```
 $ terraform apply
@@ -1311,7 +1327,7 @@ Destroy complete! Resources: 4 destroyed.
 
 Note that a warning is appeared for restore can't be deleted.
 
-If you execute `terraform show`, you will find nothing for all the state is cleared:
+If you execute `terraform show`, you will find nothing for all the states is cleared:
 ```
 $ terraform show
 
