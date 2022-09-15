@@ -1,8 +1,8 @@
-# Terraform TiDBCloud Provider
+# Terraform TiDB Cloud Provider
 
 [![License](https://img.shields.io/github/license/pingcap/tispark.svg)](https://github.com/pingcap/tispark/blob/master/LICENSE)
 
-This is the repository for the terraform-provider-tidbcloud, which allows one to use Terraform with TiDBCloud. Learn more about [TiDBCloud](https://en.pingcap.com/tidb-cloud/)
+This is the repository for the terraform-provider-tidbcloud, which allows one to use Terraform with TiDB Cloud. Learn more about [TiDB Cloud](https://en.pingcap.com/tidb-cloud/)
 
 For general information about Terraform, visit the [official website](https://www.terraform.io) and the [GitHub project page](https://github.com/hashicorp/terraform).
 
@@ -55,15 +55,15 @@ DataSource
 
 ## Using the provider
 
-Documentation about the provider use and the corresponding specific configuration options can be found on the [official's website](https://www.terraform.io/language/providers).
+Documentation about the provider usage and the corresponding specific configuration options can be found on the [official's website](https://www.terraform.io/language/providers).
 
-Here We just give an example to show how to use the TiDBCloud provider. 
+Here we just give an example to show how to use the TiDB Cloud provider. 
 
 In this example, you will create and manage a dedicated cluster, create a backup for it and restore from the backup.
 
 ### Set up
 
-TiDBCloud provider has released to terraform registry. All you need to do is install terraform (>=1.0).
+TiDB Cloud provider has released to terraform registry. All you need to do is install terraform (>=1.0).
 
 For Mac user, you can install it with Homebrew.
 
@@ -92,9 +92,9 @@ However, terraform-provider-tidbcloud does not support managing API key now. So 
 6. Make sure that you have copied and saved the private key in a secure location. The private key only displays upon the creation. After leaving this page, you will not be able to get the full private key again
 7. Click Done
 
-### Get TiDBCloud provider
+### Get TiDB Cloud provider
 
-Create a main.tf file to get the TiDBCloud provider with API key:
+Create a main.tf file to get the TiDB Cloud provider with API key:
 
 ```
 terraform {
@@ -107,9 +107,9 @@ terraform {
   required_version = ">= 1.0.0"
 }
 ```
-- The `source` attribute defines the provider which will be downloaded from [Terraform Registry](https://registry.terraform.io/?_gl=1*r7mwys*_ga*NTgyMzMzOTU1LjE2NTk5NDA0MTA.*_ga_P7S46ZYEKW*MTY2MTQ4MTg5Mi4yNy4xLjE2NjE0ODIxODcuMC4wLjA.) by default
-- The `version` attribute is optional which defines the version of the provider, it will use the latest version in default
-- The `required_version` is optional which defines the version of the terraform, it will use the latest version in default
+- The `source` attribute defines the provider which will be downloaded from [Terraform Registry](https://registry.terraform.io/) by default
+- The `version` attribute is optional which defines the version of the provider, it will use the latest version by default
+- The `required_version` is optional which defines the version of the terraform, it will use the latest version by default
 
 ### Config the provider
 
