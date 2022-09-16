@@ -1333,14 +1333,6 @@ $ terraform show
 
 If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
 
-### Test with TiDB Cloud dev/staging
-
-If you want to test with TiDB Cloud dev or staging. You can specify the host by: 
-
-```
-export TIDBCLOUD_HOST="https://api.dev.tidbcloud.com"
-```
-
 ### Building the provider from source
 
 1. Clone the repository
