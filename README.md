@@ -1181,7 +1181,7 @@ First add a cluster resource like:
 resource "tidbcloud_cluster" "restore_cluster1" {}
 ```
 
-Then import the cluster by ` terraform import tidbcloud_cluster.restore_cluster1 projectId,clusterId`, you can get the projectId and clusterId by restore resource:
+Then import the cluster by `terraform import tidbcloud_cluster.restore_cluster1 projectId,clusterId`, you can get the projectId and clusterId by restore resource:
 ```
 $ terraform import tidbcloud_cluster.restore_cluster1 1372813089189561287,1379661944630264072
 
@@ -1261,7 +1261,7 @@ resource "tidbcloud_cluster" "restore_cluster1" {
 }
 ```
 
-You can use `terraform fmt` to formate your config file:
+You can use `terraform fmt` to format your config file:
 ```
 $ terraform fmt 
 
@@ -1358,7 +1358,7 @@ see [here](./internal/README.md) for more detail.
 
 ### Debug the provider
 
-I will introduce how to debug with Terraform CLI development overrides. About other ways to debug the provider. See [terraform official doc](https://www.terraform.io/plugin/debugging) for more detail
+I will introduce how to debug with Terraform CLI development overrides. About other ways to debug the provider, see [terraform official doc](https://www.terraform.io/plugin/debugging) for more detail
 
 Development overrides is a method of using a specified local filesystem Terraform provider binary with Terraform CLI, such as one locally built with updated code, rather than a released binary.
 
