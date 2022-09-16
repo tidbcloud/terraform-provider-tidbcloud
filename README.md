@@ -1,6 +1,6 @@
 # Terraform TiDB Cloud Provider
 
-[![License](https://img.shields.io/github/license/pingcap/tispark.svg)](https://github.com/pingcap/tispark/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/tidbcloud/terraform-provider-tidbcloud.svg)](https://github.com/tidbcloud/terraform-provider-tidbcloud/blob/master/LICENSE)
 
 This is the repository for the terraform-provider-tidbcloud, which allows one to use Terraform with TiDB Cloud. Learn more about [TiDB Cloud](https://en.pingcap.com/tidb-cloud/)
 
@@ -13,7 +13,7 @@ For general information about Terraform, visit the [official website](https://ww
 - [Using the provider](#using-the-provider)
     * [Set up](#set-up)
     * [Create an API key](#create-an-api-key)
-    * [Get TiDBCloud provider](#get-tidbcloud-provider)
+    * [Get TiDB Cloud provider](#get-tidb-cloud-provider)
     * [Config the provider](#config-the-provider)
     * [Get projectId with project Data Source](#get-projectid-with-project-data-source)
     * [Get cluster spec info with cluster-spec Data Source](#get-cluster-spec-info-with-cluster-spec-data-source)
@@ -69,7 +69,7 @@ For Mac user, you can install it with Homebrew.
 
 First, install the HashiCorp tap, a repository of all our Homebrew packages.
 ```shell
-brew install hashicorp/tap/terraform
+brew tap hashicorp/tap
 ```
 Now, install Terraform with hashicorp/tap/terraform.
 ```shell
@@ -84,24 +84,18 @@ The TiDB Cloud API uses HTTP Digest Authentication. It protects your private key
 
 However, terraform-provider-tidbcloud does not support managing API key now. So you need to create the API key in the [console](https://tidbcloud.com/console/clusters).
 
-1. Click the account name in the upper-right corner of the TiDB Cloud console
-2. Click Organization Settings. The organization settings page is displayed
-3. Click the API Keys tab and then click Create API Key
-4. Enter a description for your API key. The role of the API key is always Owner currently
-5. Click Next. Copy and save the public key and the private key
-6. Make sure that you have copied and saved the private key in a secure location. The private key only displays upon the creation. After leaving this page, you will not be able to get the full private key again
-7. Click Done
+Turn to [TiDB Cloud API doc](https://docs.pingcap.com/tidbcloud/api/v1beta#section/Authentication/API-Key-Management) for help if you meet any problems.
 
 ### Get TiDB Cloud provider
 
-Create a main.tf file to get the TiDB Cloud provider with API key:
+Create a main.tf file to get the TiDB Cloud provider:
 
 ```
 terraform {
   required_providers {
     tidbcloud = {
       source = "tidbcloud/tidbcloud"
-      version = "~> 1.0.0"
+      version = "~> 0.0.1"
     }
   }
   required_version = ">= 1.0.0"
@@ -135,8 +129,8 @@ provider "tidbcloud" {
 username and password are the API key's public key and private key, you can also pass them with the environment:
 
 ```
-export TiDBCLOUD_USERNAME = ${public_key}
-export TiDBCLOUD_PASSWORD = ${private_key}
+export TiDBCLOUD_USERNAME = ${PUBLIC_KEY}
+export TiDBCLOUD_PASSWORD = ${PRIVATE_KEY}
 ```
 
 Now, you can use the tidbcloud provider!
@@ -145,7 +139,7 @@ Now, you can use the tidbcloud provider!
 
 Let us get all the projects by project data source first:
 - Use `data` block to define the data source of tidbcloud, it consists of the data source type and the data source name. In this example, data source type is `tidbcloud_project` and the name is `example_project`. The prefix of the type maps to the name of the provider.
-- Use `output` block to get the information, and can expose information for other Terraform configurations to use. It is similar to return values in programming languages. see [official doc](https://www.terraform.io/language/values/outputs) for more detail
+- Use `output` block to get the information, and expose information for other Terraform configurations to use. It is similar to return values in programming languages. See [official doc](https://www.terraform.io/language/values/outputs) for more detail
 
 Besides, you can find all the supported configs for the data source and resource [here](./docs)
 
@@ -484,7 +478,7 @@ Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
 Use `terraform show` or `terraform state show tidbcloud_cluster.example_cluste` to inspect the state of your resource. The former will show all the states. (all the resources and the data source)
 
 ```shell
-$ terraform state show tidbcloud_cluster.example_cluste
+$ terraform state show tidbcloud_cluster.example_cluster
 
 # tidbcloud_cluster.example_cluster:
 resource "tidbcloud_cluster" "example_cluster" {
@@ -1406,4 +1400,4 @@ Twitter [@PingCAP](https://twitter.com/PingCAP)
 
 ## License
 
-TiSpark is under the Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
+terraform-provider-tidbcloud is under the Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
