@@ -16,7 +16,7 @@ restore resource
 terraform {
   required_providers {
     tidbcloud = {
-      source = "hashicorp/tidbcloud"
+      source = "tidbcloud/tidbcloud"
     }
   }
 }

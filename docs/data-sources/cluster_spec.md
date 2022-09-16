@@ -16,7 +16,7 @@ cluster_spec data source
 terraform {
   required_providers {
     tidbcloud = {
-      source = "hashicorp/tidbcloud"
+      source = "tidbcloud/tidbcloud"
     }
   }
 }

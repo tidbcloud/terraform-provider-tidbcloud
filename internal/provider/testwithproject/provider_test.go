@@ -18,22 +18,22 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 }
 
 var (
-	projectId = os.Getenv("TiDBCLOUD_PROJECTID")
-	clusterId = os.Getenv("TiDBCLOUD_CLUSTERID")
+	projectId = os.Getenv("TIDBCLOUD_PROJECTID")
+	clusterId = os.Getenv("TIDBCLOUD_CLUSTERID")
 )
 
 func testAccPreCheck(t *testing.T) {
 	var username, password, projectId string
-	username = os.Getenv("TiDBCLOUD_USERNAME")
-	password = os.Getenv("TiDBCLOUD_PASSWORD")
-	projectId = os.Getenv("TiDBCLOUD_PROJECTID")
+	username = os.Getenv("TIDBCLOUD_USERNAME")
+	password = os.Getenv("TIDBCLOUD_PASSWORD")
+	projectId = os.Getenv("TIDBCLOUD_PROJECTID")
 	if username == "" {
-		t.Fatal("TiDBCLOUD_USERNAME must be set for acceptance tests")
+		t.Fatal("TIDBCLOUD_USERNAME must be set for acceptance tests")
 	}
 	if password == "" {
-		t.Fatal("TiDBCLOUD_PASSWORD must be set for acceptance tests")
+		t.Fatal("TIDBCLOUD_PASSWORD must be set for acceptance tests")
 	}
 	if projectId == "" {
-		t.Fatal("TiDBCLOUD_PROJECTID must be set for acceptance tests")
+		t.Fatal("TIDBCLOUD_PROJECTID must be set for acceptance tests")
 	}
 }

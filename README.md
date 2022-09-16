@@ -114,7 +114,7 @@ terraform {
   required_providers {
     tidbcloud = {
       source = "tidbcloud/tidbcloud"
-      version = "~> 1.0.0"
+      version = "~> 0.0.1"
     }
   }
   required_version = ">= 1.0.0"
@@ -129,8 +129,8 @@ provider "tidbcloud" {
 username and password are the API key's public key and private key, you can also pass them with the environment:
 
 ```
-export TiDBCLOUD_USERNAME = ${PUBLIC_KEY}
-export TiDBCLOUD_PASSWORD = ${PRIVATE_KEY}
+export TIDBCLOUD_USERNAME = ${public_key}
+export TIDBCLOUD_PASSWORD = ${private_key}
 ```
 
 Now, you can use the tidbcloud provider!
@@ -148,7 +148,7 @@ terraform {
   required_providers {
     tidbcloud = {
       source = "tidbcloud/tidbcloud"
-      version = "~> 1.0.0"
+      version = "~> 0.0.1"
     }
   }
   required_version = ">= 1.0.0"

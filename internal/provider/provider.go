@@ -62,7 +62,7 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	if data.Username.Null {
-		username = os.Getenv("TiDBCLOUD_USERNAME")
+		username = os.Getenv("TIDBCLOUD_USERNAME")
 	} else {
 		username = data.Username.Value
 	}
@@ -88,7 +88,7 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	if data.Password.Null {
-		password = os.Getenv("TiDBCLOUD_PASSWORD")
+		password = os.Getenv("TIDBCLOUD_PASSWORD")
 	} else {
 		password = data.Password.Value
 	}
