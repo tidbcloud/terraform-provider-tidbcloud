@@ -43,53 +43,6 @@ func (c *TiDBCloudClient) GetAllProjects(page, pageSize int64) (*GetAllProjectsR
 	return &result, nil
 }
 
-// CreateDedicatedCluster create a dedicated cluster in the given project
-func (c *TiDBCloudClient) CreateDedicatedCluster(projectID string, spec *Specification) (*CreateClusterResp, error) {
-	var (
-		url    = fmt.Sprintf("%s/api/v1beta/projects/%s/clusters", host, projectID)
-		result CreateClusterResp
-	)
-
-	// We have check the boundary in main function
-	tidbSpec := spec.Tidb[0]
-	tikvSpec := spec.Tikv[0]
-
-	payload := CreateClusterReq{
-		Name:          "tidbcloud-sample-1", // NOTE change to your cluster name
-		ClusterType:   spec.ClusterType,
-		CloudProvider: spec.CloudProvider,
-		Region:        spec.Region,
-		Config: ClusterConfig{
-			RootPassword: "your secret password", // NOTE change to your cluster password, we generate a random password here
-			Port:         4000,
-			Components: Components{
-				TiDB: ComponentTiDB{
-					NodeSize:     tidbSpec.NodeSize,
-					NodeQuantity: tidbSpec.NodeQuantityRange.Min,
-				},
-				TiKV: ComponentTiKV{
-					NodeSize:       tikvSpec.NodeSize,
-					StorageSizeGib: tikvSpec.StorageSizeGibRange.Min,
-					NodeQuantity:   tikvSpec.NodeQuantityRange.Min,
-				},
-			},
-			IPAccessList: []IPAccess{
-				{
-					CIDR:        "0.0.0.0/0",
-					Description: "Allow Access from Anywhere.",
-				},
-			},
-		},
-	}
-
-	_, err := doPOST(url, payload, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	return &result, nil
-}
-
 // CreateCluster create a cluster in the given project
 func (c *TiDBCloudClient) CreateCluster(projectID string, clusterReq *CreateClusterReq) (*CreateClusterResp, error) {
 	var (

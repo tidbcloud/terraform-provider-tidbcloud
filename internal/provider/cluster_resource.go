@@ -27,41 +27,41 @@ type clusterResourceData struct {
 	CloudProvider string        `tfsdk:"cloud_provider"`
 	Region        string        `tfsdk:"region"`
 	Status        types.String  `tfsdk:"status"`
-	Config        ClusterConfig `tfsdk:"config"`
+	Config        clusterConfig `tfsdk:"config"`
 }
 
-type ClusterConfig struct {
+type clusterConfig struct {
 	Paused       *bool        `tfsdk:"paused"`
 	RootPassword types.String `tfsdk:"root_password"`
 	Port         types.Int64  `tfsdk:"port"`
-	Components   *Components  `tfsdk:"components"`
-	IPAccessList []IPAccess   `tfsdk:"ip_access_list"`
+	Components   *components  `tfsdk:"components"`
+	IPAccessList []ipAccess   `tfsdk:"ip_access_list"`
 }
 
-type Components struct {
-	TiDB    *ComponentTiDB    `tfsdk:"tidb"`
-	TiKV    *ComponentTiKV    `tfsdk:"tikv"`
-	TiFlash *ComponentTiFlash `tfsdk:"tiflash"`
+type components struct {
+	TiDB    *componentTiDB    `tfsdk:"tidb"`
+	TiKV    *componentTiKV    `tfsdk:"tikv"`
+	TiFlash *componentTiFlash `tfsdk:"tiflash"`
 }
 
-type ComponentTiDB struct {
+type componentTiDB struct {
 	NodeSize     string `tfsdk:"node_size"`
 	NodeQuantity int    `tfsdk:"node_quantity"`
 }
 
-type ComponentTiKV struct {
+type componentTiKV struct {
 	NodeSize       string `tfsdk:"node_size"`
 	StorageSizeGib int    `tfsdk:"storage_size_gib"`
 	NodeQuantity   int    `tfsdk:"node_quantity"`
 }
 
-type ComponentTiFlash struct {
+type componentTiFlash struct {
 	NodeSize       string `tfsdk:"node_size"`
 	StorageSizeGib int    `tfsdk:"storage_size_gib"`
 	NodeQuantity   int    `tfsdk:"node_quantity"`
 }
 
-type IPAccess struct {
+type ipAccess struct {
 	CIDR        string `tfsdk:"cidr"`
 	Description string `tfsdk:"description"`
 }
@@ -387,7 +387,7 @@ func (r clusterResource) Read(ctx context.Context, req resource.ReadRequest, res
 	// root_password, ip_access_list and pause will not return by read api, so we just use state's value even it changed on console!
 	// use types.String in case ImportState method throw unhandled null value
 	var rootPassword types.String
-	var iPAccessList []IPAccess
+	var iPAccessList []ipAccess
 	var paused *bool
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("config").AtName("root_password"), &rootPassword)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("config").AtName("ip_access_list"), &iPAccessList)...)
@@ -414,12 +414,12 @@ func refreshClusterResourceData(resp *tidbcloud.GetClusterResp, data *clusterRes
 	data.Config.Port = types.Int64{Value: int64(resp.Config.Port)}
 	tidb := resp.Config.Components.TiDB
 	tikv := resp.Config.Components.TiKV
-	data.Config.Components = &Components{
-		TiDB: &ComponentTiDB{
+	data.Config.Components = &components{
+		TiDB: &componentTiDB{
 			NodeSize:     tidb.NodeSize,
 			NodeQuantity: tidb.NodeQuantity,
 		},
-		TiKV: &ComponentTiKV{
+		TiKV: &componentTiKV{
 			NodeSize:       tikv.NodeSize,
 			NodeQuantity:   tikv.NodeQuantity,
 			StorageSizeGib: tikv.StorageSizeGib,
@@ -429,7 +429,7 @@ func refreshClusterResourceData(resp *tidbcloud.GetClusterResp, data *clusterRes
 	// may return
 	tiflash := resp.Config.Components.TiFlash
 	if tiflash != nil {
-		data.Config.Components.TiFlash = &ComponentTiFlash{
+		data.Config.Components.TiFlash = &componentTiFlash{
 			NodeSize:       tiflash.NodeSize,
 			NodeQuantity:   tiflash.NodeQuantity,
 			StorageSizeGib: tiflash.StorageSizeGib,

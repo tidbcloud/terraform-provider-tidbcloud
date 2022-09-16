@@ -7,6 +7,7 @@ import (
 	"github.com/icholy/digest"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 )
 
@@ -16,7 +17,7 @@ var (
 	restClient *resty.Client
 )
 
-const host = "https://api.tidbcloud.com"
+var host = "https://api.tidbcloud.com"
 
 func initClient(publicKey, privateKey string) {
 	clientInitOnce.Do(func() {
@@ -26,6 +27,10 @@ func initClient(publicKey, privateKey string) {
 			Password: privateKey,
 		})
 	})
+	// only for test
+	if os.Getenv("TIDBCLOUD_HOST") != "" {
+		host = os.Getenv("TIDBCLOUD_HOST")
+	}
 }
 
 // doRequest wraps resty request, it's a generic method to spawn a HTTP request

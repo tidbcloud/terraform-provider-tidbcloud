@@ -19,18 +19,18 @@ type restoreResourceData struct {
 	ProjectId       string        `tfsdk:"project_id"`
 	Name            string        `tfsdk:"name"`
 	BackupId        string        `tfsdk:"backup_id"`
-	Config          RestoreConfig `tfsdk:"config"`
+	Config          restoreConfig `tfsdk:"config"`
 	CreateTimestamp types.String  `tfsdk:"create_timestamp"`
 	Status          types.String  `tfsdk:"status"`
 	Cluster         *cluster      `tfsdk:"cluster"`
 	ErrorMessage    types.String  `tfsdk:"error_message"`
 }
 
-type RestoreConfig struct {
+type restoreConfig struct {
 	RootPassword types.String `tfsdk:"root_password"`
 	Port         types.Int64  `tfsdk:"port"`
-	Components   *Components  `tfsdk:"components"`
-	IPAccessList []IPAccess   `tfsdk:"ip_access_list"`
+	Components   *components  `tfsdk:"components"`
+	IPAccessList []ipAccess   `tfsdk:"ip_access_list"`
 }
 
 type cluster struct {
