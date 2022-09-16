@@ -1,0 +1,39 @@
+// ------------------------------------------------------------------
+// NOTICE file corresponding to the section 4d of The Apache License,
+// Version 2.0, in this case for
+// ------------------------------------------------------------------
+
+digest
+  Revision: 9fb4663eab3efe9542bde3773ec5435fb89e0dd9
+  Address: https://github.com/icholy/digest
+  License: https://github.com/icholy/digest/blob/master/LICENSE
+
+resty
+  Revision: 3d08b3602d13ae8a44f246db2ec34402e18497c6
+  Address: https://github.com/go-resty/resty
+  License: https://github.com/go-resty/resty/blob/master/LICENSE
+
+terraform-plugin-docs
+  Revision: ff6f844120050d19da921512bc94ee5b46d17b71
+  Address: https://github.com/hashicorp/terraform-plugin-docs
+  License: https://github.com/hashicorp/terraform-plugin-docs/blob/main/LICENSE
+
+terraform-plugin-framework
+   Revision: 330a87f68e5c8fdbf2224e3111f9a430d26d9fb6
+   Address: https://github.com/hashicorp/terraform-plugin-framework
+   License: https://github.com/hashicorp/terraform-plugin-framework/blob/main/LICENSE
+
+terraform-plugin-go
+   Revision: 1d4cacead6fb6e7f85810f94451c38baa2345ea2
+   Address: https://github.com/hashicorp/terraform-plugin-go
+   License: https://github.com/hashicorp/terraform-plugin-go/blob/main/LICENSE
+
+terraform-plugin-log
+   Revision: 2a7a4a85e924b5cefe5189bd515220a207d90e30
+   Address: https://github.com/hashicorp/terraform-plugin-log
+   License: https://github.com/hashicorp/terraform-plugin-log/blob/main/LICENSE
+
+terraform-plugin-sdk
+   Revision: a21509dacde9d30c1683b66b32d1ee0be1619c3d
+   Address: https://github.com/hashicorp/terraform-plugin-sdk
+   License: https://github.com/hashicorp/terraform-plugin-sdk/blob/main/LICENSE
