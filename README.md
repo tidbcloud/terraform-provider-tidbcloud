@@ -475,7 +475,7 @@ Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
 
 ```
 
-Use `terraform show` or `terraform state show tidbcloud_cluster.example_cluste` to inspect the state of your resource. The former will show all the states. (all the resources and the data source)
+Use `terraform show` or `terraform state show tidbcloud_cluster.example_cluster` to inspect the state of your resource. The former will show all the states (all the resources and the data source).
 
 ```shell
 $ terraform state show tidbcloud_cluster.example_cluster
@@ -510,7 +510,7 @@ resource "tidbcloud_cluster" "example_cluster" {
 }
 ```
 
-The status of the cluster is CREATING, we need to wait until it changes to AVAILABLE, it usually takes 10+ minutes.
+The status of the cluster is CREATING, we need to wait until it changes to `AVAILABLE`, it usually takes 10+ minutes.
 
 Once you want to check the status, execute `terraform refresh` to update the state, then use `terraform state show tidbcloud_cluster.example_cluster` to check the status.
 
@@ -900,7 +900,7 @@ resource "tidbcloud_cluster" "example_cluster" {
 }
 ```
 
-Wait for a moment, the status will be changed to AVAILABLE again.
+Wait for a moment, the status will be changed to `AVAILABLE` again.
 
 ### Create a backup with backup resource
 
