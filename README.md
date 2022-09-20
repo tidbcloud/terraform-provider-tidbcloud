@@ -88,7 +88,7 @@ Turn to [TiDB Cloud API doc](https://docs.pingcap.com/tidbcloud/api/v1beta#secti
 
 ### Get TiDB Cloud provider
 
-Create a main.tf file to get the TiDB Cloud provider:
+Create a main.tf file:
 
 ```
 terraform {
@@ -104,6 +104,27 @@ terraform {
 - The `source` attribute defines the provider which will be downloaded from [Terraform Registry](https://registry.terraform.io/) by default
 - The `version` attribute is optional which defines the version of the provider, it will use the latest version by default
 - The `required_version` is optional which defines the version of the terraform, it will use the latest version by default
+
+To get the TiDB Cloud provider, execute `terraform init`. It will download the provider from terraform registry
+```
+$ terraform init
+
+Initializing the backend...
+
+Initializing provider plugins...
+- Reusing previous version of tidbcloud/tidbcloud from the dependency lock file
+- Using previously-installed tidbcloud/tidbcloud v0.0.1
+
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
+```
 
 ### Config the provider
 
