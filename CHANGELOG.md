@@ -1,3 +1,5 @@
-## 0.1.0 (Unreleased)
+## 0.0.1
 
-FEATURES:
+Features:
+- Support datasource: project, cluster spec, restore, backup
+- Support resources: cluster, restore, backup
