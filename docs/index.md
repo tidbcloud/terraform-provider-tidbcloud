@@ -13,7 +13,7 @@ description: |-
 ## Example Usage
 
 ```terraform
-# We provide a full example in Readme https://github.com/tidbcloud/terraform-provider-tidbcloud
+# We provide a full example in README https://github.com/tidbcloud/terraform-provider-tidbcloud
 
 terraform {
   required_providers {
