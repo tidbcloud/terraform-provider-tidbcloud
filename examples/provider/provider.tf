@@ -1,4 +1,4 @@
-# We provide a full example in README https://github.com/tidbcloud/terraform-provider-tidbcloud
+# We provide a full example in README https://github.com/tidbcloud/terraform-provider-tidbcloud#using-the-provider
 
 terraform {
   required_providers {
