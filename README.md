@@ -50,7 +50,7 @@ DataSource
 - [project](./docs/data-sources/project.md)
 - [cluster spec](./docs/data-sources/cluster_spec.md)
 - [restore](./docs/data-sources/restore.md)
-- [backcup](./docs/data-sources/backup.md)
+- [backup](./docs/data-sources/backup.md)
 
 
 ## Using the provider
