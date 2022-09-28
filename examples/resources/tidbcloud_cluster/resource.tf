@@ -11,7 +11,7 @@ provider "tidbcloud" {
   password = "fake_password"
 }
 
-resource "tidbcloud_cluster" "example" {
+resource "tidbcloud_cluster" "dedicated_tier_cluster" {
   project_id     = "fake_id"
   name           = "example1"
   cluster_type   = "DEDICATED"
@@ -38,8 +38,8 @@ resource "tidbcloud_cluster" "example" {
   }
 }
 
-resource "tidbcloud_cluster" "example2" {
-  project_id     = "" // your projectId
+resource "tidbcloud_cluster" "developer_tier_cluster" {
+  project_id     = "fake_id"
   name           = "example2"
   cluster_type   = "DEVELOPER"
   cloud_provider = "AWS"
