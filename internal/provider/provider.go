@@ -3,8 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 	"os"
+
+	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -36,8 +37,8 @@ type tidbcloudProvider struct {
 
 // providerData can be used to store data from the Terraform configuration.
 type providerData struct {
-	Username types.String `tfsdk:"username"`
-	Password types.String `tfsdk:"password"`
+	PublicKey  types.String `tfsdk:"public_key"`
+	PrivateKey types.String `tfsdk:"private_key"`
 }
 
 func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
@@ -50,60 +51,60 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	// User must provide a username to the provider
-	var username string
-	if data.Username.Unknown {
+	// User must provide a public_key to the provider
+	var publicKey string
+	if data.PublicKey.Unknown {
 		// Cannot connect to client with an unknown value
 		resp.Diagnostics.AddWarning(
 			"Unable to create client",
-			"Cannot use unknown value as username",
+			"Cannot use unknown value as public_key",
 		)
 		return
 	}
 
-	if data.Username.Null {
-		username = os.Getenv("TIDBCLOUD_USERNAME")
+	if data.PublicKey.Null {
+		publicKey = os.Getenv("TIDBCLOUD_PUBLIC_KEY")
 	} else {
-		username = data.Username.Value
+		publicKey = data.PublicKey.Value
 	}
 
-	if username == "" {
+	if publicKey == "" {
 		// Error vs warning - empty value must stop execution
 		resp.Diagnostics.AddError(
-			"Unable to find username",
-			"Username cannot be an empty string",
+			"Unable to find public_key",
+			"public_key cannot be an empty string",
 		)
 		return
 	}
 
-	// User must provide a password to the provider
-	var password string
-	if data.Password.Unknown {
+	// User must provide a private_key to the provider
+	var privateKey string
+	if data.PrivateKey.Unknown {
 		// Cannot connect to client with an unknown value
 		resp.Diagnostics.AddError(
 			"Unable to create client",
-			"Cannot use unknown value as password",
+			"Cannot use unknown value as private_key",
 		)
 		return
 	}
 
-	if data.Password.Null {
-		password = os.Getenv("TIDBCLOUD_PASSWORD")
+	if data.PrivateKey.Null {
+		privateKey = os.Getenv("TIDBCLOUD_PRIVATE_KEY")
 	} else {
-		password = data.Password.Value
+		privateKey = data.PrivateKey.Value
 	}
 
-	if password == "" {
+	if privateKey == "" {
 		// Error vs warning - empty value must stop execution
 		resp.Diagnostics.AddError(
-			"Unable to find password",
-			"password cannot be an empty string",
+			"Unable to find private_key",
+			"private_key cannot be an empty string",
 		)
 		return
 	}
 
 	// Create a new tidb client and set it to the provider client
-	c, err := tidbcloud.NewTiDBCloudClient(username, password)
+	c, err := tidbcloud.NewTiDBCloudClient(publicKey, privateKey)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create client",
@@ -136,13 +137,13 @@ func (p *tidbcloudProvider) GetDataSources(ctx context.Context) (map[string]prov
 func (p *tidbcloudProvider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
-			"username": {
+			"public_key": {
 				MarkdownDescription: "Public Key",
 				Type:                types.StringType,
 				Optional:            true,
 				Sensitive:           true,
 			},
-			"password": {
+			"private_key": {
 				MarkdownDescription: "Private Key",
 				Type:                types.StringType,
 				Optional:            true,

@@ -8,30 +8,31 @@ For general information about Terraform, visit the [official website](https://ww
 
 ## TOC
 
-- [Requirements](#requirements)
-- [Support](#support)
-- [Using the provider](#using-the-provider)
-    * [Set up](#set-up)
-    * [Create an API key](#create-an-api-key)
-    * [Get TiDB Cloud provider](#get-tidb-cloud-provider)
-    * [Config the provider](#config-the-provider)
-    * [Get projectId with project Data Source](#get-projectid-with-project-data-source)
-    * [Get cluster spec info with cluster-spec Data Source](#get-cluster-spec-info-with-cluster-spec-data-source)
-    * [Create a dedicated cluster with cluster resource](#create-a-dedicated-cluster-with-cluster-resource)
-    * [Change the dedicated cluster](#change-the-dedicated-cluster)
-    * [Create a backup with backup resource](#create-a-backup-with-backup-resource)
-    * [Create a restore task with restore resource](#create-a-restore-task-with-restore-resource)
-    * [Importing the restore cluster](#importing-the-restore-cluster)
-    * [Destroy the dedicated cluster](#destroy-the-dedicated-cluster)
-- [Developing the Provider](#developing-the-provider)
-    * [Environment](#environment)
-    * [Building the provider from source](#building-the-provider-from-source)
-    * [Generate or update documentation in docs file](#generate-or-update-documentation-in-docs-file)
-    * [Running the acceptance test](#running-the-acceptance-test)
-    * [Debug the provider](#debug-the-provider)
-- [Follow us](#follow-us)
-    * [Twitter](#twitter)
-- [License](#license)
+- [Terraform TiDB Cloud Provider](#terraform-tidb-cloud-provider)
+  - [TOC](#toc)
+  - [Requirements](#requirements)
+  - [Support](#support)
+  - [Using the provider](#using-the-provider)
+    - [Set up](#set-up)
+    - [Create an API key](#create-an-api-key)
+    - [Get TiDB Cloud provider](#get-tidb-cloud-provider)
+    - [Config the provider](#config-the-provider)
+    - [Get projectId with project Data Source](#get-projectid-with-project-data-source)
+    - [Get cluster spec info with cluster-spec Data Source](#get-cluster-spec-info-with-cluster-spec-data-source)
+    - [Create a dedicated cluster with cluster resource](#create-a-dedicated-cluster-with-cluster-resource)
+    - [Change the dedicated cluster](#change-the-dedicated-cluster)
+    - [Create a backup with backup resource](#create-a-backup-with-backup-resource)
+    - [Create a restore task with restore resource](#create-a-restore-task-with-restore-resource)
+    - [Importing the restore cluster](#importing-the-restore-cluster)
+    - [Destroy the dedicated cluster](#destroy-the-dedicated-cluster)
+  - [Developing the Provider](#developing-the-provider)
+    - [Environment](#environment)
+    - [Building the provider from source](#building-the-provider-from-source)
+    - [Generate or update documentation in docs file](#generate-or-update-documentation-in-docs-file)
+    - [Running the acceptance test](#running-the-acceptance-test)
+    - [Debug the provider](#debug-the-provider)
+  - [Follow us](#follow-us)
+  - [License](#license)
 
 
 ## Requirements
@@ -142,16 +143,16 @@ terraform {
 }
 
 provider "tidbcloud" {
-  username = "fake_username"
-  password = "fake_password"
+  public_key = "fake_public_key"
+  private_key = "fake_private_key"
 }
 ```
 
-username and password are the API key's public key and private key, you can also pass them with the environment:
+public_key and private_key are the API key's public key and private key, you can also pass them with the environment:
 
 ```
-export TIDBCLOUD_USERNAME = ${public_key}
-export TIDBCLOUD_PASSWORD = ${private_key}
+export TIDBCLOUD_PUBLIC_KEY = ${public_key}
+export TIDBCLOUD_PRIVATE_KEY = ${private_key}
 ```
 
 Now, you can use the tidbcloud provider!
@@ -176,8 +177,8 @@ terraform {
 }
 
 provider "tidbcloud" {
-  username = "fake_username"
-  password = "fake_password"
+  public_key = "fake_public_key"
+  private_key = "fake_private_key"
 }
 
 data "tidbcloud_project" "example_project" {

@@ -9,8 +9,8 @@
 ## Auth
 You need to set API Key with environment before all the tests
 ```
-export TIDBCLOUD_USERNAME=${public_key}
-export TIDBCLOUD_PASSWORD=${private_key}
+export TIDBCLOUD_PUBLIC_KEY=${public_key}
+export TIDBCLOUD_PRIVATE_KEY=${private_key}
 ```
 
 ## Test With Project
@@ -25,7 +25,7 @@ Here are the steps to test them:
 
 2. set projectId with environment
 ```
-export TIDBCLOUD_PROJECTID=${your_project_id}
+export TIDBCLOUD_PROJECT_ID=${your_project_id}
 ```
 3. test
 ```
@@ -41,8 +41,8 @@ Here are the steps to test them:
 
 2. set projectId and clusterId with environment
 ```
-export TIDBCLOUD_PROJECTID=${your_project_id}
-export TIDBCLOUD_CLUSTERID=${your_cluster_id}
+export TIDBCLOUD_PROJECT_ID=${your_project_id}
+export TIDBCLOUD_CLUSTER_ID=${your_cluster_id}
 ```
 
 3. test

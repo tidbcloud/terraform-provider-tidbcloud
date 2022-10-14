@@ -11,6 +11,6 @@ terraform {
 }
 
 provider "tidbcloud" {
-  username = "fake_username"
-  password = "fake_password"
+  public_key  = "fake_public_key"
+  private_key = "fake_private_key"
 }
