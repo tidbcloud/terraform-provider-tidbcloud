@@ -7,8 +7,8 @@ import (
 type TiDBCloudClient struct {
 }
 
-func NewTiDBCloudClient(publicKey, privateKey string) (*TiDBCloudClient, error) {
-	initClient(publicKey, privateKey)
+func NewTiDBCloudClient(publicKey, privateKey, providerVersion string) (*TiDBCloudClient, error) {
+	initClient(publicKey, privateKey, providerVersion)
 	c := TiDBCloudClient{}
 	return &c, nil
 }

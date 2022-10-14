@@ -3,12 +3,13 @@ package tidbcloud
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"github.com/icholy/digest"
 	"log"
 	"net/http"
 	"os"
 	"sync"
+
+	"github.com/go-resty/resty/v2"
+	"github.com/icholy/digest"
 )
 
 var (
@@ -19,13 +20,14 @@ var (
 
 var host = "https://api.tidbcloud.com"
 
-func initClient(publicKey, privateKey string) {
+func initClient(publicKey, privateKey, providerVersion string) {
 	clientInitOnce.Do(func() {
 		restClient = resty.New()
 		restClient.SetTransport(&digest.Transport{
 			Username: publicKey,
 			Password: privateKey,
 		})
+		restClient.SetHeader(http.CanonicalHeaderKey("User-Agent"), fmt.Sprintf("terraform-provider-tidbcloud/%s - go-resty/%s", providerVersion, resty.Version))
 	})
 	// only for test
 	if os.Getenv("TIDBCLOUD_HOST") != "" {
