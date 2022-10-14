@@ -1388,7 +1388,7 @@ Development overrides is a method of using a specified local filesystem Terrafor
 provider_installation {
 
   dev_overrides {
-      "hashicorp.com/edu/tidbcloud" = "/usr/local/go/bin"
+      "tidbcloud/tidbcloud" = "<put your $GOPATH/bin here>"
   }
 
   # For all other providers, install them directly from their origin provider
@@ -1398,7 +1398,7 @@ provider_installation {
 }
 ```
 
-2. run go install in the terraform-provider-tidbcloud, you will find the `terraform-provider-tidbcloud` will be installed under the `/usr/local/go/bin` 
+2. run go install in the terraform-provider-tidbcloud, you will find the `terraform-provider-tidbcloud` will be installed under the `$GOPATH/bin` 
 ```
 go install
 ```
@@ -1408,7 +1408,7 @@ go install
 terraform {
   required_providers {
     tidbcloud = {
-      source = "hashicorp/tidbcloud"
+      source = "tidbcloud/tidbcloud"
     }
   }
 }
