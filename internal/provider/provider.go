@@ -104,7 +104,7 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	// Create a new tidb client and set it to the provider client
-	c, err := tidbcloud.NewTiDBCloudClient(publicKey, privateKey)
+	c, err := tidbcloud.NewTiDBCloudClient(publicKey, privateKey, p.version)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create client",
