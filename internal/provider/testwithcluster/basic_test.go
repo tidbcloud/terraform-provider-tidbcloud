@@ -1,11 +1,12 @@
 package testwithcluster
 
 import (
+	"os"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/internal/provider"
-	"os"
-	"testing"
 )
 
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
@@ -13,26 +14,26 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 }
 
 var (
-	projectId = os.Getenv("TIDBCLOUD_PROJECTID")
-	clusterId = os.Getenv("TIDBCLOUD_CLUSTERID")
+	projectId = os.Getenv("TIDBCLOUD_PROJECT_ID")
+	clusterId = os.Getenv("TIDBCLOUD_CLUSTER_ID")
 )
 
 func testAccPreCheck(t *testing.T) {
-	var username, password, projectId, clusterId string
-	username = os.Getenv("TIDBCLOUD_USERNAME")
-	password = os.Getenv("TIDBCLOUD_PASSWORD")
-	projectId = os.Getenv("TIDBCLOUD_PROJECTID")
-	clusterId = os.Getenv("TIDBCLOUD_CLUSTERID")
-	if username == "" {
-		t.Fatal("TIDBCLOUD_USERNAME must be set for acceptance tests")
+	var publicKey, privateKey, projectId, clusterId string
+	publicKey = os.Getenv("TIDBCLOUD_PUBLIC_KEY")
+	privateKey = os.Getenv("TIDBCLOUD_PRIVATE_KEY")
+	projectId = os.Getenv("TIDBCLOUD_PROJECT_ID")
+	clusterId = os.Getenv("TIDBCLOUD_CLUSTER_ID")
+	if publicKey == "" {
+		t.Fatal("TIDBCLOUD_PUBLIC_KEY must be set for acceptance tests")
 	}
-	if password == "" {
-		t.Fatal("TIDBCLOUD_PASSWORD must be set for acceptance tests")
+	if privateKey == "" {
+		t.Fatal("TIDBCLOUD_PRIVATE_KEY must be set for acceptance tests")
 	}
 	if projectId == "" {
-		t.Fatal("TIDBCLOUD_PROJECTID must be set for acceptance tests")
+		t.Fatal("TIDBCLOUD_PROJECT_ID must be set for acceptance tests")
 	}
 	if clusterId == "" {
-		t.Fatal("TIDBCLOUD_CLUSTERID must be set for acceptance tests")
+		t.Fatal("TIDBCLOUD_CLUSTER_ID must be set for acceptance tests")
 	}
 }

@@ -15,8 +15,8 @@ terraform {
 }
 
 provider "tidbcloud" {
-  username = ""  //  update it
-  password = ""  // update it
+  public_key = ""  //  update it
+  private_key = ""  // update it
 }
 
 resource "tidbcloud_cluster" "cluster1" {
