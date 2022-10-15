@@ -1,6 +1,7 @@
 # Terraform TiDB Cloud Provider
 
 [![License](https://img.shields.io/github/license/tidbcloud/terraform-provider-tidbcloud.svg)](https://github.com/tidbcloud/terraform-provider-tidbcloud/blob/master/LICENSE)
+[![Release](https://img.shields.io/github/v/release/tidbcloud/terraform-provider-tidbcloud?display_name=release)](https://github.com/tidbcloud/terraform-provider-tidbcloud/releases)
 
 This is the repository for the terraform-provider-tidbcloud, which allows one to use Terraform with TiDB Cloud. Learn more about [TiDB Cloud](https://en.pingcap.com/tidb-cloud/)
 
