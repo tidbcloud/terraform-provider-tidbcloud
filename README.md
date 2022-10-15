@@ -1,3 +1,8 @@
+<p align="center">
+  <img src=".github/tidbcloud_logo.jpg" alt="TiDB logo" width="250"/>
+  <img src=".github/terraform_logo.svg" alt="Terraform logo" width="250"/>
+</p>
+
 # Terraform TiDB Cloud Provider
 
 [![License](https://img.shields.io/github/license/tidbcloud/terraform-provider-tidbcloud.svg)](https://github.com/tidbcloud/terraform-provider-tidbcloud/blob/master/LICENSE)
