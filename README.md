@@ -1,6 +1,6 @@
 <p align="center">
-  <img src=".github/tidbcloud_logo.jpg" href="https://www.pingcap.com/tidb-cloud/" alt="TiDB logo" width="250"/>
-  <img src=".github/terraform_logo.svg" href="https://www.terraform.io/" alt="Terraform logo" width="250"/>
+  [<img src=".github/tidbcloud_logo.jpg" alt="TiDB logo" width="250"/>](https://www.pingcap.com/tidb-cloud/)
+  [<img src=".github/terraform_logo.svg" alt="Terraform logo" width="250"/>](https://www.terraform.io/)
 </p>
 
 # Terraform TiDB Cloud Provider
