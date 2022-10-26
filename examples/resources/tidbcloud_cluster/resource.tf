@@ -38,7 +38,7 @@ resource "tidbcloud_cluster" "dedicated_tier_cluster" {
   }
 }
 
-resource "tidbcloud_cluster" "developer_tier_cluster" {
+resource "tidbcloud_cluster" "serverless_tier_cluster" {
   project_id     = "fake_id"
   name           = "example2"
   cluster_type   = "DEVELOPER"

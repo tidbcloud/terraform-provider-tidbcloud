@@ -86,7 +86,7 @@ func (t restoreResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 					},
 					"port": {
 						MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080, 4000 in default.\n" +
-							"  - For a Developer Tier cluster, only port 4000 is available.",
+							"  - For a Serverless Tier cluster, only port 4000 is available.",
 						Optional: true,
 						Computed: true,
 						Type:     types.Int64Type,
@@ -96,7 +96,7 @@ func (t restoreResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 					},
 					"components": {
 						MarkdownDescription: "The components of the cluster.\n" +
-							"  - For a Developer Tier cluster, the components value can not be set." +
+							"  - For a Serverless Tier cluster, the components value can not be set." +
 							"  - For a Dedicated Tier cluster, the components value must be set.",
 						Required: true,
 						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
