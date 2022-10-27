@@ -121,7 +121,7 @@ func (t clusterResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 					},
 					"port": {
 						MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080, 4000 in default.\n" +
-							"  - For a Developer Tier cluster, only port 4000 is available.",
+							"  - For a Serverless Tier cluster, only port 4000 is available.",
 						Optional: true,
 						Computed: true,
 						Type:     types.Int64Type,
@@ -138,7 +138,7 @@ func (t clusterResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 					},
 					"components": {
 						MarkdownDescription: "The components of the cluster.\n" +
-							"  - For a Developer Tier cluster, the components value can not be set." +
+							"  - For a Serverless Tier cluster, the components value can not be set." +
 							"  - For a Dedicated Tier cluster, the components value must be set.",
 						Optional: true,
 						Computed: true,
@@ -268,7 +268,7 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	// for DEVELOPER cluster, components is not allowed. or plan and state may be inconsistent
+	// for Serverless cluster, components is not allowed. or plan and state may be inconsistent
 	if data.ClusterType == dev {
 		if data.Config.Components != nil {
 			resp.Diagnostics.AddError("Create Error", fmt.Sprintf("components is not allowed in %s cluster_type", dev))
@@ -460,11 +460,11 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	// DEVELOPER can not be changed now
+	// Severless can not be changed now
 	if data.ClusterType == dev {
 		resp.Diagnostics.AddError(
 			"Update error",
-			"Unable to update DEVELOPER cluster",
+			"Unable to update Serverless cluster",
 		)
 		return
 	}

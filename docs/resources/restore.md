@@ -79,14 +79,14 @@ The status of the restore task.
 Required:
 
 - `components` (Attributes) The components of the cluster.
-  - For a Developer Tier cluster, the components value can not be set.  - For a Dedicated Tier cluster, the components value must be set. (see [below for nested schema](#nestedatt--config--components))
+  - For a Serverless Tier cluster, the components value can not be set.  - For a Dedicated Tier cluster, the components value must be set. (see [below for nested schema](#nestedatt--config--components))
 - `root_password` (String) The root password to access the cluster. It must be 8-64 characters.
 
 Optional:
 
 - `ip_access_list` (Attributes List) A list of IP addresses and Classless Inter-Domain Routing (CIDR) addresses that are allowed to access the TiDB Cloud cluster via [standard connection](https://docs.pingcap.com/tidbcloud/connect-to-tidb-cluster#connect-via-standard-connection). (see [below for nested schema](#nestedatt--config--ip_access_list))
 - `port` (Number) The TiDB port for connection. The port must be in the range of 1024-65535 except 10080, 4000 in default.
-  - For a Developer Tier cluster, only port 4000 is available.
+  - For a Serverless Tier cluster, only port 4000 is available.
 
 <a id="nestedatt--config--components"></a>
 ### Nested Schema for `config.components`

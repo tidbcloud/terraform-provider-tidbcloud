@@ -10,14 +10,14 @@ import (
 // create dedicated cluster may cause cost, make sure you have enough balance
 // update node_quantity is not tested for create dedicated tier needs too much time!
 func TestAccClusterResource(t *testing.T) {
-	reg, _ := regexp.Compile(".*Unable to update DEVELOPER cluster.*")
+	reg, _ := regexp.Compile(".*Unable to update Serverless cluster.*")
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read dev-tier
+			// Create and Read serverless tier
 			{
-				Config: testAccDevClusterResourceConfig("developer-test"),
+				Config: testAccServerlessClusterResourceConfig("serverless-test"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("tidbcloud_cluster.test", "id"),
 					resource.TestCheckResourceAttrSet("tidbcloud_cluster.test", "config.components.tidb.node_quantity"),
@@ -32,7 +32,7 @@ func TestAccClusterResource(t *testing.T) {
 			},
 			// Update is not supported
 			{
-				Config:      testAccDevClusterResourceConfig("developer-test2"),
+				Config:      testAccServerlessClusterResourceConfig("serverless-test2"),
 				ExpectError: reg,
 			},
 			// Delete testing automatically occurs in TestCase
@@ -67,7 +67,7 @@ func TestAccClusterResource(t *testing.T) {
 	})
 }
 
-func testAccDevClusterResourceConfig(name string) string {
+func testAccServerlessClusterResourceConfig(name string) string {
 	return fmt.Sprintf(`
 resource "tidbcloud_cluster" "test" {
   project_id     = %s
