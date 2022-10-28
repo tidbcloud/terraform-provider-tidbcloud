@@ -1,3 +1,8 @@
+## [0.0.4] 2022-10-29
+
+Docs:
+- Change Developer Tier to Serverless Tier in response to [TiDB Cloud release](https://docs.pingcap.com/tidbcloud/release-notes-2022#october-28-2022).
+
 ## [0.0.3] 2022-10-14
 
 Changes:
