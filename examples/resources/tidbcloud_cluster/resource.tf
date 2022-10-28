@@ -46,10 +46,5 @@ resource "tidbcloud_cluster" "serverless_tier_cluster" {
   region         = "us-east-1"
   config = {
     root_password = "Fake_root_password1"
-    ip_access_list = [{
-      cidr        = "0.0.0.0/0"
-      description = "all"
-      }
-    ]
   }
 }
