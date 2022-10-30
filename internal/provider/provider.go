@@ -131,6 +131,7 @@ func (p *tidbcloudProvider) GetDataSources(ctx context.Context) (map[string]prov
 		"tidbcloud_cluster_spec": clusterSpecDataSourceType{},
 		"tidbcloud_backup":       backupDataSourceType{},
 		"tidbcloud_restore":      restoreDataSourceType{},
+		"tidbcloud_cluster":      clusterDataSourceType{},
 	}, nil
 }
 

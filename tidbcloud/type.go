@@ -10,8 +10,19 @@ type Project struct {
 }
 
 type ConnectionString struct {
-	Standard   string `json:"standard"`
-	VpcPeering string `json:"vpc_peering"`
+	DefaultUser string     `json:"default_user"`
+	Standard    Standard   `json:"standard"`
+	VpcPeering  VpcPeering `json:"vpc_peering"`
+}
+
+type Standard struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
+type VpcPeering struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
 }
 
 type IPAccess struct {
@@ -50,8 +61,9 @@ type ClusterConfig struct {
 }
 
 type ClusterStatus struct {
-	TidbVersion   string `json:"tidb_version"`
-	ClusterStatus string `json:"cluster_status"`
+	TidbVersion       string           `json:"tidb_version"`
+	ClusterStatus     string           `json:"cluster_status"`
+	ConnectionStrings ConnectionString `json:"connection_strings"`
 }
 
 type CreateClusterReq struct {
@@ -81,19 +93,22 @@ type GetAllProjectsResp struct {
 	Total int64     `json:"total"`
 }
 
+type GetAllClustersResp struct {
+	Items []GetClusterResp `json:"items"`
+	Total int64            `json:"total"`
+}
+
 type GetClusterResp struct {
-	Id                uint64           `json:"id,string"`
-	ProjectId         uint64           `json:"project_id,string"`
-	Name              string           `json:"name"`
-	Port              int32            `json:"port"`
-	TiDBVersion       string           `json:"tidb_version"`
-	ClusterType       string           `json:"cluster_type"`
-	CloudProvider     string           `json:"cloud_provider"`
-	Region            string           `json:"region"`
-	Status            ClusterStatus    `json:"status"`
-	CreateTimestamp   string           `json:"create_timestamp"`
-	Config            ClusterConfig    `json:"config"`
-	ConnectionStrings ConnectionString `json:"connection_strings"`
+	Id              uint64        `json:"id,string"`
+	ProjectId       uint64        `json:"project_id,string"`
+	Name            string        `json:"name"`
+	TiDBVersion     string        `json:"tidb_version"`
+	ClusterType     string        `json:"cluster_type"`
+	CloudProvider   string        `json:"cloud_provider"`
+	Region          string        `json:"region"`
+	Status          ClusterStatus `json:"status"`
+	CreateTimestamp string        `json:"create_timestamp"`
+	Config          ClusterConfig `json:"config"`
 }
 
 type Specification struct {
