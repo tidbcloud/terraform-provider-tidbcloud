@@ -79,6 +79,7 @@ resource "tidbcloud_cluster" "serverless_tier_cluster" {
 
 ### Read-Only
 
+- `connection_strings` (Attributes) Connection strings. (see [below for nested schema](#nestedatt--connection_strings))
 - `id` (String) The ID of the cluster.
 - `status` (String) the status of the cluster.
 
@@ -157,5 +158,33 @@ Required:
 
 - `cidr` (String) The IP address or CIDR range that you want to add to the cluster's IP access list.
 - `description` (String) Description that explains the purpose of the entry.
+
+
+
+<a id="nestedatt--connection_strings"></a>
+### Nested Schema for `connection_strings`
+
+Read-Only:
+
+- `default_user` (String) The default TiDB user for connection.
+- `standard` (Attributes) Standard connection string. (see [below for nested schema](#nestedatt--connection_strings--standard))
+- `vpc_peering` (Attributes) VPC peering connection string. (see [below for nested schema](#nestedatt--connection_strings--vpc_peering))
+
+<a id="nestedatt--connection_strings--standard"></a>
+### Nested Schema for `connection_strings.standard`
+
+Read-Only:
+
+- `host` (String) The host of standard connection.
+- `port` (Number) The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.
+
+
+<a id="nestedatt--connection_strings--vpc_peering"></a>
+### Nested Schema for `connection_strings.vpc_peering`
+
+Read-Only:
+
+- `host` (String) The host of VPC peering connection.
+- `port` (Number) The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.
 
 

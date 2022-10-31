@@ -20,14 +20,15 @@ const dev = "DEVELOPER"
 const ded = "DEDICATED"
 
 type clusterResourceData struct {
-	ClusterId     types.String  `tfsdk:"id"`
-	ProjectId     string        `tfsdk:"project_id"`
-	Name          string        `tfsdk:"name"`
-	ClusterType   string        `tfsdk:"cluster_type"`
-	CloudProvider string        `tfsdk:"cloud_provider"`
-	Region        string        `tfsdk:"region"`
-	Status        types.String  `tfsdk:"status"`
-	Config        clusterConfig `tfsdk:"config"`
+	ClusterId         types.String  `tfsdk:"id"`
+	ProjectId         string        `tfsdk:"project_id"`
+	Name              string        `tfsdk:"name"`
+	ClusterType       string        `tfsdk:"cluster_type"`
+	CloudProvider     string        `tfsdk:"cloud_provider"`
+	Region            string        `tfsdk:"region"`
+	Status            types.String  `tfsdk:"status"`
+	Config            clusterConfig `tfsdk:"config"`
+	ConnectionStrings *connection   `tfsdk:"connection_strings"`
 }
 
 type clusterConfig struct {
@@ -109,6 +110,49 @@ func (t clusterResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				MarkdownDescription: "the status of the cluster.",
 				Computed:            true,
 				Type:                types.StringType,
+			},
+			"connection_strings": {
+				MarkdownDescription: "Connection strings.",
+				Computed:            true,
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"default_user": {
+						MarkdownDescription: "The default TiDB user for connection.",
+						Computed:            true,
+						Type:                types.StringType,
+					},
+					"standard": {
+						MarkdownDescription: "Standard connection string.",
+						Computed:            true,
+						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+							"host": {
+								MarkdownDescription: "The host of standard connection.",
+								Computed:            true,
+								Type:                types.StringType,
+							},
+							"port": {
+								MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.",
+								Computed:            true,
+								Type:                types.Int64Type,
+							},
+						}),
+					},
+					"vpc_peering": {
+						MarkdownDescription: "VPC peering connection string.",
+						Computed:            true,
+						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+							"host": {
+								MarkdownDescription: "The host of VPC peering connection.",
+								Computed:            true,
+								Type:                types.StringType,
+							},
+							"port": {
+								MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.",
+								Computed:            true,
+								Type:                types.Int64Type,
+							},
+						}),
+					},
+				}),
 			},
 			"config": {
 				MarkdownDescription: "The configuration of the cluster.",
@@ -426,6 +470,22 @@ func refreshClusterResourceData(resp *tidbcloud.GetClusterResp, data *clusterRes
 		},
 	}
 	data.Status = types.String{Value: resp.Status.ClusterStatus}
+	// ConnectionStrings return at least one connection
+	data.ConnectionStrings = &connection{
+		DefaultUser: resp.Status.ConnectionStrings.DefaultUser,
+	}
+	if resp.Status.ConnectionStrings.Standard.Port != 0 {
+		data.ConnectionStrings.Standard = &connectionStandard{
+			Host: resp.Status.ConnectionStrings.Standard.Host,
+			Port: int64(resp.Status.ConnectionStrings.Standard.Port),
+		}
+	}
+	if resp.Status.ConnectionStrings.VpcPeering.Port != 0 {
+		data.ConnectionStrings.VpcPeering = &connectionVpcPeering{
+			Host: resp.Status.ConnectionStrings.VpcPeering.Host,
+			Port: int64(resp.Status.ConnectionStrings.VpcPeering.Port),
+		}
+	}
 	// may return
 	tiflash := resp.Config.Components.TiFlash
 	if tiflash != nil {

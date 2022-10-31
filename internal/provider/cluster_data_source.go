@@ -355,16 +355,20 @@ func (d clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 				ClusterStatus: key.Status.ClusterStatus,
 				ConnectionStrings: &connection{
 					DefaultUser: key.Status.ConnectionStrings.DefaultUser,
-					Standard: &connectionStandard{
-						Host: key.Status.ConnectionStrings.Standard.Host,
-						Port: int64(key.Status.ConnectionStrings.Standard.Port),
-					},
-					VpcPeering: &connectionVpcPeering{
-						Host: key.Status.ConnectionStrings.VpcPeering.Host,
-						Port: int64(key.Status.ConnectionStrings.VpcPeering.Port),
-					},
 				},
 			},
+		}
+		if key.Status.ConnectionStrings.Standard.Port != 0 {
+			clusterItem.Status.ConnectionStrings.Standard = &connectionStandard{
+				Host: key.Status.ConnectionStrings.Standard.Host,
+				Port: int64(key.Status.ConnectionStrings.Standard.Port),
+			}
+		}
+		if key.Status.ConnectionStrings.VpcPeering.Port != 0 {
+			clusterItem.Status.ConnectionStrings.VpcPeering = &connectionVpcPeering{
+				Host: key.Status.ConnectionStrings.VpcPeering.Host,
+				Port: int64(key.Status.ConnectionStrings.VpcPeering.Port),
+			}
 		}
 		if key.Config.Components.TiFlash != nil {
 			clusterItem.Config.Components.TiFlash = &componentTiFlash{
