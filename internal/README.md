@@ -13,6 +13,14 @@ export TIDBCLOUD_PUBLIC_KEY=${public_key}
 export TIDBCLOUD_PRIVATE_KEY=${private_key}
 ```
 
+## Cost
+
+Some tests may generate costs and will not be tested by default. To run them, you need to set the environment variable `TIDBCLOUD_ENABLE_COST` to `true`.
+
+```
+export TIDBCLOUD_ENABLE_COST=true
+```
+
 ## Test With Project
 The tests need project are put into the /internal/provide/testwithproject path.
 

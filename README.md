@@ -58,6 +58,7 @@ DataSource
 - [cluster spec](./docs/data-sources/cluster_spec.md)
 - [restore](./docs/data-sources/restore.md)
 - [backup](./docs/data-sources/backup.md)
+- [cluster](./docs/data-sources/cluster.md)
 
 
 ## Using the provider

@@ -19,7 +19,8 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 }
 
 var (
-	projectId = os.Getenv("TIDBCLOUD_PROJECT_ID")
+	projectId  = os.Getenv("TIDBCLOUD_PROJECT_ID")
+	enableCost = os.Getenv("TIDBCLOUD_ENABLE_COST") == "true"
 )
 
 func testAccPreCheck(t *testing.T) {
