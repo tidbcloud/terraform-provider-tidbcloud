@@ -383,8 +383,6 @@ func (d clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	data.Id = types.String{Value: "just for test"}
 
-	//resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Test error: %v,Status:%v", data.Clusters[0].Config, data.Clusters[0].Status))
-	//return
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 }
