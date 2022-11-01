@@ -17,5 +17,5 @@ data "tidbcloud_projects" "example" {
 }
 
 output "output" {
-  value = data.tidbcloud_project.example
+  value = data.tidbcloud_projects.example
 }

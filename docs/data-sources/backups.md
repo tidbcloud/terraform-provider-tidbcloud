@@ -34,7 +34,7 @@ data "tidbcloud_backups" "example" {
 }
 
 output "output" {
-  value = data.tidbcloud_backup.example
+  value = data.tidbcloud_backups.example
 }
 ```
 
@@ -53,7 +53,7 @@ output "output" {
 
 ### Read-Only
 
-- `id` (String) ignore it, it is just for test.
+- `id` (Number) data source ID
 - `items` (Attributes List) (see [below for nested schema](#nestedatt--items))
 - `total` (Number) The total number of backups in the project.
 

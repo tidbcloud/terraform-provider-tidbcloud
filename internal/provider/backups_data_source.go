@@ -146,7 +146,7 @@ func (d backupsDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		data.PageSize = types.Int64{Value: 10}
 	}
 
-	tflog.Trace(ctx, "read backup data source")
+	tflog.Trace(ctx, "read backups data source")
 	backups, err := d.provider.client.GetBackups(data.ProjectId, data.ClusterId, data.Page.Value, data.PageSize.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetBackups, got error: %s", err))

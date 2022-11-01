@@ -30,7 +30,7 @@ data "tidbcloud_cluster_specs" "example" {
 }
 
 output "output" {
-  value = data.tidbcloud_cluster_spec.example
+  value = data.tidbcloud_cluster_specs.example
 }
 ```
 
@@ -39,7 +39,7 @@ output "output" {
 
 ### Read-Only
 
-- `id` (String) ignore it, it is just for test.
+- `id` (Number) data source ID.
 - `items` (Attributes List) (see [below for nested schema](#nestedatt--items))
 - `total` (Number) the total number of the spec.
 

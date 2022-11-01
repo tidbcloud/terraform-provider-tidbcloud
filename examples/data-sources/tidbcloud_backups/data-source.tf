@@ -19,5 +19,5 @@ data "tidbcloud_backups" "example" {
 }
 
 output "output" {
-  value = data.tidbcloud_backup.example
+  value = data.tidbcloud_backups.example
 }

@@ -16,5 +16,5 @@ data "tidbcloud_restores" "example" {
 }
 
 output "output" {
-  value = data.tidbcloud_restore.example
+  value = data.tidbcloud_restores.example
 }

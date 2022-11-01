@@ -40,7 +40,7 @@ type restoresDataSourceType struct{}
 
 func (t restoresDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
-		MarkdownDescription: "restore data source",
+		MarkdownDescription: "restores data source",
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
 				MarkdownDescription: "data source ID.",
@@ -170,7 +170,7 @@ func (d restoresDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		data.PageSize = types.Int64{Value: 10}
 	}
 
-	tflog.Trace(ctx, "read restore data source")
+	tflog.Trace(ctx, "read restores data source")
 	restores, err := d.provider.client.GetRestoreTasks(data.ProjectId, data.Page.Value, data.PageSize.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetRestoreTasks, got error: %s", err))

@@ -152,14 +152,14 @@ func (t clustersDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, di
 										Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 											"node_size": {
 												Computed: true,
-												MarkdownDescription: "The size of the TiDB component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).\n" +
+												MarkdownDescription: "The size of the TiDB component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 													"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.\n" +
 													"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.\n" +
 													"  - Can not modify node_size of an existing cluster.",
 												Type: types.StringType,
 											},
 											"node_quantity": {
-												MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).",
+												MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).",
 												Computed:            true,
 												Type:                types.Int64Type,
 											},
@@ -170,7 +170,7 @@ func (t clustersDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, di
 										Computed:            true,
 										Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 											"node_size": {
-												MarkdownDescription: "The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).\n" +
+												MarkdownDescription: "The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 													"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.\n" +
 													"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.\n" +
 													"  - Can not modify node_size of an existing cluster.",
@@ -178,13 +178,13 @@ func (t clustersDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, di
 												Type:     types.StringType,
 											},
 											"storage_size_gib": {
-												MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).\n" +
+												MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 													"  - Can not modify storage_size_gib of an existing cluster.",
 												Computed: true,
 												Type:     types.Int64Type,
 											},
 											"node_quantity": {
-												MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).\n" +
+												MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 													"  - TiKV do not support decreasing node quantity.\n" +
 													"  - The node_quantity of TiKV must be a multiple of 3.",
 												Computed: true,
@@ -198,19 +198,19 @@ func (t clustersDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, di
 										Optional:            true,
 										Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 											"node_size": {
-												MarkdownDescription: "The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).\n" +
+												MarkdownDescription: "The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 													"  - Can not modify node_size of an existing cluster.",
 												Computed: true,
 												Type:     types.StringType,
 											},
 											"storage_size_gib": {
-												MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).\n" +
+												MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 													"  - Can not modify storage_size_gib of an existing cluster.",
 												Computed: true,
 												Type:     types.Int64Type,
 											},
 											"node_quantity": {
-												MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).\n" +
+												MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 													"  - TiFlash do not support decreasing node quantity.",
 												Computed: true,
 												Type:     types.Int64Type,
@@ -319,7 +319,7 @@ func (d clustersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		data.PageSize = types.Int64{Value: 10}
 	}
 
-	tflog.Trace(ctx, "read cluster data source")
+	tflog.Trace(ctx, "read clusters data source")
 	clusters, err := d.provider.client.GetClusters(data.ProjectId.Value, data.Page.Value, data.PageSize.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call read cluster, got error: %s", err))

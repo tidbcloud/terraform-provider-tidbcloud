@@ -129,7 +129,7 @@ func (d projectsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		data.PageSize = types.Int64{Value: 10}
 	}
 
-	tflog.Trace(ctx, "read project data source")
+	tflog.Trace(ctx, "read projects data source")
 	projects, err := d.provider.client.GetAllProjects(data.Page.Value, data.PageSize.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call read project, got error: %s", err))

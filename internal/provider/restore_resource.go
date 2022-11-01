@@ -104,7 +104,7 @@ func (t restoreResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 								Required: true,
 								Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 									"node_size": {
-										MarkdownDescription: "The size of the TiDB component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](./cluster_spec.md).\n" +
+										MarkdownDescription: "The size of the TiDB component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](./cluster_specs.md).\n" +
 											"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.\n" +
 											"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.\n" +
 											"  - Can not modify node_size of an existing cluster.",
@@ -112,7 +112,7 @@ func (t restoreResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 										Type:     types.StringType,
 									},
 									"node_quantity": {
-										MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](./cluster_spec.md).",
+										MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](./cluster_specs.md).",
 										Required:            true,
 										Type:                types.Int64Type,
 									},
@@ -122,7 +122,7 @@ func (t restoreResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 								Required: true,
 								Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 									"node_size": {
-										MarkdownDescription: "The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](./cluster_spec.md).\n" +
+										MarkdownDescription: "The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](./cluster_specs.md).\n" +
 											"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.\n" +
 											"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.\n" +
 											"  - Can not modify node_size of an existing cluster.",
@@ -130,13 +130,13 @@ func (t restoreResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 										Type:     types.StringType,
 									},
 									"storage_size_gib": {
-										MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](./cluster_spec.md).\n" +
+										MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](./cluster_specs.md).\n" +
 											"  - Can not modify storage_size_gib of an existing cluster.",
 										Required: true,
 										Type:     types.Int64Type,
 									},
 									"node_quantity": {
-										MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](./cluster_spec.md).",
+										MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](./cluster_specs.md).",
 										Required:            true,
 										Type:                types.Int64Type,
 									},
@@ -146,7 +146,7 @@ func (t restoreResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 								Optional: true,
 								Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 									"node_size": {
-										MarkdownDescription: "The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](./cluster_spec.md).\n" +
+										MarkdownDescription: "The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](./cluster_specs.md).\n" +
 											"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.\n" +
 											"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.\n" +
 											"  - Can not modify node_size of an existing cluster.",
@@ -154,13 +154,13 @@ func (t restoreResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 										Type:     types.StringType,
 									},
 									"storage_size_gib": {
-										MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](./cluster_spec.md).\n" +
+										MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](./cluster_specs.md).\n" +
 											"  - Can not modify storage_size_gib of an existing cluster.",
 										Required: true,
 										Type:     types.Int64Type,
 									},
 									"node_quantity": {
-										MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](./cluster_spec.md).",
+										MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](./cluster_specs.md).",
 										Required:            true,
 										Type:                types.Int64Type,
 									},

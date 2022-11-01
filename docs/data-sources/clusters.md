@@ -31,7 +31,7 @@ data "tidbcloud_clusters" "example" {
 }
 
 output "output" {
-  value = data.tidbcloud_cluster.example
+  value = data.tidbcloud_clusters.example
 }
 ```
 
@@ -49,7 +49,7 @@ output "output" {
 
 ### Read-Only
 
-- `id` (String) ignore it, it is just for test.
+- `id` (Number) data source ID.
 - `items` (Attributes List) The items of clusters in the project. (see [below for nested schema](#nestedatt--items))
 - `total` (Number) The total number of project clusters.
 
@@ -94,11 +94,11 @@ Read-Only:
 
 Read-Only:
 
-- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - TiFlash do not support decreasing node quantity.
-- `node_size` (String) The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_size` (String) The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - Can not modify node_size of an existing cluster.
-- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - Can not modify storage_size_gib of an existing cluster.
 
 
@@ -107,8 +107,8 @@ Read-Only:
 
 Read-Only:
 
-- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
-- `node_size` (String) The size of the TiDB component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
+- `node_size` (String) The size of the TiDB component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.
   - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.
   - Can not modify node_size of an existing cluster.
@@ -119,14 +119,14 @@ Read-Only:
 
 Read-Only:
 
-- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - TiKV do not support decreasing node quantity.
   - The node_quantity of TiKV must be a multiple of 3.
-- `node_size` (String) The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_size` (String) The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.
   - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.
   - Can not modify node_size of an existing cluster.
-- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - Can not modify storage_size_gib of an existing cluster.
 
 

@@ -15,5 +15,5 @@ data "tidbcloud_cluster_specs" "example" {
 }
 
 output "output" {
-  value = data.tidbcloud_cluster_spec.example
+  value = data.tidbcloud_cluster_specs.example
 }

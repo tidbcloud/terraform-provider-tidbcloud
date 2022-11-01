@@ -23,8 +23,8 @@ For general information about Terraform, visit the [official website](https://ww
     - [Create an API key](#create-an-api-key)
     - [Get TiDB Cloud provider](#get-tidb-cloud-provider)
     - [Config the provider](#config-the-provider)
-    - [Get projectId with project Data Source](#get-projectid-with-project-data-source)
-    - [Get cluster spec info with cluster-spec Data Source](#get-cluster-spec-info-with-cluster-spec-data-source)
+    - [Get projectId with projects Data Source](#get-projectid-with-projects-data-source)
+    - [Get cluster spec info with cluster-specs Data Source](#get-cluster-spec-info-with-cluster-specs-data-source)
     - [Create a dedicated cluster with cluster resource](#create-a-dedicated-cluster-with-cluster-resource)
     - [Change the dedicated cluster](#change-the-dedicated-cluster)
     - [Create a backup with backup resource](#create-a-backup-with-backup-resource)
@@ -54,11 +54,11 @@ Resources
 - [restore](./docs/resources/restore.md) (not support update and delete)
 
 DataSource
-- [project](./docs/data-sources/project.md)
-- [cluster spec](./docs/data-sources/cluster_spec.md)
-- [restore](./docs/data-sources/restore.md)
-- [backup](./docs/data-sources/backup.md)
-- [cluster](./docs/data-sources/cluster.md)
+- [projects](./docs/data-sources/projects.md)
+- [cluster specs](./docs/data-sources/cluster_specs.md)
+- [restores](./docs/data-sources/restores.md)
+- [backups](./docs/data-sources/backups.md)
+- [clusters](./docs/data-sources/clusters.md)
 
 
 ## Using the provider
@@ -164,10 +164,10 @@ export TIDBCLOUD_PRIVATE_KEY = ${private_key}
 
 Now, you can use the tidbcloud provider!
 
-### Get projectId with project Data Source
+### Get projectId with projects Data Source
 
-Let us get all the projects by project data source first:
-- Use `data` block to define the data source of tidbcloud, it consists of the data source type and the data source name. In this example, data source type is `tidbcloud_project` and the name is `example_project`. The prefix of the type maps to the name of the provider.
+Let us get all the projects by projects data source first:
+- Use `data` block to define the data source of tidbcloud, it consists of the data source type and the data source name. In this example, data source type is `tidbcloud_projects` and the name is `example_project`. The prefix of the type maps to the name of the provider.
 - Use `output` block to get the information, and expose information for other Terraform configurations to use. It is similar to return values in programming languages. See [official doc](https://www.terraform.io/language/values/outputs) for more detail
 
 Besides, you can find all the supported configs for the data source and resource [here](./docs)
@@ -188,13 +188,13 @@ provider "tidbcloud" {
   private_key = "fake_private_key"
 }
 
-data "tidbcloud_project" "example_project" {
+data "tidbcloud_projects" "example_project" {
   page      = 1
   page_size = 10
 }
 
 output "projects" {
-  value = data.tidbcloud_project.example_project.items
+  value = data.tidbcloud_projects.example_project.items
 }
 ```
 
@@ -202,8 +202,8 @@ Then you can apply the configuration with the `terraform apply`, you need to typ
 
 ```shell
 $ terraform apply --auto-approve
-data.tidbcloud_project.example_project: Reading...
-data.tidbcloud_project.example_project: Read complete after 1s [id=just for test]
+data.tidbcloud_projects.example_project: Reading...
+data.tidbcloud_projects.example_project: Read complete after 1s [id=just for test]
 
 Changes to Outputs:
   + projects = [
@@ -253,16 +253,16 @@ projects = tolist([
 
 Now, you get all the available projects, copy one of the id you need. Here we use the default project's ID.
 
-### Get cluster spec info with cluster-spec Data Source
+### Get cluster spec info with cluster-specs Data Source
 
 Before creating a TiDB cluster, you may need to get the available config values (providers, regions, etc.) by cluster-spec Data Source:
 
 ```
-data "tidbcloud_cluster_spec" "example_cluster_spec" {
+data "tidbcloud_cluster_specs" "example_cluster_spec" {
 }
 
-output "cluster_spec" {
-  value = data.tidbcloud_cluster_spec.example_cluster_spec.items
+output "cluster_specs" {
+  value = data.tidbcloud_cluster_specs.example_cluster_spec.items
 }
 ```
 

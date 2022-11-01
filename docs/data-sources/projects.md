@@ -32,7 +32,7 @@ data "tidbcloud_projects" "example" {
 }
 
 output "output" {
-  value = data.tidbcloud_project.example
+  value = data.tidbcloud_projects.example
 }
 ```
 
@@ -46,7 +46,7 @@ output "output" {
 
 ### Read-Only
 
-- `id` (String) ignore it, it is just for test.
+- `id` (Number) data source ID.
 - `items` (Attributes List) The items of accessible projects. (see [below for nested schema](#nestedatt--items))
 - `total` (Number) The total number of accessible projects.
 

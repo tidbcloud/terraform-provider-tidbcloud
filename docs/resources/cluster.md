@@ -74,8 +74,8 @@ resource "tidbcloud_cluster" "serverless_tier_cluster" {
 - `cluster_type` (String) Enum: "DEDICATED" "DEVELOPER", The cluster type.
 - `config` (Attributes) The configuration of the cluster. (see [below for nested schema](#nestedatt--config))
 - `name` (String) The name of the cluster.
-- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_project datasource](../data-sources/cluster_spec.md).
-- `region` (String) the region value should match the cloud provider's region code. You can get the complete list of available regions from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).
+- `region` (String) the region value should match the cloud provider's region code. You can get the complete list of available regions from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
 
 ### Read-Only
 
@@ -126,14 +126,14 @@ Required:
 
 Required:
 
-- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - TiKV do not support decreasing node quantity.
   - The node_quantity of TiKV must be a multiple of 3.
-- `node_size` (String) The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_size` (String) The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.
   - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.
   - Can not modify node_size of an existing cluster.
-- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - Can not modify storage_size_gib of an existing cluster.
 
 
@@ -142,9 +142,9 @@ Required:
 
 Required:
 
-- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - TiFlash do not support decreasing node quantity.
-- `node_size` (String) The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_size` (String) The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - Can not modify node_size of an existing cluster.
 - `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
   - Can not modify storage_size_gib of an existing cluster.
