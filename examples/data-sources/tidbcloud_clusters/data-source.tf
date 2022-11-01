@@ -11,11 +11,10 @@ provider "tidbcloud" {
   private_key = "fake_private_key"
 }
 
-data "tidbcloud_project" "example" {
-  page      = 1
-  page_size = 10
+data "tidbcloud_clusters" "example" {
+  project_id = "fake_id"
 }
 
 output "output" {
-  value = data.tidbcloud_project.example
+  value = data.tidbcloud_cluster.example
 }

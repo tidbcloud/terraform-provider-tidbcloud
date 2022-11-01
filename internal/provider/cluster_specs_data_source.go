@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type clusterSpecDataSourceData struct {
+type clusterSpecsDataSourceData struct {
 	Id    types.String      `tfsdk:"id"`
 	Items []clusterSpecItem `tfsdk:"items"`
 	Total types.Int64       `tfsdk:"total"`
@@ -54,14 +54,14 @@ type storageSizeGiRange struct {
 }
 
 // Ensure provider defined types fully satisfy framework interfaces
-var _ provider.DataSourceType = clusterSpecDataSourceType{}
-var _ datasource.DataSource = clusterSpecDataSource{}
+var _ provider.DataSourceType = clusterSpecsDataSourceType{}
+var _ datasource.DataSource = clusterSpecsDataSource{}
 
-type clusterSpecDataSourceType struct{}
+type clusterSpecsDataSourceType struct{}
 
-func (t clusterSpecDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (t clusterSpecsDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
-		MarkdownDescription: "cluster_spec data source",
+		MarkdownDescription: "cluster_specs data source",
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
 				MarkdownDescription: "ignore it, it is just for test.",
@@ -210,20 +210,20 @@ func (t clusterSpecDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema,
 	}, nil
 }
 
-func (t clusterSpecDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
+func (t clusterSpecsDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	provider, diags := convertProviderType(in)
 
-	return clusterSpecDataSource{
+	return clusterSpecsDataSource{
 		provider: provider,
 	}, diags
 }
 
-type clusterSpecDataSource struct {
+type clusterSpecsDataSource struct {
 	provider tidbcloudProvider
 }
 
-func (d clusterSpecDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data clusterSpecDataSourceData
+func (d clusterSpecsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data clusterSpecsDataSourceData
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

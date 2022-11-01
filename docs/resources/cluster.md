@@ -79,9 +79,9 @@ resource "tidbcloud_cluster" "serverless_tier_cluster" {
 
 ### Read-Only
 
-- `connection_strings` (Attributes) Connection strings. (see [below for nested schema](#nestedatt--connection_strings))
+- `create_timestamp` (String) The creation time of the cluster in Unix timestamp seconds (epoch time).
 - `id` (String) The ID of the cluster.
-- `status` (String) the status of the cluster.
+- `status` (Attributes) The status of the cluster. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--config"></a>
 ### Nested Schema for `config`
@@ -161,17 +161,26 @@ Required:
 
 
 
-<a id="nestedatt--connection_strings"></a>
-### Nested Schema for `connection_strings`
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `cluster_status` (String) Status of the cluster.
+- `connection_strings` (Attributes) Connection strings. (see [below for nested schema](#nestedatt--status--connection_strings))
+- `tidb_version` (String) TiDB version.
+
+<a id="nestedatt--status--connection_strings"></a>
+### Nested Schema for `status.connection_strings`
 
 Read-Only:
 
 - `default_user` (String) The default TiDB user for connection.
-- `standard` (Attributes) Standard connection string. (see [below for nested schema](#nestedatt--connection_strings--standard))
-- `vpc_peering` (Attributes) VPC peering connection string. (see [below for nested schema](#nestedatt--connection_strings--vpc_peering))
+- `standard` (Attributes) Standard connection string. (see [below for nested schema](#nestedatt--status--connection_strings--standard))
+- `vpc_peering` (Attributes) VPC peering connection string. (see [below for nested schema](#nestedatt--status--connection_strings--vpc_peering))
 
-<a id="nestedatt--connection_strings--standard"></a>
-### Nested Schema for `connection_strings.standard`
+<a id="nestedatt--status--connection_strings--standard"></a>
+### Nested Schema for `status.connection_strings.standard`
 
 Read-Only:
 
@@ -179,8 +188,8 @@ Read-Only:
 - `port` (Number) The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.
 
 
-<a id="nestedatt--connection_strings--vpc_peering"></a>
-### Nested Schema for `connection_strings.vpc_peering`
+<a id="nestedatt--status--connection_strings--vpc_peering"></a>
+### Nested Schema for `status.connection_strings.vpc_peering`
 
 Read-Only:
 

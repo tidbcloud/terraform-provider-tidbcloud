@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type restoreDataSourceData struct {
+type restoresDataSourceData struct {
 	Id        types.String `tfsdk:"id"`
 	ProjectId string       `tfsdk:"project_id"`
 	Page      types.Int64  `tfsdk:"page"`
@@ -32,12 +32,12 @@ type restore struct {
 }
 
 // Ensure provider defined types fully satisfy framework interfaces
-var _ provider.DataSourceType = restoreDataSourceType{}
-var _ datasource.DataSource = restoreDataSource{}
+var _ provider.DataSourceType = restoresDataSourceType{}
+var _ datasource.DataSource = restoresDataSource{}
 
-type restoreDataSourceType struct{}
+type restoresDataSourceType struct{}
 
-func (t restoreDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (t restoresDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		MarkdownDescription: "restore data source",
 		Attributes: map[string]tfsdk.Attribute{
@@ -141,20 +141,20 @@ func (t restoreDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, dia
 	}, nil
 }
 
-func (t restoreDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
+func (t restoresDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	provider, diags := convertProviderType(in)
 
-	return restoreDataSource{
+	return restoresDataSource{
 		provider: provider,
 	}, diags
 }
 
-type restoreDataSource struct {
+type restoresDataSource struct {
 	provider tidbcloudProvider
 }
 
-func (d restoreDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data restoreDataSourceData
+func (d restoresDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data restoresDataSourceData
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

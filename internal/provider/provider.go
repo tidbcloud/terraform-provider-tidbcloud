@@ -127,11 +127,11 @@ func (p *tidbcloudProvider) GetResources(ctx context.Context) (map[string]provid
 
 func (p *tidbcloudProvider) GetDataSources(ctx context.Context) (map[string]provider.DataSourceType, diag.Diagnostics) {
 	return map[string]provider.DataSourceType{
-		"tidbcloud_projects":      projectDataSourceType{},
-		"tidbcloud_cluster_specs": clusterSpecDataSourceType{},
-		"tidbcloud_backups":       backupDataSourceType{},
-		"tidbcloud_restores":      restoreDataSourceType{},
-		"tidbcloud_clusters":      clusterDataSourceType{},
+		"tidbcloud_projects":      projectsDataSourceType{},
+		"tidbcloud_cluster_specs": clusterSpecsDataSourceType{},
+		"tidbcloud_backups":       backupsDataSourceType{},
+		"tidbcloud_restores":      restoresDataSourceType{},
+		"tidbcloud_clusters":      clustersDataSourceType{},
 	}, nil
 }
 

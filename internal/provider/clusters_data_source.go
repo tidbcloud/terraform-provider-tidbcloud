@@ -12,7 +12,7 @@ import (
 	"strconv"
 )
 
-type clusterDataSourceData struct {
+type clustersDataSourceData struct {
 	Id        types.String   `tfsdk:"id"`
 	Page      types.Int64    `tfsdk:"page"`
 	PageSize  types.Int64    `tfsdk:"page_size"`
@@ -61,14 +61,14 @@ type connectionVpcPeering struct {
 }
 
 // Ensure provider defined types fully satisfy framework interfaces
-var _ provider.DataSourceType = clusterDataSourceType{}
-var _ datasource.DataSource = clusterDataSource{}
+var _ provider.DataSourceType = clustersDataSourceType{}
+var _ datasource.DataSource = clustersDataSource{}
 
-type clusterDataSourceType struct{}
+type clustersDataSourceType struct{}
 
-func (t clusterDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (t clustersDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
-		MarkdownDescription: "cluster data source",
+		MarkdownDescription: "clusters data source",
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
 				MarkdownDescription: "ignore it, it is just for test.",
@@ -290,20 +290,20 @@ func (t clusterDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, dia
 	}, nil
 }
 
-func (t clusterDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
+func (t clustersDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	provider, diags := convertProviderType(in)
 
-	return clusterDataSource{
+	return clustersDataSource{
 		provider: provider,
 	}, diags
 }
 
-type clusterDataSource struct {
+type clustersDataSource struct {
 	provider tidbcloudProvider
 }
 
-func (d clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data clusterDataSourceData
+func (d clustersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data clustersDataSourceData
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

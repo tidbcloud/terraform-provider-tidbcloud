@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type projectDataSourceData struct {
+type projectsDataSourceData struct {
 	Id       types.String `tfsdk:"id"`
 	Page     types.Int64  `tfsdk:"page"`
 	PageSize types.Int64  `tfsdk:"page_size"`
@@ -29,14 +29,14 @@ type project struct {
 }
 
 // Ensure provider defined types fully satisfy framework interfaces
-var _ provider.DataSourceType = projectDataSourceType{}
-var _ datasource.DataSource = projectDataSource{}
+var _ provider.DataSourceType = projectsDataSourceType{}
+var _ datasource.DataSource = projectsDataSource{}
 
-type projectDataSourceType struct{}
+type projectsDataSourceType struct{}
 
-func (t projectDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (t projectsDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
-		MarkdownDescription: "project data source",
+		MarkdownDescription: "projects data source",
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
 				MarkdownDescription: "ignore it, it is just for test.",
@@ -100,20 +100,20 @@ func (t projectDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, dia
 	}, nil
 }
 
-func (t projectDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
+func (t projectsDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	provider, diags := convertProviderType(in)
 
-	return projectDataSource{
+	return projectsDataSource{
 		provider: provider,
 	}, diags
 }
 
-type projectDataSource struct {
+type projectsDataSource struct {
 	provider tidbcloudProvider
 }
 
-func (d projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data projectDataSourceData
+func (d projectsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data projectsDataSourceData
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
