@@ -9,14 +9,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"math/rand"
 )
 
 type projectsDataSourceData struct {
-	Id       types.String `tfsdk:"id"`
-	Page     types.Int64  `tfsdk:"page"`
-	PageSize types.Int64  `tfsdk:"page_size"`
-	Projects []project    `tfsdk:"items"`
-	Total    types.Int64  `tfsdk:"total"`
+	Id       types.Int64 `tfsdk:"id"`
+	Page     types.Int64 `tfsdk:"page"`
+	PageSize types.Int64 `tfsdk:"page_size"`
+	Projects []project   `tfsdk:"items"`
+	Total    types.Int64 `tfsdk:"total"`
 }
 
 type project struct {
@@ -39,9 +40,9 @@ func (t projectsDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, di
 		MarkdownDescription: "projects data source",
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
-				MarkdownDescription: "ignore it, it is just for test.",
+				MarkdownDescription: "data source ID.",
 				Computed:            true,
-				Type:                types.StringType,
+				Type:                types.Int64Type,
 			},
 			"page": {
 				MarkdownDescription: "Default:1 The number of pages.",
@@ -148,7 +149,7 @@ func (d projectsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		})
 	}
 	data.Projects = items
-	data.Id = types.String{Value: "just for test"}
+	data.Id = types.Int64{Value: rand.Int63()}
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

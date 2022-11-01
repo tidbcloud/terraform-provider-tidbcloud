@@ -9,16 +9,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"math/rand"
 )
 
 type backupsDataSourceData struct {
-	Id        types.String `tfsdk:"id"`
-	ProjectId string       `tfsdk:"project_id"`
-	ClusterId string       `tfsdk:"cluster_id"`
-	Page      types.Int64  `tfsdk:"page"`
-	PageSize  types.Int64  `tfsdk:"page_size"`
-	Items     []backup     `tfsdk:"items"`
-	Total     types.Int64  `tfsdk:"total"`
+	Id        types.Int64 `tfsdk:"id"`
+	ProjectId string      `tfsdk:"project_id"`
+	ClusterId string      `tfsdk:"cluster_id"`
+	Page      types.Int64 `tfsdk:"page"`
+	PageSize  types.Int64 `tfsdk:"page_size"`
+	Items     []backup    `tfsdk:"items"`
+	Total     types.Int64 `tfsdk:"total"`
 }
 
 type backup struct {
@@ -42,9 +43,9 @@ func (t backupsDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, dia
 		MarkdownDescription: "backups data source",
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
-				MarkdownDescription: "ignore it, it is just for test.",
+				MarkdownDescription: "data source ID",
 				Computed:            true,
-				Type:                types.StringType,
+				Type:                types.Int64Type,
 			},
 			"project_id": {
 				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_project datasource](../project).",
@@ -152,7 +153,7 @@ func (d backupsDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	data.Id = types.String{Value: "just for test"}
+	data.Id = types.Int64{Value: rand.Int63()}
 	data.Total = types.Int64{Value: backups.Total}
 	var items []backup
 	for _, key := range backups.Items {

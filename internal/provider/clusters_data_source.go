@@ -9,11 +9,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"math/rand"
 	"strconv"
 )
 
 type clustersDataSourceData struct {
-	Id        types.String   `tfsdk:"id"`
+	Id        types.Int64    `tfsdk:"id"`
 	Page      types.Int64    `tfsdk:"page"`
 	PageSize  types.Int64    `tfsdk:"page_size"`
 	Clusters  []clusterItems `tfsdk:"items"`
@@ -71,9 +72,9 @@ func (t clustersDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, di
 		MarkdownDescription: "clusters data source",
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
-				MarkdownDescription: "ignore it, it is just for test.",
+				MarkdownDescription: "data source ID.",
 				Computed:            true,
-				Type:                types.StringType,
+				Type:                types.Int64Type,
 			},
 			"page": {
 				MarkdownDescription: "Default:1 The number of pages.",
@@ -381,7 +382,7 @@ func (d clustersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 	data.Clusters = items
 
-	data.Id = types.String{Value: "just for test"}
+	data.Id = types.Int64{Value: rand.Int63()}
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

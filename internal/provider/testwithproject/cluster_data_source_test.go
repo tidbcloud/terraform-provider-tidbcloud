@@ -16,7 +16,7 @@ func TestAccClusterDataSource(t *testing.T) {
 			{
 				Config: testAccClusterDataSourceConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.tidbcloud_cluster.test", "total"),
+					resource.TestCheckResourceAttrSet("data.tidbcloud_clusters.test", "total"),
 				),
 			},
 		},
@@ -24,7 +24,7 @@ func TestAccClusterDataSource(t *testing.T) {
 }
 
 var testAccClusterDataSourceConfig = fmt.Sprintf(`
-data "tidbcloud_cluster" "test" {
+data "tidbcloud_clusters" "test" {
   project_id = %s
 }
 `, projectId)

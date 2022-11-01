@@ -10,15 +10,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"math/rand"
 )
 
 type restoresDataSourceData struct {
-	Id        types.String `tfsdk:"id"`
-	ProjectId string       `tfsdk:"project_id"`
-	Page      types.Int64  `tfsdk:"page"`
-	PageSize  types.Int64  `tfsdk:"page_size"`
-	Items     []restore    `tfsdk:"items"`
-	Total     types.Int64  `tfsdk:"total"`
+	Id        types.Int64 `tfsdk:"id"`
+	ProjectId string      `tfsdk:"project_id"`
+	Page      types.Int64 `tfsdk:"page"`
+	PageSize  types.Int64 `tfsdk:"page_size"`
+	Items     []restore   `tfsdk:"items"`
+	Total     types.Int64 `tfsdk:"total"`
 }
 
 type restore struct {
@@ -42,9 +43,9 @@ func (t restoresDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, di
 		MarkdownDescription: "restore data source",
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
-				MarkdownDescription: "ignore it, it is just for test.",
+				MarkdownDescription: "data source ID.",
 				Computed:            true,
-				Type:                types.StringType,
+				Type:                types.Int64Type,
 			},
 			"project_id": {
 				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_project datasource](../project).",
@@ -194,7 +195,7 @@ func (d restoresDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		})
 	}
 	data.Items = items
-	data.Id = types.String{Value: "just for test"}
+	data.Id = types.Int64{Value: rand.Int63()}
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

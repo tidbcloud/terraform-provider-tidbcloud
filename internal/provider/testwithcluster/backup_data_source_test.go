@@ -16,7 +16,7 @@ func TestAccBackupDataSource(t *testing.T) {
 			{
 				Config: testAccBackupDataSourceConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.tidbcloud_backup.test", "total"),
+					resource.TestCheckResourceAttrSet("data.tidbcloud_backups.test", "total"),
 				),
 			},
 		},
@@ -24,7 +24,7 @@ func TestAccBackupDataSource(t *testing.T) {
 }
 
 var testAccBackupDataSourceConfig = fmt.Sprintf(`
-data "tidbcloud_backup" "test" {
+data "tidbcloud_backups" "test" {
   project_id = %s
   cluster_id = %s
 }

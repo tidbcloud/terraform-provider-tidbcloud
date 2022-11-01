@@ -15,7 +15,7 @@ func TestAccProjectDataSource(t *testing.T) {
 			{
 				Config: testAccProjectDataSourceConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.tidbcloud_project.test", "total"),
+					resource.TestCheckResourceAttrSet("data.tidbcloud_projects.test", "total"),
 				),
 			},
 		},
@@ -23,6 +23,6 @@ func TestAccProjectDataSource(t *testing.T) {
 }
 
 const testAccProjectDataSourceConfig = `
-data "tidbcloud_project" "test" {
+data "tidbcloud_projects" "test" {
 }
 `
