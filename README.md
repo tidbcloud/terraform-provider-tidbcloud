@@ -203,7 +203,7 @@ Then you can apply the configuration with the `terraform apply`, you need to typ
 ```shell
 $ terraform apply --auto-approve
 data.tidbcloud_projects.example_project: Reading...
-data.tidbcloud_projects.example_project: Read complete after 1s [id=just for test]
+data.tidbcloud_projects.example_project: Read complete after 1s
 
 Changes to Outputs:
   + projects = [
@@ -435,7 +435,7 @@ Execute `terraform apply`, it is not recommended to use `terraform apply --auto-
 ```shell
 $ terraform apply
 data.tidbcloud_project.example_project: Reading...
-data.tidbcloud_project.example_project: Read complete after 1s [id=just for test]
+data.tidbcloud_project.example_project: Read complete after 1s
 
 Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
   + create
