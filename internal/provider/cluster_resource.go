@@ -262,7 +262,7 @@ func (t clusterResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 										Type:     types.StringType,
 									},
 									"storage_size_gib": {
-										MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).\n" +
+										MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 											"  - Can not modify storage_size_gib of an existing cluster.",
 										Required: true,
 										Type:     types.Int64Type,

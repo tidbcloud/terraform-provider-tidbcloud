@@ -46,7 +46,7 @@ output "output" {
 
 ### Read-Only
 
-- `id` (Number) data source ID.
+- `id` (String) data source ID.
 - `items` (Attributes List) The items of accessible projects. (see [below for nested schema](#nestedatt--items))
 - `total` (Number) The total number of accessible projects.
 

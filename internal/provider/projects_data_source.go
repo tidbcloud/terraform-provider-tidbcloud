@@ -10,14 +10,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"math/rand"
+	"strconv"
 )
 
 type projectsDataSourceData struct {
-	Id       types.Int64 `tfsdk:"id"`
-	Page     types.Int64 `tfsdk:"page"`
-	PageSize types.Int64 `tfsdk:"page_size"`
-	Projects []project   `tfsdk:"items"`
-	Total    types.Int64 `tfsdk:"total"`
+	Id       types.String `tfsdk:"id"`
+	Page     types.Int64  `tfsdk:"page"`
+	PageSize types.Int64  `tfsdk:"page_size"`
+	Projects []project    `tfsdk:"items"`
+	Total    types.Int64  `tfsdk:"total"`
 }
 
 type project struct {
@@ -42,7 +43,7 @@ func (t projectsDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, di
 			"id": {
 				MarkdownDescription: "data source ID.",
 				Computed:            true,
-				Type:                types.Int64Type,
+				Type:                types.StringType,
 			},
 			"page": {
 				MarkdownDescription: "Default:1 The number of pages.",
@@ -149,7 +150,7 @@ func (d projectsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		})
 	}
 	data.Projects = items
-	data.Id = types.Int64{Value: rand.Int63()}
+	data.Id = types.String{Value: strconv.FormatInt(rand.Int63(), 10)}
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

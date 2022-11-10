@@ -44,7 +44,7 @@ output "output" {
 ### Required
 
 - `cluster_id` (String) The ID of your cluster.
-- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_project datasource](../project).
+- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../datasource/projects.md).
 
 ### Optional
 
@@ -53,7 +53,7 @@ output "output" {
 
 ### Read-Only
 
-- `id` (Number) data source ID
+- `id` (String) data source ID
 - `items` (Attributes List) (see [below for nested schema](#nestedatt--items))
 - `total` (Number) The total number of backups in the project.
 

@@ -41,7 +41,7 @@ resource "tidbcloud_backup" "example" {
 
 - `cluster_id` (String) The ID of your cluster that you want to take a manual backup.
 - `name` (String) Specify the name for a manual backup. It is recommended that you use a unique name, so that it is easy to distinguish the backup when you query the backups.
-- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_project datasource](../project).
+- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).
 
 ### Optional
 

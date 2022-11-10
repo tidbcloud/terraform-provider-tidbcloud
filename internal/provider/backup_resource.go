@@ -38,7 +38,7 @@ func (t backupResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.D
 		MarkdownDescription: "backup resource",
 		Attributes: map[string]tfsdk.Attribute{
 			"project_id": {
-				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_project datasource](../project).",
+				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).",
 				Required:            true,
 				Type:                types.StringType,
 			},

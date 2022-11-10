@@ -10,10 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"math/rand"
+	"strconv"
 )
 
 type clusterSpecsDataSourceData struct {
-	Id    types.Int64       `tfsdk:"id"`
+	Id    types.String      `tfsdk:"id"`
 	Items []clusterSpecItem `tfsdk:"items"`
 	Total types.Int64       `tfsdk:"total"`
 }
@@ -67,7 +68,7 @@ func (t clusterSpecsDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema
 			"id": {
 				MarkdownDescription: "data source ID.",
 				Computed:            true,
-				Type:                types.Int64Type,
+				Type:                types.StringType,
 			},
 			"total": {
 				MarkdownDescription: "the total number of the spec.",
@@ -290,7 +291,7 @@ func (d clusterSpecsDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	data.Items = items
 	data.Total = types.Int64{Value: int64(len(items))}
-	data.Id = types.Int64{Value: rand.Int63()}
+	data.Id = types.String{Value: strconv.FormatInt(rand.Int63(), 10)}
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

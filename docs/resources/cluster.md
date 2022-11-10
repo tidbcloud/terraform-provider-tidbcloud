@@ -146,7 +146,7 @@ Required:
   - TiFlash do not support decreasing node quantity.
 - `node_size` (String) The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - Can not modify node_size of an existing cluster.
-- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - Can not modify storage_size_gib of an existing cluster.
 
 

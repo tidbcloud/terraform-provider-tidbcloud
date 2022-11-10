@@ -14,7 +14,7 @@ import (
 )
 
 type clustersDataSourceData struct {
-	Id        types.Int64    `tfsdk:"id"`
+	Id        types.String   `tfsdk:"id"`
 	Page      types.Int64    `tfsdk:"page"`
 	PageSize  types.Int64    `tfsdk:"page_size"`
 	Clusters  []clusterItems `tfsdk:"items"`
@@ -74,7 +74,7 @@ func (t clustersDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, di
 			"id": {
 				MarkdownDescription: "data source ID.",
 				Computed:            true,
-				Type:                types.Int64Type,
+				Type:                types.StringType,
 			},
 			"page": {
 				MarkdownDescription: "Default:1 The number of pages.",
@@ -382,7 +382,7 @@ func (d clustersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 	data.Clusters = items
 
-	data.Id = types.Int64{Value: rand.Int63()}
+	data.Id = types.String{Value: strconv.FormatInt(rand.Int63(), 10)}
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

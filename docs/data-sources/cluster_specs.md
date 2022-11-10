@@ -39,7 +39,7 @@ output "output" {
 
 ### Read-Only
 
-- `id` (Number) data source ID.
+- `id` (String) data source ID.
 - `items` (Attributes List) (see [below for nested schema](#nestedatt--items))
 - `total` (Number) the total number of the spec.
 
