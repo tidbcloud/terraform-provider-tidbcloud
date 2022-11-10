@@ -40,7 +40,7 @@ output "output" {
 
 ### Required
 
-- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects).
+- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).
 
 ### Optional
 

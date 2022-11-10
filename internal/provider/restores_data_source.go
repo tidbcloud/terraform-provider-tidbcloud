@@ -49,7 +49,7 @@ func (t restoresDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, di
 				Type:                types.StringType,
 			},
 			"project_id": {
-				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects).",
+				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).",
 				Required:            true,
 				Type:                types.StringType,
 			},
