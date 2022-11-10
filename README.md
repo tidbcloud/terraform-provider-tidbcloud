@@ -255,7 +255,7 @@ Now, you get all the available projects, copy one of the id you need. Here we us
 
 ### Get cluster spec info with cluster-specs Data Source
 
-Before creating a TiDB cluster, you may need to get the available config values (providers, regions, etc.) by cluster-spec Data Source:
+Before creating a TiDB cluster, you may need to get the available config values (providers, regions, etc.) by cluster-specs Data Source:
 
 ```
 data "tidbcloud_cluster_specs" "example_cluster_spec" {
