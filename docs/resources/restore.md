@@ -61,7 +61,7 @@ resource "tidbcloud_restore" "example" {
 - `backup_id` (String) The ID of the backup
 - `config` (Attributes) The configuration of the cluster (see [below for nested schema](#nestedatt--config))
 - `name` (String) The name of the restore
-- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_project datasource](../project).
+- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).
 
 ### Read-Only
 
