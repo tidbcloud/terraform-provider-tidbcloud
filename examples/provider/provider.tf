@@ -4,7 +4,7 @@ terraform {
   required_providers {
     tidbcloud = {
       source  = "tidbcloud/tidbcloud"
-      version = "~> 0.0.1"
+      version = "~> 1.1.0"
     }
   }
   required_version = ">= 1.0.0"
