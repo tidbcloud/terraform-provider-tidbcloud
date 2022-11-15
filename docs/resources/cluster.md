@@ -114,8 +114,8 @@ Optional:
 
 Required:
 
-- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
-- `node_size` (String) The size of the TiDB component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
+- `node_size` (String) The size of the TiDB component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.
   - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.
   - Can not modify node_size of an existing cluster.

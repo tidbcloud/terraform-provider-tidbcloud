@@ -232,7 +232,7 @@ func (d clusterSpecsDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	tflog.Trace(ctx, "read cluster_spec data source")
+	tflog.Trace(ctx, "read cluster_specs data source")
 	spec, err := d.provider.client.GetSpecifications()
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call read specifications, got error: %s", err))
