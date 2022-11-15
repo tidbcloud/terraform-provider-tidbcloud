@@ -32,6 +32,14 @@ export TIDBCLOUD_PROJECT_ID=${your_project_id}
 TF_ACC=1 go test -v ./internal/provider/testwithproject
 ```
 
+### Cost
+
+Some tests may generate costs and will not be tested by default. To run them, you need to set the environment variable `TIDBCLOUD_ENABLE_COST` to `true`.
+
+```
+export TIDBCLOUD_ENABLE_COST=true
+```
+
 ## Test With Cluster
 The tests need pre-created TiDB cluster are put into the /internal/provider/testwithcluster path
 

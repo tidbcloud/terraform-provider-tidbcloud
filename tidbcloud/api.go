@@ -43,6 +43,21 @@ func (c *TiDBCloudClient) GetAllProjects(page, pageSize int64) (*GetAllProjectsR
 	return &result, nil
 }
 
+// GetClusters returns all the clusters
+func (c *TiDBCloudClient) GetClusters(projectId string, page, pageSize int64) (*GetAllClustersResp, error) {
+	var (
+		url    = fmt.Sprintf("%s/api/v1beta/projects/%s/clusters?page=%d&page_size=%d", host, projectId, page, pageSize)
+		result GetAllClustersResp
+	)
+
+	_, err := doGET(url, nil, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 // CreateCluster create a cluster in the given project
 func (c *TiDBCloudClient) CreateCluster(projectID string, clusterReq *CreateClusterReq) (*CreateClusterResp, error) {
 	var (

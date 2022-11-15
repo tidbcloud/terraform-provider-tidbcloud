@@ -15,7 +15,7 @@ func TestAccClusterSpecDataSource(t *testing.T) {
 			{
 				Config: testAccClusterSpecDataSourceConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.tidbcloud_cluster_spec.test", "total"),
+					resource.TestCheckResourceAttrSet("data.tidbcloud_cluster_specs.test", "total"),
 				),
 			},
 		},
@@ -23,6 +23,6 @@ func TestAccClusterSpecDataSource(t *testing.T) {
 }
 
 const testAccClusterSpecDataSourceConfig = `
-data "tidbcloud_cluster_spec" "test" {
+data "tidbcloud_cluster_specs" "test" {
 }
 `

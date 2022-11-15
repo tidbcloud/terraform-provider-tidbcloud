@@ -10,6 +10,9 @@ import (
 // create dedicated cluster may cause cost, make sure you have enough balance
 // update node_quantity is not tested for create dedicated tier needs too much time!
 func TestAccClusterResource(t *testing.T) {
+	if !enableCost {
+		t.Skip("Skip test due to cost")
+	}
 	reg, _ := regexp.Compile(".*Unable to update Serverless cluster.*")
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },

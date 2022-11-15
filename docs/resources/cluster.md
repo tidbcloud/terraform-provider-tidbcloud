@@ -74,13 +74,14 @@ resource "tidbcloud_cluster" "serverless_tier_cluster" {
 - `cluster_type` (String) Enum: "DEDICATED" "DEVELOPER", The cluster type.
 - `config` (Attributes) The configuration of the cluster. (see [below for nested schema](#nestedatt--config))
 - `name` (String) The name of the cluster.
-- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_project datasource](../data-sources/cluster_spec.md).
-- `region` (String) the region value should match the cloud provider's region code. You can get the complete list of available regions from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).
+- `region` (String) the region value should match the cloud provider's region code. You can get the complete list of available regions from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
 
 ### Read-Only
 
+- `create_timestamp` (String) The creation time of the cluster in Unix timestamp seconds (epoch time).
 - `id` (String) The ID of the cluster.
-- `status` (String) the status of the cluster.
+- `status` (Attributes) The status of the cluster. (see [below for nested schema](#nestedatt--status))
 
 <a id="nestedatt--config"></a>
 ### Nested Schema for `config`
@@ -125,14 +126,14 @@ Required:
 
 Required:
 
-- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - TiKV do not support decreasing node quantity.
   - The node_quantity of TiKV must be a multiple of 3.
-- `node_size` (String) The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_size` (String) The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.
   - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.
   - Can not modify node_size of an existing cluster.
-- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - Can not modify storage_size_gib of an existing cluster.
 
 
@@ -141,11 +142,11 @@ Required:
 
 Required:
 
-- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_quantity` (Number) The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - TiFlash do not support decreasing node quantity.
-- `node_size` (String) The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `node_size` (String) The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - Can not modify node_size of an existing cluster.
-- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_spec datasource](../data-sources/cluster_spec.md).
+- `storage_size_gib` (Number) The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
   - Can not modify storage_size_gib of an existing cluster.
 
 
@@ -157,5 +158,42 @@ Required:
 
 - `cidr` (String) The IP address or CIDR range that you want to add to the cluster's IP access list.
 - `description` (String) Description that explains the purpose of the entry.
+
+
+
+<a id="nestedatt--status"></a>
+### Nested Schema for `status`
+
+Read-Only:
+
+- `cluster_status` (String) Status of the cluster.
+- `connection_strings` (Attributes) Connection strings. (see [below for nested schema](#nestedatt--status--connection_strings))
+- `tidb_version` (String) TiDB version.
+
+<a id="nestedatt--status--connection_strings"></a>
+### Nested Schema for `status.connection_strings`
+
+Read-Only:
+
+- `default_user` (String) The default TiDB user for connection.
+- `standard` (Attributes) Standard connection string. (see [below for nested schema](#nestedatt--status--connection_strings--standard))
+- `vpc_peering` (Attributes) VPC peering connection string. (see [below for nested schema](#nestedatt--status--connection_strings--vpc_peering))
+
+<a id="nestedatt--status--connection_strings--standard"></a>
+### Nested Schema for `status.connection_strings.standard`
+
+Read-Only:
+
+- `host` (String) The host of standard connection.
+- `port` (Number) The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.
+
+
+<a id="nestedatt--status--connection_strings--vpc_peering"></a>
+### Nested Schema for `status.connection_strings.vpc_peering`
+
+Read-Only:
+
+- `host` (String) The host of VPC peering connection.
+- `port` (Number) The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.
 
 

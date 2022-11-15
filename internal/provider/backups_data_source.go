@@ -9,9 +9,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"math/rand"
+	"strconv"
 )
 
-type backupDataSourceData struct {
+type backupsDataSourceData struct {
 	Id        types.String `tfsdk:"id"`
 	ProjectId string       `tfsdk:"project_id"`
 	ClusterId string       `tfsdk:"cluster_id"`
@@ -32,22 +34,22 @@ type backup struct {
 }
 
 // Ensure provider defined types fully satisfy framework interfaces
-var _ provider.DataSourceType = backupDataSourceType{}
-var _ datasource.DataSource = backupDataSource{}
+var _ provider.DataSourceType = backupsDataSourceType{}
+var _ datasource.DataSource = backupsDataSource{}
 
-type backupDataSourceType struct{}
+type backupsDataSourceType struct{}
 
-func (t backupDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (t backupsDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
-		MarkdownDescription: "backup data source",
+		MarkdownDescription: "backups data source",
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
-				MarkdownDescription: "ignore it, it is just for test.",
+				MarkdownDescription: "data source ID",
 				Computed:            true,
 				Type:                types.StringType,
 			},
 			"project_id": {
-				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_project datasource](../project).",
+				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../datasource/projects.md).",
 				Required:            true,
 				Type:                types.StringType,
 			},
@@ -117,20 +119,20 @@ func (t backupDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag
 	}, nil
 }
 
-func (t backupDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
+func (t backupsDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	provider, diags := convertProviderType(in)
 
-	return backupDataSource{
+	return backupsDataSource{
 		provider: provider,
 	}, diags
 }
 
-type backupDataSource struct {
+type backupsDataSource struct {
 	provider tidbcloudProvider
 }
 
-func (d backupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data backupDataSourceData
+func (d backupsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data backupsDataSourceData
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -145,14 +147,14 @@ func (d backupDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		data.PageSize = types.Int64{Value: 10}
 	}
 
-	tflog.Trace(ctx, "read backup data source")
+	tflog.Trace(ctx, "read backups data source")
 	backups, err := d.provider.client.GetBackups(data.ProjectId, data.ClusterId, data.Page.Value, data.PageSize.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetBackups, got error: %s", err))
 		return
 	}
 
-	data.Id = types.String{Value: "just for test"}
+	data.Id = types.String{Value: strconv.FormatInt(rand.Int63(), 10)}
 	data.Total = types.Int64{Value: backups.Total}
 	var items []backup
 	for _, key := range backups.Items {

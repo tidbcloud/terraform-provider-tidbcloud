@@ -10,9 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"math/rand"
+	"strconv"
 )
 
-type restoreDataSourceData struct {
+type restoresDataSourceData struct {
 	Id        types.String `tfsdk:"id"`
 	ProjectId string       `tfsdk:"project_id"`
 	Page      types.Int64  `tfsdk:"page"`
@@ -32,22 +34,22 @@ type restore struct {
 }
 
 // Ensure provider defined types fully satisfy framework interfaces
-var _ provider.DataSourceType = restoreDataSourceType{}
-var _ datasource.DataSource = restoreDataSource{}
+var _ provider.DataSourceType = restoresDataSourceType{}
+var _ datasource.DataSource = restoresDataSource{}
 
-type restoreDataSourceType struct{}
+type restoresDataSourceType struct{}
 
-func (t restoreDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (t restoresDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
-		MarkdownDescription: "restore data source",
+		MarkdownDescription: "restores data source",
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
-				MarkdownDescription: "ignore it, it is just for test.",
+				MarkdownDescription: "data source ID.",
 				Computed:            true,
 				Type:                types.StringType,
 			},
 			"project_id": {
-				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_project datasource](../project).",
+				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).",
 				Required:            true,
 				Type:                types.StringType,
 			},
@@ -141,20 +143,20 @@ func (t restoreDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, dia
 	}, nil
 }
 
-func (t restoreDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
+func (t restoresDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	provider, diags := convertProviderType(in)
 
-	return restoreDataSource{
+	return restoresDataSource{
 		provider: provider,
 	}, diags
 }
 
-type restoreDataSource struct {
+type restoresDataSource struct {
 	provider tidbcloudProvider
 }
 
-func (d restoreDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data restoreDataSourceData
+func (d restoresDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data restoresDataSourceData
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -169,7 +171,7 @@ func (d restoreDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		data.PageSize = types.Int64{Value: 10}
 	}
 
-	tflog.Trace(ctx, "read restore data source")
+	tflog.Trace(ctx, "read restores data source")
 	restores, err := d.provider.client.GetRestoreTasks(data.ProjectId, data.Page.Value, data.PageSize.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetRestoreTasks, got error: %s", err))
@@ -194,7 +196,7 @@ func (d restoreDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		})
 	}
 	data.Items = items
-	data.Id = types.String{Value: "just for test"}
+	data.Id = types.String{Value: strconv.FormatInt(rand.Int63(), 10)}
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

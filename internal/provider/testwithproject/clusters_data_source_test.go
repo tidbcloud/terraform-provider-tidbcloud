@@ -7,24 +7,24 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
-func TestAccRestoreDataSource(t *testing.T) {
+func TestAccClusterDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Read testing
 			{
-				Config: testAccRestoreDataSourceConfig,
+				Config: testAccClusterDataSourceConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.tidbcloud_restore.test", "total"),
+					resource.TestCheckResourceAttrSet("data.tidbcloud_clusters.test", "total"),
 				),
 			},
 		},
 	})
 }
 
-var testAccRestoreDataSourceConfig = fmt.Sprintf(`
-data "tidbcloud_restore" "test" {
+var testAccClusterDataSourceConfig = fmt.Sprintf(`
+data "tidbcloud_clusters" "test" {
   project_id = %s
 }
 `, projectId)

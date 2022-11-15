@@ -9,9 +9,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"math/rand"
+	"strconv"
 )
 
-type projectDataSourceData struct {
+type projectsDataSourceData struct {
 	Id       types.String `tfsdk:"id"`
 	Page     types.Int64  `tfsdk:"page"`
 	PageSize types.Int64  `tfsdk:"page_size"`
@@ -29,17 +31,17 @@ type project struct {
 }
 
 // Ensure provider defined types fully satisfy framework interfaces
-var _ provider.DataSourceType = projectDataSourceType{}
-var _ datasource.DataSource = projectDataSource{}
+var _ provider.DataSourceType = projectsDataSourceType{}
+var _ datasource.DataSource = projectsDataSource{}
 
-type projectDataSourceType struct{}
+type projectsDataSourceType struct{}
 
-func (t projectDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (t projectsDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
-		MarkdownDescription: "project data source",
+		MarkdownDescription: "projects data source",
 		Attributes: map[string]tfsdk.Attribute{
 			"id": {
-				MarkdownDescription: "ignore it, it is just for test.",
+				MarkdownDescription: "data source ID.",
 				Computed:            true,
 				Type:                types.StringType,
 			},
@@ -100,20 +102,20 @@ func (t projectDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, dia
 	}, nil
 }
 
-func (t projectDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
+func (t projectsDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	provider, diags := convertProviderType(in)
 
-	return projectDataSource{
+	return projectsDataSource{
 		provider: provider,
 	}, diags
 }
 
-type projectDataSource struct {
+type projectsDataSource struct {
 	provider tidbcloudProvider
 }
 
-func (d projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data projectDataSourceData
+func (d projectsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data projectsDataSourceData
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -128,7 +130,7 @@ func (d projectDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		data.PageSize = types.Int64{Value: 10}
 	}
 
-	tflog.Trace(ctx, "read project data source")
+	tflog.Trace(ctx, "read projects data source")
 	projects, err := d.provider.client.GetAllProjects(data.Page.Value, data.PageSize.Value)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call read project, got error: %s", err))
@@ -148,7 +150,7 @@ func (d projectDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		})
 	}
 	data.Projects = items
-	data.Id = types.String{Value: "just for test"}
+	data.Id = types.String{Value: strconv.FormatInt(rand.Int63(), 10)}
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
