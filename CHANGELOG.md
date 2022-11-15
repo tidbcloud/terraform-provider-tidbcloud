@@ -1,3 +1,11 @@
+## [0.1.1] 2022-11-15
+
+**Docs**
+- Fix docs forgeting to change cluster_spec data source to cluster_specs data source.
+
+**Deps**
+- Bump github.com/hashicorp/terraform-plugin-go from 0.14.0 to 0.14.1.
+
 ## [0.1.0] 2022-11-15
 
 **Compatibility Changes**
