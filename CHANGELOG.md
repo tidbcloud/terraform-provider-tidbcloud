@@ -1,3 +1,17 @@
+## [0.1.0] 2022-11-15
+
+**Compatibility Changes**
+- backup datasource is renamed to backups datasource.
+- project datasource is renamed to projects datasource.
+- restore datasource is renamed to restores datasource.
+- cluster_spec datasource is renamed to cluster_specs datasource.
+
+**Features**
+- Support clusters datasource.
+
+**Changes**
+- Supplement the status information in cluster resource.
+
 ## [0.0.4] 2022-10-29
 
 Docs:
