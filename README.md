@@ -103,7 +103,7 @@ terraform {
   required_providers {
     tidbcloud = {
       source = "tidbcloud/tidbcloud"
-      version = "~> 1.1.0"
+      version = "~> 0.1.0"
     }
   }
   required_version = ">= 1.0.0"
@@ -121,7 +121,7 @@ Initializing the backend...
 
 Initializing provider plugins...
 - Reusing previous version of tidbcloud/tidbcloud from the dependency lock file
-- Using previously-installed tidbcloud/tidbcloud v1.1.0
+- Using previously-installed tidbcloud/tidbcloud v0.1.0
 
 Terraform has been successfully initialized!
 
@@ -143,7 +143,7 @@ terraform {
   required_providers {
     tidbcloud = {
       source = "tidbcloud/tidbcloud"
-      version = "~> 1.1.0"
+      version = "~> 0.1.0"
     }
   }
   required_version = ">= 1.0.0"
@@ -177,7 +177,7 @@ terraform {
   required_providers {
     tidbcloud = {
       source = "tidbcloud/tidbcloud"
-      version = "~> 1.1.0"
+      version = "~> 0.1.0"
     }
   }
   required_version = ">= 1.0.0"
