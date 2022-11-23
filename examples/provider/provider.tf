@@ -1,5 +1,3 @@
-# We provide a full example in README https://github.com/tidbcloud/terraform-provider-tidbcloud#using-the-provider
-
 terraform {
   required_providers {
     tidbcloud = {
@@ -10,6 +8,11 @@ terraform {
   required_version = ">= 1.0.0"
 }
 
+# Instructions for getting an API Key
+# https://docs.pingcap.com/tidbcloud/api/v1beta#section/Authentication/API-Key-Management
+# You can also pass the keys through environment variables:
+# export TIDBCLOUD_PUBLIC_KEY = "fake_public_key"
+# export TIDBCLOUD_PRIVATE_KEY = "fake_private_key"
 provider "tidbcloud" {
   public_key  = "fake_public_key"
   private_key = "fake_private_key"
