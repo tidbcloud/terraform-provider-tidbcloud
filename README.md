@@ -55,9 +55,6 @@ brew tap hashicorp/tap
 brew install hashicorp/tap/terraform
 ```
 
-Set the environment variables
-
-
 Build a cluster.tf file:
 
 ```
