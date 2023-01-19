@@ -89,9 +89,9 @@ resource "tidbcloud_cluster" "serverless_tier_cluster" {
 Set environment variables
 
 ```
-export TIDBCLOUD_PUBLIC_KEY = "fake_public_key"
-export TIDBCLOUD_PRIVATE_KEY = "fake_private_key"
-export TF_VAR_password = "fake_password"
+export TIDBCLOUD_PUBLIC_KEY=fake_public_key
+export TIDBCLOUD_PRIVATE_KEY=fake_private_key
+export TF_VAR_password=fake_password
 ```
 
 Execute the following commands to create a serverless tier
