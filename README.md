@@ -48,7 +48,7 @@ DataSource
 
 ## Quick Start
 
-Install terraform
+Install terraform in Mac. See [official doc](https://learn.hashicorp.com/tutorials/terraform/install-cli?in=terraform/aws-get-started) for other OS.
 
 ```
 brew tap hashicorp/tap
@@ -57,14 +57,16 @@ brew install hashicorp/tap/terraform
 
 Set the environment variables
 
-```
-export TIDBCLOUD_PUBLIC_KEY = "fake_public_key"
-export TIDBCLOUD_PRIVATE_KEY = "fake_private_key"
-```
 
 Build a cluster.tf file:
 
 ```
+variable "password" {
+  type      = string
+  nullable  = false
+  sensitive = true
+}
+
 terraform {
   required_providers {
     tidbcloud = {
@@ -82,9 +84,17 @@ resource "tidbcloud_cluster" "serverless_tier_cluster" {
   cloud_provider = "AWS"
   region         = "us-east-1"
   config = {
-    root_password = "Fake_root_password1"
+    root_password = var.password
   }
 }
+```
+
+Set environment variables
+
+```
+export TIDBCLOUD_PUBLIC_KEY = "fake_public_key"
+export TIDBCLOUD_PRIVATE_KEY = "fake_private_key"
+export TF_VAR_password = "fake_password"
 ```
 
 Execute the following commands to create a serverless tier
