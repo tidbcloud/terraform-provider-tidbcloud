@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	clusterApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/cluster"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -46,13 +47,13 @@ type tiflashSpec struct {
 }
 
 type nodeQuantityRange struct {
-	Min  int `tfsdk:"min"`
-	Step int `tfsdk:"step"`
+	Min  int32 `tfsdk:"min"`
+	Step int32 `tfsdk:"step"`
 }
 
 type storageSizeGiRange struct {
-	Min int `tfsdk:"min"`
-	Max int `tfsdk:"max"`
+	Min int32 `tfsdk:"min"`
+	Max int32 `tfsdk:"max"`
 }
 
 // Ensure provider defined types fully satisfy framework interfaces
@@ -233,14 +234,14 @@ func (d clusterSpecsDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	tflog.Trace(ctx, "read cluster_specs data source")
-	spec, err := d.provider.client.GetSpecifications()
+	listProviderRegionsOK, err := d.provider.client.ListProviderRegions(clusterApi.NewListProviderRegionsParams())
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call read specifications, got error: %s", err))
 		return
 	}
 
 	var items []clusterSpecItem
-	for _, key := range spec.Items {
+	for _, key := range listProviderRegionsOK.Payload.Items {
 		var tidbs []tidbSpec
 		for _, tidb := range key.Tidb {
 			tidbs = append(tidbs, tidbSpec{

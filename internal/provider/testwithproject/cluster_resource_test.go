@@ -73,19 +73,14 @@ func TestAccClusterResource(t *testing.T) {
 func testAccServerlessClusterResourceConfig(name string) string {
 	return fmt.Sprintf(`
 resource "tidbcloud_cluster" "test" {
-  project_id     = %s
-  name           = "%s"
-  cluster_type   = "DEVELOPER"
-  cloud_provider = "AWS"
-  region         = "us-east-1"
-  config = {
-    root_password = "Shiyuhang1."
-    ip_access_list = [{
-        cidr        = "0.0.0.0/0"
-        description = "all"
-        }
-      ]
-  }
+ project_id     = %s
+ name           = "%s"
+ cluster_type   = "DEVELOPER"
+ cloud_provider = "AWS"
+ region         = "us-east-1"
+ config = {
+   root_password = "Shiyuhang1."
+ }
 }
 `, projectId, name)
 }
@@ -93,25 +88,25 @@ resource "tidbcloud_cluster" "test" {
 func testAccDedicatedClusterResourceConfig(name string) string {
 	return fmt.Sprintf(`
 resource "tidbcloud_cluster" "test" {
-  project_id     = %s
-  name           = "%s"
-  cluster_type   = "DEDICATED"
-  cloud_provider = "AWS"
-  region         = "us-east-1"
-  config = {
-    root_password = "Shiyuhang1."
-    components = {
-      tidb = {
-        node_size : "2C8G"
-        node_quantity : 1
-      }
-      tikv = {
-        node_size : "2C8G"
-        storage_size_gib : 500,
-        node_quantity : 3
-      }
-    }
-  }
+ project_id     = %s
+ name           = "%s"
+ cluster_type   = "DEDICATED"
+ cloud_provider = "AWS"
+ region         = "us-east-1"
+ config = {
+   root_password = "Shiyuhang1."
+   components = {
+     tidb = {
+       node_size : "2C8G"
+       node_quantity : 1
+     }
+     tikv = {
+       node_size : "2C8G"
+       storage_size_gib : 500,
+       node_quantity : 3
+     }
+   }
+ }
 }
 `, projectId, name)
 }

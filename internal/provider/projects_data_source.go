@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	projectApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/project"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -131,18 +132,18 @@ func (d projectsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	tflog.Trace(ctx, "read projects data source")
-	projects, err := d.provider.client.GetAllProjects(data.Page.Value, data.PageSize.Value)
+	listProjectsOK, err := d.provider.client.ListProjects(projectApi.NewListProjectsParams().WithPage(&data.Page.Value).WithPageSize(&data.PageSize.Value))
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call read project, got error: %s", err))
 		return
 	}
 
-	data.Total = types.Int64{Value: projects.Total}
+	data.Total = types.Int64{Value: *listProjectsOK.Payload.Total}
 	var items []project
-	for _, key := range projects.Items {
+	for _, key := range listProjectsOK.Payload.Items {
 		items = append(items, project{
-			Id:              key.Id,
-			OrgId:           key.OrgId,
+			Id:              key.ID,
+			OrgId:           key.OrgID,
 			Name:            key.Name,
 			ClusterCount:    key.ClusterCount,
 			UserCount:       key.UserCount,

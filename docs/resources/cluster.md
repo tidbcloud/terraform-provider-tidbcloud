@@ -46,7 +46,7 @@ resource "tidbcloud_cluster" "dedicated_tier_cluster" {
       }
       tiflash = {
         node_size : "8C64G"
-        storage_size_gib : 5000,
+        storage_size_gib : 2048,
         node_quantity : 2
       }
     }
