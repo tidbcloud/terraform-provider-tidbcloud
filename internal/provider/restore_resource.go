@@ -3,8 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
-
+	restoreApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/restore"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -270,45 +269,44 @@ func (r restoreResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	tflog.Trace(ctx, "create restore resource")
-
-	createRestoreTaskResp, err := r.provider.client.CreateRestoreTask(data.ProjectId, buildCreateRestoreTaskReq(data))
+	createRestoreTaskOK, err := r.provider.client.CreateRestoreTask(restoreApi.NewCreateRestoreTaskParams().WithProjectID(data.ProjectId).WithBody(buildCreateRestoreTaskBody(data)))
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call CreateRestoreTask, got error: %s", err))
 		return
 	}
 
 	tflog.Trace(ctx, "read restore resource")
-	getRestoreTaskResp, err := r.provider.client.GetRestoreTask(data.ProjectId, createRestoreTaskResp.Id)
+	getRestoreTaskOK, err := r.provider.client.GetRestoreTask(restoreApi.NewGetRestoreTaskParams().WithProjectID(data.ProjectId).WithRestoreID(createRestoreTaskOK.Payload.ID))
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetRestoreTask, got error: %s", err))
 		return
 	}
-	refreshRestoreResourceData(getRestoreTaskResp, &data)
+	refreshRestoreResourceData(getRestoreTaskOK.Payload, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 }
 
-func buildCreateRestoreTaskReq(data restoreResourceData) tidbcloud.CreateRestoreTaskReq {
+func buildCreateRestoreTaskBody(data restoreResourceData) restoreApi.CreateRestoreTaskBody {
 	tidb := data.Config.Components.TiDB
 	tikv := data.Config.Components.TiKV
 	tiflash := data.Config.Components.TiFlash
 	// required
-	payload := tidbcloud.CreateRestoreTaskReq{
-		BackupId: data.BackupId,
-		Name:     data.Name,
-		Config: tidbcloud.ClusterConfig{
-			RootPassword: data.Config.RootPassword.Value,
-			Components: tidbcloud.Components{
-				TiDB: tidbcloud.ComponentTiDB{
-					NodeSize:     tidb.NodeSize,
-					NodeQuantity: tidb.NodeQuantity,
+	payload := restoreApi.CreateRestoreTaskBody{
+		BackupID: &data.BackupId,
+		Name:     &data.Name,
+		Config: &restoreApi.CreateRestoreTaskParamsBodyConfig{
+			RootPassword: &data.Config.RootPassword.Value,
+			Components: &restoreApi.CreateRestoreTaskParamsBodyConfigComponents{
+				Tidb: &restoreApi.CreateRestoreTaskParamsBodyConfigComponentsTidb{
+					NodeSize:     &tidb.NodeSize,
+					NodeQuantity: &tidb.NodeQuantity,
 				},
-				TiKV: tidbcloud.ComponentTiKV{
-					NodeSize:       tikv.NodeSize,
-					StorageSizeGib: tikv.StorageSizeGib,
-					NodeQuantity:   tikv.NodeQuantity,
+				Tikv: &restoreApi.CreateRestoreTaskParamsBodyConfigComponentsTikv{
+					NodeSize:       &tikv.NodeSize,
+					StorageSizeGib: &tikv.StorageSizeGib,
+					NodeQuantity:   &tikv.NodeQuantity,
 				},
 			},
 		},
@@ -316,22 +314,22 @@ func buildCreateRestoreTaskReq(data restoreResourceData) tidbcloud.CreateRestore
 
 	// port is optional
 	if !data.Config.Port.IsNull() && !data.Config.Port.IsUnknown() {
-		payload.Config.Port = int(data.Config.Port.Value)
+		payload.Config.Port = int32(data.Config.Port.Value)
 	}
 	// tiflash is optional
 	if tiflash != nil {
-		payload.Config.Components.TiFlash = &tidbcloud.ComponentTiFlash{
-			NodeSize:       tiflash.NodeSize,
-			StorageSizeGib: tiflash.StorageSizeGib,
-			NodeQuantity:   tiflash.NodeQuantity,
+		payload.Config.Components.Tiflash = &restoreApi.CreateRestoreTaskParamsBodyConfigComponentsTiflash{
+			NodeSize:       &tiflash.NodeSize,
+			StorageSizeGib: &tiflash.StorageSizeGib,
+			NodeQuantity:   &tiflash.NodeQuantity,
 		}
 	}
-	// ip_access_list  is optional
+	// ip_access_list is optional
 	if data.Config.IPAccessList != nil {
-		var IPAccessList []tidbcloud.IPAccess
+		var IPAccessList []*restoreApi.CreateRestoreTaskParamsBodyConfigIPAccessListItems0
 		for _, key := range data.Config.IPAccessList {
-			IPAccessList = append(IPAccessList, tidbcloud.IPAccess{
-				CIDR:        key.CIDR,
+			IPAccessList = append(IPAccessList, &restoreApi.CreateRestoreTaskParamsBodyConfigIPAccessListItems0{
+				Cidr:        &key.CIDR,
 				Description: key.Description,
 			})
 		}
@@ -352,25 +350,25 @@ func (r restoreResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	tflog.Trace(ctx, "read restore resource")
-	getRestoreTaskResp, err := r.provider.client.GetRestoreTask(data.ProjectId, data.RestoreId.Value)
+	getRestoreTaskOK, err := r.provider.client.GetRestoreTask(restoreApi.NewGetRestoreTaskParams().WithProjectID(data.ProjectId).WithRestoreID(data.RestoreId.Value))
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetRestoreTask, got error: %s", err))
 		return
 	}
 
-	refreshRestoreResourceData(getRestoreTaskResp, &data)
+	refreshRestoreResourceData(getRestoreTaskOK.Payload, &data)
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 }
 
-func refreshRestoreResourceData(resp *tidbcloud.GetRestoreTaskResp, data *restoreResourceData) {
-	data.ClusterId = types.String{Value: resp.ClusterId}
-	data.RestoreId = types.String{Value: resp.Id}
-	data.CreateTimestamp = types.String{Value: resp.CreateTimestamp}
+func refreshRestoreResourceData(resp *restoreApi.GetRestoreTaskOKBody, data *restoreResourceData) {
+	data.ClusterId = types.String{Value: resp.ClusterID}
+	data.RestoreId = types.String{Value: resp.ID}
+	data.CreateTimestamp = types.String{Value: resp.CreateTimestamp.String()}
 	data.Status = types.String{Value: resp.Status}
 	data.Cluster = &cluster{
-		Id:     resp.Cluster.Id,
+		Id:     resp.Cluster.ID,
 		Name:   resp.Cluster.Name,
 		Status: resp.Cluster.Status,
 	}

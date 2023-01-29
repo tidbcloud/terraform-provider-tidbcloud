@@ -22,7 +22,7 @@ type tidbcloudProvider struct {
 	// client can contain the upstream provider SDK or HTTP client used to
 	// communicate with the upstream service. Resource and DataSource
 	// implementations can then make calls using this client.
-	client *tidbcloud.TiDBCloudClient
+	client tidbcloud.TiDBCloudClient
 
 	// configured is set to true at the end of the Configure method.
 	// This can be used in Resource and DataSource implementations to verify
@@ -104,7 +104,11 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	// Create a new tidb client and set it to the provider client
-	c, err := tidbcloud.NewTiDBCloudClient(publicKey, privateKey, p.version)
+	var host = tidbcloud.DefaultApiUrl
+	if os.Getenv("TIDBCLOUD_HOST") != "" {
+		host = os.Getenv("TIDBCLOUD_HOST")
+	}
+	c, err := tidbcloud.NewClientDelegate(publicKey, privateKey, host, p.version)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create client",

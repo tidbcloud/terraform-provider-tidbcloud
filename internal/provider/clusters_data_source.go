@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	clusterApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/cluster"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -35,7 +36,7 @@ type clusterItems struct {
 }
 
 type clusterConfigDataSource struct {
-	Port       int64       `tfsdk:"port"`
+	Port       int32       `tfsdk:"port"`
 	Components *components `tfsdk:"components"`
 }
 
@@ -53,12 +54,12 @@ type connection struct {
 
 type connectionStandard struct {
 	Host string `tfsdk:"host"`
-	Port int64  `tfsdk:"port"`
+	Port int32  `tfsdk:"port"`
 }
 
 type connectionVpcPeering struct {
 	Host string `tfsdk:"host"`
-	Port int64  `tfsdk:"port"`
+	Port int32  `tfsdk:"port"`
 }
 
 // Ensure provider defined types fully satisfy framework interfaces
@@ -320,34 +321,35 @@ func (d clustersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	tflog.Trace(ctx, "read clusters data source")
-	clusters, err := d.provider.client.GetClusters(data.ProjectId.Value, data.Page.Value, data.PageSize.Value)
+	listClustersOfProjectParams := clusterApi.NewListClustersOfProjectParams().WithProjectID(data.ProjectId.Value).WithPage(&data.Page.Value).WithPageSize(&data.PageSize.Value)
+	listClustersOfProjectResp, err := d.provider.client.ListClustersOfProject(listClustersOfProjectParams)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call read cluster, got error: %s", err))
 		return
 	}
 
-	data.Total = types.Int64{Value: clusters.Total}
+	data.Total = types.Int64{Value: *listClustersOfProjectResp.Payload.Total}
 	var items []clusterItems
-	for _, key := range clusters.Items {
+	for _, key := range listClustersOfProjectResp.Payload.Items {
 		clusterItem := clusterItems{
-			Id:              strconv.FormatUint(key.Id, 10),
-			ProjectId:       strconv.FormatUint(key.ProjectId, 10),
+			Id:              *key.ID,
+			ProjectId:       *key.ProjectID,
 			Name:            key.Name,
 			CloudProvider:   key.CloudProvider,
 			ClusterType:     key.ClusterType,
 			Region:          key.Region,
 			CreateTimestamp: key.CreateTimestamp,
 			Config: &clusterConfigDataSource{
-				Port: int64(key.Config.Port),
+				Port: key.Config.Port,
 				Components: &components{
 					TiDB: &componentTiDB{
-						NodeSize:     key.Config.Components.TiDB.NodeSize,
-						NodeQuantity: key.Config.Components.TiDB.NodeQuantity,
+						NodeSize:     *key.Config.Components.Tidb.NodeSize,
+						NodeQuantity: *key.Config.Components.Tidb.NodeQuantity,
 					},
 					TiKV: &componentTiKV{
-						NodeSize:       key.Config.Components.TiKV.NodeSize,
-						NodeQuantity:   key.Config.Components.TiKV.NodeQuantity,
-						StorageSizeGib: key.Config.Components.TiKV.StorageSizeGib,
+						NodeSize:       *key.Config.Components.Tikv.NodeSize,
+						NodeQuantity:   *key.Config.Components.Tikv.NodeQuantity,
+						StorageSizeGib: *key.Config.Components.Tikv.StorageSizeGib,
 					},
 				},
 			},
@@ -359,23 +361,24 @@ func (d clustersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 				},
 			},
 		}
-		if key.Status.ConnectionStrings.Standard.Port != 0 {
+
+		if key.Status.ConnectionStrings.Standard != nil {
 			clusterItem.Status.ConnectionStrings.Standard = &connectionStandard{
 				Host: key.Status.ConnectionStrings.Standard.Host,
-				Port: int64(key.Status.ConnectionStrings.Standard.Port),
+				Port: key.Status.ConnectionStrings.Standard.Port,
 			}
 		}
-		if key.Status.ConnectionStrings.VpcPeering.Port != 0 {
+		if key.Status.ConnectionStrings.VpcPeering != nil {
 			clusterItem.Status.ConnectionStrings.VpcPeering = &connectionVpcPeering{
 				Host: key.Status.ConnectionStrings.VpcPeering.Host,
-				Port: int64(key.Status.ConnectionStrings.VpcPeering.Port),
+				Port: key.Status.ConnectionStrings.VpcPeering.Port,
 			}
 		}
-		if key.Config.Components.TiFlash != nil {
+		if key.Config.Components.Tiflash != nil {
 			clusterItem.Config.Components.TiFlash = &componentTiFlash{
-				NodeSize:       key.Config.Components.TiFlash.NodeSize,
-				NodeQuantity:   key.Config.Components.TiFlash.NodeQuantity,
-				StorageSizeGib: key.Config.Components.TiFlash.StorageSizeGib,
+				NodeSize:       *key.Config.Components.Tiflash.NodeSize,
+				NodeQuantity:   *key.Config.Components.Tiflash.NodeQuantity,
+				StorageSizeGib: *key.Config.Components.Tiflash.StorageSizeGib,
 			}
 		}
 		items = append(items, clusterItem)

@@ -30,8 +30,8 @@ resource "tidbcloud_restore" "example" {
       }
       tiflash = {
         node_size : "8C64G"
-        storage_size_gib : 500
-        node_quantity : 1
+        storage_size_gib : 2048
+        node_quantity : 2
       }
     }
   }

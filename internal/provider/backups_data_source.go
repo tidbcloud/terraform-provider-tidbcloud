@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	backupApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/backup"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -148,23 +149,25 @@ func (d backupsDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	tflog.Trace(ctx, "read backups data source")
-	backups, err := d.provider.client.GetBackups(data.ProjectId, data.ClusterId, data.Page.Value, data.PageSize.Value)
+	page := int32(data.Page.Value)
+	pageSize := int32(data.PageSize.Value)
+	listBackUpOfClusterOK, err := d.provider.client.ListBackUpOfCluster(backupApi.NewListBackUpOfClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId).WithPage(&page).WithPageSize(&pageSize))
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetBackups, got error: %s", err))
 		return
 	}
 
 	data.Id = types.String{Value: strconv.FormatInt(rand.Int63(), 10)}
-	data.Total = types.Int64{Value: backups.Total}
+	data.Total = types.Int64{Value: listBackUpOfClusterOK.Payload.Total}
 	var items []backup
-	for _, key := range backups.Items {
+	for _, key := range listBackUpOfClusterOK.Payload.Items {
 		items = append(items, backup{
-			Id:              key.Id,
+			Id:              key.ID,
 			Description:     key.Description,
 			Name:            key.Name,
 			Type:            key.Type,
 			Size:            key.Size,
-			CreateTimestamp: key.CreateTimestamp,
+			CreateTimestamp: key.CreateTimestamp.String(),
 			Status:          key.Status,
 		})
 	}

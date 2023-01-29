@@ -8,12 +8,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"strings"
 
+	clusterApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/cluster"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
-	"strconv"
 )
 
 const dev = "DEVELOPER"
@@ -47,19 +46,19 @@ type components struct {
 
 type componentTiDB struct {
 	NodeSize     string `tfsdk:"node_size"`
-	NodeQuantity int    `tfsdk:"node_quantity"`
+	NodeQuantity int32  `tfsdk:"node_quantity"`
 }
 
 type componentTiKV struct {
 	NodeSize       string `tfsdk:"node_size"`
-	StorageSizeGib int    `tfsdk:"storage_size_gib"`
-	NodeQuantity   int    `tfsdk:"node_quantity"`
+	StorageSizeGib int32  `tfsdk:"storage_size_gib"`
+	NodeQuantity   int32  `tfsdk:"node_quantity"`
 }
 
 type componentTiFlash struct {
 	NodeSize       string `tfsdk:"node_size"`
-	StorageSizeGib int    `tfsdk:"storage_size_gib"`
-	NodeQuantity   int    `tfsdk:"node_quantity"`
+	StorageSizeGib int32  `tfsdk:"storage_size_gib"`
+	NodeQuantity   int32  `tfsdk:"node_quantity"`
 }
 
 type ipAccess struct {
@@ -104,7 +103,10 @@ func (t clusterResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 			"create_timestamp": {
 				MarkdownDescription: "The creation time of the cluster in Unix timestamp seconds (epoch time).",
 				Computed:            true,
-				Type:                types.StringType,
+				PlanModifiers: tfsdk.AttributePlanModifiers{
+					resource.UseStateForUnknown(),
+				},
+				Type: types.StringType,
 			},
 			"region": {
 				MarkdownDescription: "the region value should match the cloud provider's region code. You can get the complete list of available regions from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).",
@@ -114,6 +116,9 @@ func (t clusterResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 			"status": {
 				MarkdownDescription: "The status of the cluster.",
 				Computed:            true,
+				PlanModifiers: tfsdk.AttributePlanModifiers{
+					resource.UseStateForUnknown(),
+				},
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"tidb_version": {
 						MarkdownDescription: "TiDB version.",
@@ -347,37 +352,39 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 	// write logs using the tflog package
 	// see https://pkg.go.dev/github.com/hashicorp/terraform-plugin-log/tflog
 	tflog.Trace(ctx, "created cluster_resource")
-	createClusterResp, err := r.provider.client.CreateCluster(data.ProjectId, buildCreateClusterReq(data))
+	createClusterParams := clusterApi.NewCreateClusterParams().WithProjectID(data.ProjectId).WithBody(buildCreateClusterBody(data))
+	createClusterResp, err := r.provider.client.CreateCluster(createClusterParams)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call CreateCluster, got error: %s", err))
 		return
 	}
 	// set clusterId. other computed attributes are not returned by create, they will be set when refresh
-	data.ClusterId = types.String{Value: strconv.FormatUint(createClusterResp.ClusterId, 10)}
+	data.ClusterId = types.String{Value: *createClusterResp.Payload.ID}
 
 	// we refresh in create for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
 	tflog.Trace(ctx, "read cluster_resource")
-	cluster, err := r.provider.client.GetClusterById(data.ProjectId, data.ClusterId.Value)
+	getClusterParams := clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.Value)
+	getClusterResp, err := r.provider.client.GetCluster(getClusterParams)
 	if err != nil {
-		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
+		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetCluster, got error: %s", err))
 		return
 	}
-	refreshClusterResourceData(cluster, &data)
+	refreshClusterResourceData(getClusterResp.Payload, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 }
 
-func buildCreateClusterReq(data clusterResourceData) *tidbcloud.CreateClusterReq {
+func buildCreateClusterBody(data clusterResourceData) clusterApi.CreateClusterBody {
 	// required
-	payload := tidbcloud.CreateClusterReq{
-		Name:          data.Name,
-		ClusterType:   data.ClusterType,
-		CloudProvider: data.CloudProvider,
-		Region:        data.Region,
-		Config: tidbcloud.ClusterConfig{
-			RootPassword: data.Config.RootPassword.Value,
+	payload := clusterApi.CreateClusterBody{
+		Name:          &data.Name,
+		ClusterType:   &data.ClusterType,
+		CloudProvider: &data.CloudProvider,
+		Region:        &data.Region,
+		Config: &clusterApi.CreateClusterParamsBodyConfig{
+			RootPassword: &data.Config.RootPassword.Value,
 		},
 	}
 
@@ -386,43 +393,44 @@ func buildCreateClusterReq(data clusterResourceData) *tidbcloud.CreateClusterReq
 		tidb := data.Config.Components.TiDB
 		tikv := data.Config.Components.TiKV
 		tiflash := data.Config.Components.TiFlash
-		components := tidbcloud.Components{
-			TiDB: tidbcloud.ComponentTiDB{
-				NodeSize:     tidb.NodeSize,
-				NodeQuantity: tidb.NodeQuantity,
+
+		components := &clusterApi.CreateClusterParamsBodyConfigComponents{
+			Tidb: &clusterApi.CreateClusterParamsBodyConfigComponentsTidb{
+				NodeSize:     &tidb.NodeSize,
+				NodeQuantity: &tidb.NodeQuantity,
 			},
-			TiKV: tidbcloud.ComponentTiKV{
-				NodeSize:       tikv.NodeSize,
-				StorageSizeGib: tikv.StorageSizeGib,
-				NodeQuantity:   tikv.NodeQuantity,
+			Tikv: &clusterApi.CreateClusterParamsBodyConfigComponentsTikv{
+				NodeSize:       &tikv.NodeSize,
+				StorageSizeGib: &tikv.StorageSizeGib,
+				NodeQuantity:   &tikv.NodeQuantity,
 			},
 		}
 		// tiflash is optional
 		if tiflash != nil {
-			components.TiFlash = &tidbcloud.ComponentTiFlash{
-				NodeSize:       tiflash.NodeSize,
-				StorageSizeGib: tiflash.StorageSizeGib,
-				NodeQuantity:   tiflash.NodeQuantity,
+			components.Tiflash = &clusterApi.CreateClusterParamsBodyConfigComponentsTiflash{
+				NodeSize:       &tiflash.NodeSize,
+				StorageSizeGib: &tiflash.StorageSizeGib,
+				NodeQuantity:   &tiflash.NodeQuantity,
 			}
 		}
 
 		payload.Config.Components = components
 	}
 	if data.Config.IPAccessList != nil {
-		var IPAccessList []tidbcloud.IPAccess
+		var IPAccessList []*clusterApi.CreateClusterParamsBodyConfigIPAccessListItems0
 		for _, key := range data.Config.IPAccessList {
-			IPAccessList = append(IPAccessList, tidbcloud.IPAccess{
-				CIDR:        key.CIDR,
+			IPAccessList = append(IPAccessList, &clusterApi.CreateClusterParamsBodyConfigIPAccessListItems0{
+				Cidr:        &key.CIDR,
 				Description: key.Description,
 			})
 		}
 		payload.Config.IPAccessList = IPAccessList
 	}
 	if !data.Config.Port.IsNull() && !data.Config.Port.IsUnknown() {
-		payload.Config.Port = int(data.Config.Port.Value)
+		payload.Config.Port = int32(data.Config.Port.Value)
 	}
 
-	return &payload
+	return payload
 }
 
 func (r clusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -436,7 +444,8 @@ func (r clusterResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	// call read api
 	tflog.Trace(ctx, "read cluster_resource")
-	cluster, err := r.provider.client.GetClusterById(projectId, clusterId)
+	getClusterParams := clusterApi.NewGetClusterParams().WithProjectID(projectId).WithClusterID(clusterId)
+	getClusterResp, err := r.provider.client.GetCluster(getClusterParams)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
 		return
@@ -456,34 +465,34 @@ func (r clusterResource) Read(ctx context.Context, req resource.ReadRequest, res
 	data.Config.IPAccessList = iPAccessList
 	data.Config.Paused = paused
 
-	refreshClusterResourceData(cluster, &data)
+	refreshClusterResourceData(getClusterResp.Payload, &data)
 
 	// save into the Terraform state
 	diags := resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 }
 
-func refreshClusterResourceData(resp *tidbcloud.GetClusterResp, data *clusterResourceData) {
+func refreshClusterResourceData(resp *clusterApi.GetClusterOKBody, data *clusterResourceData) {
 	// must return
 	data.Name = resp.Name
-	data.ClusterId = types.String{Value: strconv.FormatUint(resp.Id, 10)}
+	data.ClusterId = types.String{Value: *resp.ID}
 	data.Region = resp.Region
-	data.ProjectId = strconv.FormatUint(resp.ProjectId, 10)
+	data.ProjectId = *resp.ProjectID
 	data.ClusterType = resp.ClusterType
 	data.CloudProvider = resp.CloudProvider
 	data.CreateTimestamp = types.String{Value: resp.CreateTimestamp}
 	data.Config.Port = types.Int64{Value: int64(resp.Config.Port)}
-	tidb := resp.Config.Components.TiDB
-	tikv := resp.Config.Components.TiKV
+	tidb := resp.Config.Components.Tidb
+	tikv := resp.Config.Components.Tikv
 	data.Config.Components = &components{
 		TiDB: &componentTiDB{
-			NodeSize:     tidb.NodeSize,
-			NodeQuantity: tidb.NodeQuantity,
+			NodeSize:     *tidb.NodeSize,
+			NodeQuantity: *tidb.NodeQuantity,
 		},
 		TiKV: &componentTiKV{
-			NodeSize:       tikv.NodeSize,
-			NodeQuantity:   tikv.NodeQuantity,
-			StorageSizeGib: tikv.StorageSizeGib,
+			NodeSize:       *tikv.NodeSize,
+			NodeQuantity:   *tikv.NodeQuantity,
+			StorageSizeGib: *tikv.StorageSizeGib,
 		},
 	}
 	data.Status = &clusterStatusDataSource{
@@ -494,30 +503,30 @@ func refreshClusterResourceData(resp *tidbcloud.GetClusterResp, data *clusterRes
 		},
 	}
 	// ConnectionStrings return at least one connection
-	if resp.Status.ConnectionStrings.Standard.Port != 0 {
+	if resp.Status.ConnectionStrings.Standard != nil {
 		data.Status.ConnectionStrings.Standard = &connectionStandard{
 			Host: resp.Status.ConnectionStrings.Standard.Host,
-			Port: int64(resp.Status.ConnectionStrings.Standard.Port),
+			Port: resp.Status.ConnectionStrings.Standard.Port,
 		}
 	}
-	if resp.Status.ConnectionStrings.VpcPeering.Port != 0 {
+	if resp.Status.ConnectionStrings.VpcPeering != nil {
 		data.Status.ConnectionStrings.VpcPeering = &connectionVpcPeering{
 			Host: resp.Status.ConnectionStrings.VpcPeering.Host,
-			Port: int64(resp.Status.ConnectionStrings.VpcPeering.Port),
+			Port: resp.Status.ConnectionStrings.VpcPeering.Port,
 		}
 	}
 	// may return
-	tiflash := resp.Config.Components.TiFlash
+	tiflash := resp.Config.Components.Tiflash
 	if tiflash != nil {
 		data.Config.Components.TiFlash = &componentTiFlash{
-			NodeSize:       tiflash.NodeSize,
-			NodeQuantity:   tiflash.NodeQuantity,
-			StorageSizeGib: tiflash.StorageSizeGib,
+			NodeSize:       *tiflash.NodeSize,
+			NodeQuantity:   *tiflash.NodeQuantity,
+			StorageSizeGib: *tiflash.StorageSizeGib,
 		}
 	}
 
 	// not return
-	// IPAccessList, password and pause will not update for it will not return by read api(in GetClusterResp)
+	// IPAccessList, password and pause will not update for it will not return by read api
 
 }
 
@@ -609,12 +618,12 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		}
 	}
 
-	// build UpdateClusterReq
-	var updateClusterReq tidbcloud.UpdateClusterReq
+	// build UpdateClusterBody
+	var updateClusterBody clusterApi.UpdateClusterBody
 	// build paused
 	if data.Config.Paused != nil {
 		if state.Config.Paused == nil || *data.Config.Paused != *state.Config.Paused {
-			updateClusterReq.Config.Paused = data.Config.Paused
+			updateClusterBody.Config.Paused = *data.Config.Paused
 		}
 	}
 	// build components
@@ -623,36 +632,38 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		isComponentsChanged = true
 	}
 
-	var componentTiFlash *tidbcloud.ComponentTiFlash
+	var componentTiFlash *clusterApi.UpdateClusterParamsBodyConfigComponentsTiflash
 	if tiflash != nil {
 		if tiflashState == nil {
 			isComponentsChanged = true
-			componentTiFlash = &tidbcloud.ComponentTiFlash{
+			componentTiFlash = &clusterApi.UpdateClusterParamsBodyConfigComponentsTiflash{
 				NodeQuantity:   tiflash.NodeQuantity,
 				NodeSize:       tiflash.NodeSize,
 				StorageSizeGib: tiflash.StorageSizeGib,
 			}
 		} else if tiflash.NodeQuantity != tiflashState.NodeQuantity {
 			isComponentsChanged = true
-			componentTiFlash = &tidbcloud.ComponentTiFlash{
+			// NodeSize can't be changed
+			componentTiFlash = &clusterApi.UpdateClusterParamsBodyConfigComponentsTiflash{
 				NodeQuantity: tiflash.NodeQuantity,
 			}
 		}
 	}
 	if isComponentsChanged {
-		updateClusterReq.Config.Components = &tidbcloud.Components{
-			TiDB: tidbcloud.ComponentTiDB{
-				NodeQuantity: tidb.NodeQuantity,
+		updateClusterBody.Config.Components = &clusterApi.UpdateClusterParamsBodyConfigComponents{
+			Tidb: &clusterApi.UpdateClusterParamsBodyConfigComponentsTidb{
+				NodeQuantity: &tidb.NodeQuantity,
 			},
-			TiKV: tidbcloud.ComponentTiKV{
+			Tikv: &clusterApi.UpdateClusterParamsBodyConfigComponentsTikv{
 				NodeQuantity: tikv.NodeQuantity,
 			},
-			TiFlash: componentTiFlash,
+			Tiflash: componentTiFlash,
 		}
 	}
 
 	tflog.Trace(ctx, "update cluster_resource")
-	err := r.provider.client.UpdateClusterById(data.ProjectId, data.ClusterId.Value, updateClusterReq)
+	updateClusterParams := clusterApi.NewUpdateClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.Value).WithBody(updateClusterBody)
+	_, err := r.provider.client.UpdateCluster(updateClusterParams)
 	if err != nil {
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateClusterById, got error: %s", err))
 		return
@@ -660,12 +671,12 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	// we refresh for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
 	tflog.Trace(ctx, "read cluster_resource")
-	cluster, err := r.provider.client.GetClusterById(data.ProjectId, data.ClusterId.Value)
+	getClusterResp, err := r.provider.client.GetCluster(clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.Value))
 	if err != nil {
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
 		return
 	}
-	refreshClusterResourceData(cluster, &data)
+	refreshClusterResourceData(getClusterResp.Payload, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -683,7 +694,7 @@ func (r clusterResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 
 	tflog.Trace(ctx, "delete cluster_resource")
-	err := r.provider.client.DeleteClusterById(data.ProjectId, data.ClusterId.Value)
+	_, err := r.provider.client.DeleteCluster(clusterApi.NewDeleteClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.Value))
 	if err != nil {
 		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteClusterById, got error: %s", err))
 		return

@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	restoreApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/restore"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -172,24 +173,26 @@ func (d restoresDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	tflog.Trace(ctx, "read restores data source")
-	restores, err := d.provider.client.GetRestoreTasks(data.ProjectId, data.Page.Value, data.PageSize.Value)
+	page := int32(data.Page.Value)
+	pageSize := int32(data.PageSize.Value)
+	listRestoreTasksOK, err := d.provider.client.ListRestoreTasks(restoreApi.NewListRestoreTasksParams().WithProjectID(data.ProjectId).WithPage(&page).WithPageSize(&pageSize))
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetRestoreTasks, got error: %s", err))
 		return
 	}
 
-	data.Total = types.Int64{Value: restores.Total}
+	data.Total = types.Int64{Value: listRestoreTasksOK.Payload.Total}
 	var items []restore
-	for _, key := range restores.Items {
+	for _, key := range listRestoreTasksOK.Payload.Items {
 		items = append(items, restore{
-			Id:              key.Id,
-			CreateTimestamp: key.CreateTimestamp,
-			BackupId:        key.BackupId,
-			ClusterId:       key.ClusterId,
+			Id:              key.ID,
+			CreateTimestamp: key.CreateTimestamp.String(),
+			BackupId:        key.BackupID,
+			ClusterId:       key.ClusterID,
 			ErrorMessage:    key.ErrorMessage,
 			Status:          key.Status,
 			Cluster: cluster{
-				Id:     key.Cluster.Id,
+				Id:     key.Cluster.ID,
 				Name:   key.Cluster.Name,
 				Status: key.Cluster.Status,
 			},

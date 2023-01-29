@@ -57,6 +57,7 @@ resource "tidbcloud_backup" "test" {
   project_id     = %s
   cluster_id     = %s
   name           = "%s"
+  description = "create by terraform"
 }`, projectId, clusterId, name)
 }
 

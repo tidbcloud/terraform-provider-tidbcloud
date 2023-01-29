@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	backupApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/backup"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -10,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 	"strings"
 )
 
@@ -122,29 +122,28 @@ func (r backupResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	createBackupReq := tidbcloud.CreateBackupReq{
-		Name: data.Name,
+	tflog.Trace(ctx, "created backup resource")
+	createBackupBody := backupApi.CreateBackupBody{
+		Name: &data.Name,
 	}
 	if !data.Description.IsUnknown() && !data.Description.IsNull() {
-		createBackupReq.Description = data.Description.Value
+		createBackupBody.Description = data.Description.Value
 	}
-
-	tflog.Trace(ctx, "created backup resource")
-	createBackupResp, err := r.provider.client.CreateBackup(data.ProjectId, data.ClusterId, createBackupReq)
+	createBackupOK, err := r.provider.client.CreateBackup(backupApi.NewCreateBackupParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId).WithBody(createBackupBody))
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call create backup, got error: %s", err))
 		return
 	}
 
 	tflog.Trace(ctx, "get backup resource")
-	getBackupResp, err := r.provider.client.GetBackupById(data.ProjectId, data.ClusterId, createBackupResp.BackupId)
+	getBackupOfClusterOK, err := r.provider.client.GetBackupOfCluster(backupApi.NewGetBackupOfClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId).WithBackupID(createBackupOK.Payload.ID))
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetBackupById, got error: %s", err))
 		return
 	}
 
 	// save into the Terraform state.
-	refreshBackupResourceData(getBackupResp, &data)
+	refreshBackupResourceData(getBackupOfClusterOK.Payload, &data)
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -160,7 +159,7 @@ func (r backupResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	tflog.Trace(ctx, "get backup resource")
-	getBackupResp, err := r.provider.client.GetBackupById(projectId, clusterId, backupId)
+	getBackupOfClusterOK, err := r.provider.client.GetBackupOfCluster(backupApi.NewGetBackupOfClusterParams().WithProjectID(projectId).WithClusterID(clusterId).WithBackupID(backupId))
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetBackupById, got error: %s", err))
 		return
@@ -170,19 +169,19 @@ func (r backupResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	data.ClusterId = clusterId
 	data.ProjectId = projectId
 	data.BackupId = types.String{Value: backupId}
-	refreshBackupResourceData(getBackupResp, &data)
+	refreshBackupResourceData(getBackupOfClusterOK.Payload, &data)
 
 	diags := resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 }
 
-func refreshBackupResourceData(resp *tidbcloud.GetBackupResp, data *backupResourceData) {
+func refreshBackupResourceData(resp *backupApi.GetBackupOfClusterOKBody, data *backupResourceData) {
 	data.Name = resp.Name
-	data.BackupId = types.String{Value: resp.Id}
+	data.BackupId = types.String{Value: resp.ID}
 	data.Type = types.String{Value: resp.Type}
 	data.Size = types.String{Value: resp.Size}
 	data.Status = types.String{Value: resp.Status}
-	data.CreateTimestamp = types.String{Value: resp.CreateTimestamp}
+	data.CreateTimestamp = types.String{Value: resp.CreateTimestamp.String()}
 	data.Description = types.String{Value: resp.Description}
 }
 
@@ -201,7 +200,7 @@ func (r backupResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	}
 
 	tflog.Trace(ctx, "delete backup resource")
-	err := r.provider.client.DeleteBackupById(data.ProjectId, data.ClusterId, data.BackupId.Value)
+	_, err := r.provider.client.DeleteBackup(backupApi.NewDeleteBackupParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId).WithBackupID(data.BackupId.Value))
 	if err != nil {
 		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteBackupById, got error: %s", err))
 		return
