@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.14.3
 	github.com/hashicorp/terraform-plugin-log v0.7.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.24.1
-	github.com/icholy/digest v0.1.15
+	github.com/icholy/digest v0.1.22
 )
 
 require (
