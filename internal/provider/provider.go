@@ -2,18 +2,17 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"os"
 
-	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
-
-	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 )
 
-// Ensure provider defined types fully satisfy framework interfaces
+// Ensure the implementation satisfies the provider.Provider interface.
 var _ provider.Provider = &tidbcloudProvider{}
 
 // provider satisfies the tfsdk.Provider interface and usually is included
@@ -41,6 +40,11 @@ type providerData struct {
 	PrivateKey types.String `tfsdk:"private_key"`
 }
 
+func (p *tidbcloudProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "tidbcloud"
+	resp.Version = p.version
+}
+
 func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	// get providerData
 	var data providerData
@@ -53,7 +57,7 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 
 	// User must provide a public_key to the provider
 	var publicKey string
-	if data.PublicKey.Unknown {
+	if data.PublicKey.IsUnknown() {
 		// Cannot connect to client with an unknown value
 		resp.Diagnostics.AddWarning(
 			"Unable to create client",
@@ -62,10 +66,10 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	if data.PublicKey.Null {
+	if data.PublicKey.IsNull() {
 		publicKey = os.Getenv("TIDBCLOUD_PUBLIC_KEY")
 	} else {
-		publicKey = data.PublicKey.Value
+		publicKey = data.PublicKey.ValueString()
 	}
 
 	if publicKey == "" {
@@ -79,7 +83,7 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 
 	// User must provide a private_key to the provider
 	var privateKey string
-	if data.PrivateKey.Unknown {
+	if data.PrivateKey.IsUnknown() {
 		// Cannot connect to client with an unknown value
 		resp.Diagnostics.AddError(
 			"Unable to create client",
@@ -88,10 +92,10 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	if data.PrivateKey.Null {
+	if data.PrivateKey.IsNull() {
 		privateKey = os.Getenv("TIDBCLOUD_PRIVATE_KEY")
 	} else {
-		privateKey = data.PrivateKey.Value
+		privateKey = data.PrivateKey.ValueString()
 	}
 
 	if privateKey == "" {
@@ -119,43 +123,43 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 
 	p.client = c
 	p.configured = true
+	resp.ResourceData = p
+	resp.DataSourceData = p
 }
 
-func (p *tidbcloudProvider) GetResources(ctx context.Context) (map[string]provider.ResourceType, diag.Diagnostics) {
-	return map[string]provider.ResourceType{
-		"tidbcloud_cluster": clusterResourceType{},
-		"tidbcloud_backup":  backupResourceType{},
-		"tidbcloud_restore": restoreResourceType{},
-	}, nil
+func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Resource {
+	return []func() resource.Resource{
+		NewClusterResource,
+		NewBackupResource,
+		NewRestoreResource,
+	}
 }
 
-func (p *tidbcloudProvider) GetDataSources(ctx context.Context) (map[string]provider.DataSourceType, diag.Diagnostics) {
-	return map[string]provider.DataSourceType{
-		"tidbcloud_projects":      projectsDataSourceType{},
-		"tidbcloud_cluster_specs": clusterSpecsDataSourceType{},
-		"tidbcloud_backups":       backupsDataSourceType{},
-		"tidbcloud_restores":      restoresDataSourceType{},
-		"tidbcloud_clusters":      clustersDataSourceType{},
-	}, nil
+func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+	return []func() datasource.DataSource{
+		NewProjectsDataSource,
+		NewClusterSpecsDataSource,
+		NewBackupsDataSource,
+		NewRestoresDataSource,
+		NewClustersDataSource,
+	}
 }
 
-func (p *tidbcloudProvider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
-		Attributes: map[string]tfsdk.Attribute{
-			"public_key": {
+func (p *tidbcloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"public_key": schema.StringAttribute{
 				MarkdownDescription: "Public Key",
-				Type:                types.StringType,
 				Optional:            true,
 				Sensitive:           true,
 			},
-			"private_key": {
+			"private_key": schema.StringAttribute{
 				MarkdownDescription: "Private Key",
-				Type:                types.StringType,
 				Optional:            true,
 				Sensitive:           true,
 			},
 		},
-	}, nil
+	}
 }
 
 func New(version string) func() provider.Provider {
@@ -164,33 +168,4 @@ func New(version string) func() provider.Provider {
 			version: version,
 		}
 	}
-}
-
-// convertProviderType is a helper function for NewResource and NewDataSource
-// implementations to associate the concrete provider type. Alternatively,
-// this helper can be skipped and the provider type can be directly type
-// asserted (e.g. provider: in.(*scaffoldingProvider)), however using this can prevent
-// potential panics.
-func convertProviderType(in provider.Provider) (tidbcloudProvider, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	p, ok := in.(*tidbcloudProvider)
-
-	if !ok {
-		diags.AddError(
-			"Unexpected Provider Instance Type",
-			fmt.Sprintf("While creating the data source or resource, an unexpected provider type (%T) was received. This is always a bug in the provider code and should be reported to the provider developers.", p),
-		)
-		return tidbcloudProvider{}, diags
-	}
-
-	if p == nil {
-		diags.AddError(
-			"Unexpected Provider Instance Type",
-			"While creating the data source or resource, an unexpected empty provider instance was received. This is always a bug in the provider code and should be reported to the provider developers.",
-		)
-		return tidbcloudProvider{}, diags
-	}
-
-	return *p, diags
 }

@@ -5,10 +5,7 @@ import (
 	"fmt"
 	restoreApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/restore"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"math/rand"
@@ -35,128 +32,112 @@ type restore struct {
 }
 
 // Ensure provider defined types fully satisfy framework interfaces
-var _ provider.DataSourceType = restoresDataSourceType{}
-var _ datasource.DataSource = restoresDataSource{}
+var _ datasource.DataSource = &restoresDataSource{}
 
-type restoresDataSourceType struct{}
+type restoresDataSource struct {
+	provider *tidbcloudProvider
+}
 
-func (t restoresDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+func NewRestoresDataSource() datasource.DataSource {
+	return &restoresDataSource{}
+}
+
+func (d *restoresDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_restores"
+}
+
+func (d *restoresDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+	var ok bool
+	if d.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
+		resp.Diagnostics.AddError("Internal provider error",
+			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
+	}
+}
+
+func (d *restoresDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		MarkdownDescription: "restores data source",
-		Attributes: map[string]tfsdk.Attribute{
-			"id": {
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
 				MarkdownDescription: "data source ID.",
 				Computed:            true,
-				Type:                types.StringType,
 			},
-			"project_id": {
+			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).",
 				Required:            true,
-				Type:                types.StringType,
 			},
-			"page": {
+			"page": schema.Int64Attribute{
 				MarkdownDescription: "Default:1 The number of pages.",
 				Optional:            true,
 				Computed:            true,
-				Type:                types.Int64Type,
 			},
-			"page_size": {
+			"page_size": schema.Int64Attribute{
 				MarkdownDescription: "Default:10 The size of a pages.",
 				Optional:            true,
 				Computed:            true,
-				Type:                types.Int64Type,
 			},
-			"items": {
+			"items": schema.ListNestedAttribute{
 				MarkdownDescription: "Default:10 The size of a pages.",
 				Computed:            true,
-				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
-					"id": {
-						MarkdownDescription: "The ID of the restore task.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"create_timestamp": {
-						MarkdownDescription: "The creation time of the backup in UTC.The time format follows the ISO8601 standard, which is YYYY-MM-DD (year-month-day) + T +HH:MM:SS (hour-minutes-seconds) + Z. For example, 2020-01-01T00:00:00Z.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"backup_id": {
-						MarkdownDescription: "The ID of the backup.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"cluster_id": {
-						MarkdownDescription: "The cluster ID of the backup.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"status": {
-						MarkdownDescription: "Enum: \"PENDING\" \"RUNNING\" \"FAILED\" \"SUCCESS\", The status of the restore task.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"error_message": {
-						MarkdownDescription: "The error message of restore if failed.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"cluster": {
-						MarkdownDescription: "The information of the restored cluster. The restored cluster is the new cluster your backup data is restored to.",
-						Computed:            true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{
-							resource.UseStateForUnknown(),
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: "The ID of the restore task.",
+							Computed:            true,
 						},
-						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-							"id": {
-								MarkdownDescription: "The ID of the restored cluster. The restored cluster is the new cluster your backup data is restored to.",
-								Computed:            true,
-								Type:                types.StringType,
-								PlanModifiers: tfsdk.AttributePlanModifiers{
-									resource.UseStateForUnknown(),
+						"create_timestamp": schema.StringAttribute{
+							MarkdownDescription: "The creation time of the backup in UTC.The time format follows the ISO8601 standard, which is YYYY-MM-DD (year-month-day) + T +HH:MM:SS (hour-minutes-seconds) + Z. For example, 2020-01-01T00:00:00Z.",
+							Computed:            true,
+						},
+						"backup_id": schema.StringAttribute{
+							MarkdownDescription: "The ID of the backup.",
+							Computed:            true,
+						},
+						"cluster_id": schema.StringAttribute{
+							MarkdownDescription: "The cluster ID of the backup.",
+							Computed:            true,
+						},
+						"status": schema.StringAttribute{
+							MarkdownDescription: "Enum: \"PENDING\" \"RUNNING\" \"FAILED\" \"SUCCESS\", The status of the restore task.",
+							Computed:            true,
+						},
+						"error_message": schema.StringAttribute{
+							MarkdownDescription: "The error message of restore if failed.",
+							Computed:            true,
+						},
+						"cluster": schema.SingleNestedAttribute{
+							MarkdownDescription: "The information of the restored cluster. The restored cluster is the new cluster your backup data is restored to.",
+							Computed:            true,
+							Attributes: map[string]schema.Attribute{
+								"id": schema.StringAttribute{
+									MarkdownDescription: "The ID of the restored cluster. The restored cluster is the new cluster your backup data is restored to.",
+									Computed:            true,
+								},
+								"name": schema.StringAttribute{
+									MarkdownDescription: "The name of the restored cluster. The restored cluster is the new cluster your backup data is restored to.",
+									Computed:            true,
+								},
+								"status": schema.StringAttribute{
+									MarkdownDescription: "The status of the restored cluster. Possible values are \"AVAILABLE\", \"CREATING\", \"MODIFYING\", \"PAUSED\", \"RESUMING\", and \"CLEARED\".",
+									Computed:            true,
 								},
 							},
-							"name": {
-								MarkdownDescription: "The name of the restored cluster. The restored cluster is the new cluster your backup data is restored to.",
-								Computed:            true,
-								Type:                types.StringType,
-								PlanModifiers: tfsdk.AttributePlanModifiers{
-									resource.UseStateForUnknown(),
-								},
-							},
-							"status": {
-								MarkdownDescription: "The status of the restored cluster. Possible values are \"AVAILABLE\", \"CREATING\", \"MODIFYING\", \"PAUSED\", \"RESUMING\", and \"CLEARED\".",
-								Computed:            true,
-								Type:                types.StringType,
-								PlanModifiers: tfsdk.AttributePlanModifiers{
-									resource.UseStateForUnknown(),
-								},
-							},
-						}),
+						},
 					},
-				}),
+				},
 			},
-			"total": {
+			"total": schema.Int64Attribute{
 				MarkdownDescription: "The total number of restore tasks in the project.",
 				Computed:            true,
-				Type:                types.Int64Type,
 			},
 		},
-	}, nil
+	}
 }
 
-func (t restoresDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
-	provider, diags := convertProviderType(in)
-
-	return restoresDataSource{
-		provider: provider,
-	}, diags
-}
-
-type restoresDataSource struct {
-	provider tidbcloudProvider
-}
-
-func (d restoresDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *restoresDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data restoresDataSourceData
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -165,23 +146,23 @@ func (d restoresDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	// set default value
-	if data.Page.IsNull() || data.Page.IsUnknown() {
-		data.Page = types.Int64{Value: 1}
+	var page int32 = 1
+	var pageSize int32 = 10
+	if !data.Page.IsNull() && !data.Page.IsUnknown() {
+		page = int32(data.Page.ValueInt64())
 	}
-	if data.PageSize.IsNull() || data.PageSize.IsUnknown() {
-		data.PageSize = types.Int64{Value: 10}
+	if !data.PageSize.IsNull() && !data.PageSize.IsUnknown() {
+		pageSize = int32(data.PageSize.ValueInt64())
 	}
 
 	tflog.Trace(ctx, "read restores data source")
-	page := int32(data.Page.Value)
-	pageSize := int32(data.PageSize.Value)
 	listRestoreTasksOK, err := d.provider.client.ListRestoreTasks(restoreApi.NewListRestoreTasksParams().WithProjectID(data.ProjectId).WithPage(&page).WithPageSize(&pageSize))
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetRestoreTasks, got error: %s", err))
 		return
 	}
 
-	data.Total = types.Int64{Value: listRestoreTasksOK.Payload.Total}
+	data.Total = types.Int64Value(listRestoreTasksOK.Payload.Total)
 	var items []restore
 	for _, key := range listRestoreTasksOK.Payload.Items {
 		items = append(items, restore{
@@ -199,7 +180,7 @@ func (d restoresDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		})
 	}
 	data.Items = items
-	data.Id = types.String{Value: strconv.FormatInt(rand.Int63(), 10)}
+	data.Id = types.StringValue(strconv.FormatInt(rand.Int63(), 10))
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

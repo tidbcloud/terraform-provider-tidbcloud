@@ -3,16 +3,17 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
-	"strings"
-
 	clusterApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/cluster"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"strings"
 )
 
 const dev = "DEVELOPER"
@@ -66,254 +67,301 @@ type ipAccess struct {
 	Description string `tfsdk:"description"`
 }
 
-type clusterResourceType struct{}
+type clusterResource struct {
+	provider *tidbcloudProvider
+}
 
-func (t clusterResourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+func NewClusterResource() resource.Resource {
+	return &clusterResource{}
+}
+
+func (r *clusterResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_cluster"
+}
+
+func (r *clusterResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	var ok bool
+	if r.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
+		resp.Diagnostics.AddError("Internal provider error",
+			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
+	}
+}
+
+func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		MarkdownDescription: "cluster resource",
-		Attributes: map[string]tfsdk.Attribute{
-			"project_id": {
+		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).",
 				Required:            true,
-				Type:                types.StringType,
 			},
-			"name": {
+			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the cluster.",
 				Required:            true,
-				Type:                types.StringType,
 			},
-			"id": {
+			"id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The ID of the cluster.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
-				Type: types.StringType,
 			},
-			"cluster_type": {
+			"cluster_type": schema.StringAttribute{
 				MarkdownDescription: "Enum: \"DEDICATED\" \"DEVELOPER\", The cluster type.",
 				Required:            true,
-				Type:                types.StringType,
 			},
-			"cloud_provider": {
+			"cloud_provider": schema.StringAttribute{
 				MarkdownDescription: "Enum: \"AWS\" \"GCP\", The cloud provider on which your TiDB cluster is hosted.",
 				Required:            true,
-				Type:                types.StringType,
 			},
-			"create_timestamp": {
+			"create_timestamp": schema.StringAttribute{
 				MarkdownDescription: "The creation time of the cluster in Unix timestamp seconds (epoch time).",
 				Computed:            true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
-				Type: types.StringType,
 			},
-			"region": {
+			"region": schema.StringAttribute{
 				MarkdownDescription: "the region value should match the cloud provider's region code. You can get the complete list of available regions from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).",
 				Required:            true,
-				Type:                types.StringType,
 			},
-			"status": {
+			"status": schema.SingleNestedAttribute{
 				MarkdownDescription: "The status of the cluster.",
 				Computed:            true,
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
 				},
-				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-					"tidb_version": {
+				Attributes: map[string]schema.Attribute{
+					"tidb_version": schema.StringAttribute{
 						MarkdownDescription: "TiDB version.",
 						Computed:            true,
-						Type:                types.StringType,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
-					"cluster_status": {
+					"cluster_status": schema.StringAttribute{
 						MarkdownDescription: "Status of the cluster.",
 						Computed:            true,
-						Type:                types.StringType,
 					},
-					"connection_strings": {
+					"connection_strings": schema.SingleNestedAttribute{
 						MarkdownDescription: "Connection strings.",
 						Computed:            true,
-						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-							"default_user": {
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
+						Attributes: map[string]schema.Attribute{
+							"default_user": schema.StringAttribute{
 								MarkdownDescription: "The default TiDB user for connection.",
 								Computed:            true,
-								Type:                types.StringType,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
-							"standard": {
+							"standard": schema.SingleNestedAttribute{
 								MarkdownDescription: "Standard connection string.",
 								Computed:            true,
-								Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-									"host": {
+								PlanModifiers: []planmodifier.Object{
+									objectplanmodifier.UseStateForUnknown(),
+								},
+								Attributes: map[string]schema.Attribute{
+									"host": schema.StringAttribute{
 										MarkdownDescription: "The host of standard connection.",
 										Computed:            true,
-										Type:                types.StringType,
+										PlanModifiers: []planmodifier.String{
+											stringplanmodifier.UseStateForUnknown(),
+										},
 									},
-									"port": {
+									"port": schema.Int64Attribute{
 										MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.",
 										Computed:            true,
-										Type:                types.Int64Type,
+										PlanModifiers: []planmodifier.Int64{
+											int64planmodifier.UseStateForUnknown(),
+										},
 									},
-								}),
+								},
 							},
-							"vpc_peering": {
+							"vpc_peering": schema.SingleNestedAttribute{
 								MarkdownDescription: "VPC peering connection string.",
 								Computed:            true,
-								Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-									"host": {
+								PlanModifiers: []planmodifier.Object{
+									objectplanmodifier.UseStateForUnknown(),
+								},
+								Attributes: map[string]schema.Attribute{
+									"host": schema.StringAttribute{
 										MarkdownDescription: "The host of VPC peering connection.",
 										Computed:            true,
-										Type:                types.StringType,
+										PlanModifiers: []planmodifier.String{
+											stringplanmodifier.UseStateForUnknown(),
+										},
 									},
-									"port": {
+									"port": schema.Int64Attribute{
 										MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.",
 										Computed:            true,
-										Type:                types.Int64Type,
+										PlanModifiers: []planmodifier.Int64{
+											int64planmodifier.UseStateForUnknown(),
+										},
 									},
-								}),
+								},
 							},
-						}),
+						},
 					},
-				}),
+				},
 			},
-			"config": {
+			"config": schema.SingleNestedAttribute{
 				MarkdownDescription: "The configuration of the cluster.",
 				Required:            true,
-				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-					"root_password": {
+				Attributes: map[string]schema.Attribute{
+					"root_password": schema.StringAttribute{
 						MarkdownDescription: "The root password to access the cluster. It must be 8-64 characters.",
 						Optional:            true,
-						Type:                types.StringType,
 					},
-					"port": {
+					"port": schema.Int64Attribute{
 						MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080, 4000 in default.\n" +
 							"  - For a Serverless Tier cluster, only port 4000 is available.",
 						Optional: true,
 						Computed: true,
-						Type:     types.Int64Type,
-						PlanModifiers: tfsdk.AttributePlanModifiers{
-							resource.UseStateForUnknown(),
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
 						},
 					},
-					"paused": {
+					"paused": schema.BoolAttribute{
 						MarkdownDescription: "lag that indicates whether the cluster is paused. true means to pause the cluster, and false means to resume the cluster.\n" +
 							"  - The cluster can be paused only when the cluster_status is \"AVAILABLE\"." +
 							"  - The cluster can be resumed only when the cluster_status is \"PAUSED\".",
 						Optional: true,
-						Type:     types.BoolType,
 					},
-					"components": {
+					"components": schema.SingleNestedAttribute{
 						MarkdownDescription: "The components of the cluster.\n" +
 							"  - For a Serverless Tier cluster, the components value can not be set." +
 							"  - For a Dedicated Tier cluster, the components value must be set.",
 						Optional: true,
 						Computed: true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{
-							resource.UseStateForUnknown()},
-						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-							"tidb": {
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
+						Attributes: map[string]schema.Attribute{
+							"tidb": schema.SingleNestedAttribute{
 								MarkdownDescription: "The TiDB component of the cluster",
 								Required:            true,
-								Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-									"node_size": {
+								PlanModifiers: []planmodifier.Object{
+									objectplanmodifier.UseStateForUnknown(),
+								},
+								Attributes: map[string]schema.Attribute{
+									"node_size": schema.StringAttribute{
 										Required: true,
 										MarkdownDescription: "The size of the TiDB component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 											"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.\n" +
 											"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.\n" +
 											"  - Can not modify node_size of an existing cluster.",
-										Type: types.StringType,
+										PlanModifiers: []planmodifier.String{
+											stringplanmodifier.UseStateForUnknown(),
+										},
 									},
-									"node_quantity": {
+									"node_quantity": schema.Int64Attribute{
 										MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).",
 										Required:            true,
-										Type:                types.Int64Type,
+										PlanModifiers: []planmodifier.Int64{
+											int64planmodifier.UseStateForUnknown(),
+										},
 									},
-								}),
+								},
 							},
-							"tikv": {
+							"tikv": schema.SingleNestedAttribute{
 								MarkdownDescription: "The TiKV component of the cluster",
 								Required:            true,
-								Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-									"node_size": {
+								PlanModifiers: []planmodifier.Object{
+									objectplanmodifier.UseStateForUnknown(),
+								},
+								Attributes: map[string]schema.Attribute{
+									"node_size": schema.StringAttribute{
 										MarkdownDescription: "The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 											"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.\n" +
 											"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.\n" +
 											"  - Can not modify node_size of an existing cluster.",
 										Required: true,
-										Type:     types.StringType,
+										PlanModifiers: []planmodifier.String{
+											stringplanmodifier.UseStateForUnknown(),
+										},
 									},
-									"storage_size_gib": {
+									"storage_size_gib": schema.Int64Attribute{
 										MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 											"  - Can not modify storage_size_gib of an existing cluster.",
 										Required: true,
-										Type:     types.Int64Type,
+										PlanModifiers: []planmodifier.Int64{
+											int64planmodifier.UseStateForUnknown(),
+										},
 									},
-									"node_quantity": {
+									"node_quantity": schema.Int64Attribute{
 										MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 											"  - TiKV do not support decreasing node quantity.\n" +
 											"  - The node_quantity of TiKV must be a multiple of 3.",
 										Required: true,
-										Type:     types.Int64Type,
+										PlanModifiers: []planmodifier.Int64{
+											int64planmodifier.UseStateForUnknown(),
+										},
 									},
-								}),
+								},
 							},
-							"tiflash": {
+							"tiflash": schema.SingleNestedAttribute{
 								MarkdownDescription: "The TiFlash component of the cluster.",
 								Optional:            true,
-								Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-									"node_size": {
+								PlanModifiers: []planmodifier.Object{
+									objectplanmodifier.UseStateForUnknown(),
+								},
+								Attributes: map[string]schema.Attribute{
+									"node_size": schema.StringAttribute{
 										MarkdownDescription: "The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 											"  - Can not modify node_size of an existing cluster.",
 										Required: true,
-										Type:     types.StringType,
+										PlanModifiers: []planmodifier.String{
+											stringplanmodifier.UseStateForUnknown(),
+										},
 									},
-									"storage_size_gib": {
+									"storage_size_gib": schema.Int64Attribute{
 										MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 											"  - Can not modify storage_size_gib of an existing cluster.",
 										Required: true,
-										Type:     types.Int64Type,
+										PlanModifiers: []planmodifier.Int64{
+											int64planmodifier.UseStateForUnknown(),
+										},
 									},
-									"node_quantity": {
+									"node_quantity": schema.Int64Attribute{
 										MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
 											"  - TiFlash do not support decreasing node quantity.",
 										Required: true,
-										Type:     types.Int64Type,
+										PlanModifiers: []planmodifier.Int64{
+											int64planmodifier.UseStateForUnknown(),
+										},
 									},
-								}),
+								},
 							},
-						}),
+						},
 					},
-					"ip_access_list": {
+					"ip_access_list": schema.ListNestedAttribute{
 						MarkdownDescription: "A list of IP addresses and Classless Inter-Domain Routing (CIDR) addresses that are allowed to access the TiDB Cloud cluster via [standard connection](https://docs.pingcap.com/tidbcloud/connect-to-tidb-cluster#connect-via-standard-connection).",
 						Optional:            true,
-						Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
-							"cidr": {
-								MarkdownDescription: "The IP address or CIDR range that you want to add to the cluster's IP access list.",
-								Required:            true,
-								Type:                types.StringType,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"cidr": schema.StringAttribute{
+									MarkdownDescription: "The IP address or CIDR range that you want to add to the cluster's IP access list.",
+									Required:            true,
+								},
+								"description": schema.StringAttribute{
+									MarkdownDescription: "Description that explains the purpose of the entry.",
+									Required:            true,
+								},
 							},
-							"description": {
-								MarkdownDescription: "Description that explains the purpose of the entry.",
-								Required:            true,
-								Type:                types.StringType,
-							},
-						}),
+						},
 					},
-				}),
+				},
 			},
 		},
-	}, nil
-}
-
-func (t clusterResourceType) NewResource(ctx context.Context, in provider.Provider) (resource.Resource, diag.Diagnostics) {
-	provider, diags := convertProviderType(in)
-
-	return clusterResource{
-		provider: provider,
-	}, diags
-}
-
-type clusterResource struct {
-	provider tidbcloudProvider
+	}
 }
 
 func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -359,11 +407,11 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 	// set clusterId. other computed attributes are not returned by create, they will be set when refresh
-	data.ClusterId = types.String{Value: *createClusterResp.Payload.ID}
+	data.ClusterId = types.StringValue(*createClusterResp.Payload.ID)
 
 	// we refresh in create for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
 	tflog.Trace(ctx, "read cluster_resource")
-	getClusterParams := clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.Value)
+	getClusterParams := clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString())
 	getClusterResp, err := r.provider.client.GetCluster(getClusterParams)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetCluster, got error: %s", err))
@@ -378,13 +426,14 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 
 func buildCreateClusterBody(data clusterResourceData) clusterApi.CreateClusterBody {
 	// required
+	rootPassWord := data.Config.RootPassword.ValueString()
 	payload := clusterApi.CreateClusterBody{
 		Name:          &data.Name,
 		ClusterType:   &data.ClusterType,
 		CloudProvider: &data.CloudProvider,
 		Region:        &data.Region,
 		Config: &clusterApi.CreateClusterParamsBodyConfig{
-			RootPassword: &data.Config.RootPassword.Value,
+			RootPassword: &rootPassWord,
 		},
 	}
 
@@ -427,7 +476,7 @@ func buildCreateClusterBody(data clusterResourceData) clusterApi.CreateClusterBo
 		payload.Config.IPAccessList = IPAccessList
 	}
 	if !data.Config.Port.IsNull() && !data.Config.Port.IsUnknown() {
-		payload.Config.Port = int32(data.Config.Port.Value)
+		payload.Config.Port = int32(data.Config.Port.ValueInt64())
 	}
 
 	return payload
@@ -475,13 +524,13 @@ func (r clusterResource) Read(ctx context.Context, req resource.ReadRequest, res
 func refreshClusterResourceData(resp *clusterApi.GetClusterOKBody, data *clusterResourceData) {
 	// must return
 	data.Name = resp.Name
-	data.ClusterId = types.String{Value: *resp.ID}
+	data.ClusterId = types.StringValue(*resp.ID)
 	data.Region = resp.Region
 	data.ProjectId = *resp.ProjectID
 	data.ClusterType = resp.ClusterType
 	data.CloudProvider = resp.CloudProvider
-	data.CreateTimestamp = types.String{Value: resp.CreateTimestamp}
-	data.Config.Port = types.Int64{Value: int64(resp.Config.Port)}
+	data.CreateTimestamp = types.StringValue(resp.CreateTimestamp)
+	data.Config.Port = types.Int64Value(int64(resp.Config.Port))
 	tidb := resp.Config.Components.Tidb
 	tikv := resp.Config.Components.Tikv
 	data.Config.Components = &components{
@@ -495,25 +544,25 @@ func refreshClusterResourceData(resp *clusterApi.GetClusterOKBody, data *cluster
 			StorageSizeGib: *tikv.StorageSizeGib,
 		},
 	}
-	data.Status = &clusterStatusDataSource{
-		TidbVersion:   resp.Status.TidbVersion,
-		ClusterStatus: resp.Status.ClusterStatus,
-		ConnectionStrings: &connection{
-			DefaultUser: resp.Status.ConnectionStrings.DefaultUser,
-		},
-	}
-	// ConnectionStrings return at least one connection
+
+	var standard connectionStandard
+	var vpcPeering connectionVpcPeering
 	if resp.Status.ConnectionStrings.Standard != nil {
-		data.Status.ConnectionStrings.Standard = &connectionStandard{
-			Host: resp.Status.ConnectionStrings.Standard.Host,
-			Port: resp.Status.ConnectionStrings.Standard.Port,
-		}
+		standard.Host = resp.Status.ConnectionStrings.Standard.Host
+		standard.Port = resp.Status.ConnectionStrings.Standard.Port
 	}
 	if resp.Status.ConnectionStrings.VpcPeering != nil {
-		data.Status.ConnectionStrings.VpcPeering = &connectionVpcPeering{
-			Host: resp.Status.ConnectionStrings.VpcPeering.Host,
-			Port: resp.Status.ConnectionStrings.VpcPeering.Port,
-		}
+		vpcPeering.Host = resp.Status.ConnectionStrings.VpcPeering.Host
+		vpcPeering.Port = resp.Status.ConnectionStrings.VpcPeering.Port
+	}
+	data.Status = &clusterStatusDataSource{
+		TidbVersion:   resp.Status.TidbVersion,
+		ClusterStatus: types.StringValue(resp.Status.ClusterStatus),
+		ConnectionStrings: &connection{
+			DefaultUser: resp.Status.ConnectionStrings.DefaultUser,
+			Standard:    &standard,
+			VpcPeering:  &vpcPeering,
+		},
 	}
 	// may return
 	tiflash := resp.Config.Components.Tiflash
@@ -567,7 +616,7 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		)
 		return
 	}
-	if !data.Config.Port.IsNull() && !data.Config.Port.IsNull() && data.Config.Port.Value != state.Config.Port.Value {
+	if !data.Config.Port.IsNull() && !data.Config.Port.IsNull() && data.Config.Port.ValueInt64() != state.Config.Port.ValueInt64() {
 		resp.Diagnostics.AddError(
 			"Update error",
 			"port can not be changed, only components can be changed now",
@@ -620,6 +669,7 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	// build UpdateClusterBody
 	var updateClusterBody clusterApi.UpdateClusterBody
+	updateClusterBody.Config = &clusterApi.UpdateClusterParamsBodyConfig{}
 	// build paused
 	if data.Config.Paused != nil {
 		if state.Config.Paused == nil || *data.Config.Paused != *state.Config.Paused {
@@ -649,6 +699,7 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 			}
 		}
 	}
+
 	if isComponentsChanged {
 		updateClusterBody.Config.Components = &clusterApi.UpdateClusterParamsBodyConfigComponents{
 			Tidb: &clusterApi.UpdateClusterParamsBodyConfigComponentsTidb{
@@ -662,7 +713,7 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	tflog.Trace(ctx, "update cluster_resource")
-	updateClusterParams := clusterApi.NewUpdateClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.Value).WithBody(updateClusterBody)
+	updateClusterParams := clusterApi.NewUpdateClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString()).WithBody(updateClusterBody)
 	_, err := r.provider.client.UpdateCluster(updateClusterParams)
 	if err != nil {
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateClusterById, got error: %s", err))
@@ -671,7 +722,7 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	// we refresh for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
 	tflog.Trace(ctx, "read cluster_resource")
-	getClusterResp, err := r.provider.client.GetCluster(clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.Value))
+	getClusterResp, err := r.provider.client.GetCluster(clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString()))
 	if err != nil {
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
 		return
@@ -694,7 +745,7 @@ func (r clusterResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 
 	tflog.Trace(ctx, "delete cluster_resource")
-	_, err := r.provider.client.DeleteCluster(clusterApi.NewDeleteClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.Value))
+	_, err := r.provider.client.DeleteCluster(clusterApi.NewDeleteClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString()))
 	if err != nil {
 		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteClusterById, got error: %s", err))
 		return

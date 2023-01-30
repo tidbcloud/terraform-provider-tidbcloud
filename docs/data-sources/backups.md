@@ -54,7 +54,7 @@ output "output" {
 ### Read-Only
 
 - `id` (String) data source ID
-- `items` (Attributes List) (see [below for nested schema](#nestedatt--items))
+- `items` (Attributes List) The items of backups (see [below for nested schema](#nestedatt--items))
 - `total` (Number) The total number of backups in the project.
 
 <a id="nestedatt--items"></a>
