@@ -5,9 +5,7 @@ import (
 	"fmt"
 	clusterApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/cluster"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"math/rand"
@@ -41,9 +39,9 @@ type clusterConfigDataSource struct {
 }
 
 type clusterStatusDataSource struct {
-	TidbVersion       string      `tfsdk:"tidb_version"`
-	ClusterStatus     string      `tfsdk:"cluster_status"`
-	ConnectionStrings *connection `tfsdk:"connection_strings"`
+	TidbVersion       string       `tfsdk:"tidb_version"`
+	ClusterStatus     types.String `tfsdk:"cluster_status"`
+	ConnectionStrings *connection  `tfsdk:"connection_strings"`
 }
 
 type connection struct {
@@ -63,248 +61,230 @@ type connectionVpcPeering struct {
 }
 
 // Ensure provider defined types fully satisfy framework interfaces
-var _ provider.DataSourceType = clustersDataSourceType{}
-var _ datasource.DataSource = clustersDataSource{}
+var _ datasource.DataSource = &clustersDataSource{}
 
-type clustersDataSourceType struct{}
+type clustersDataSource struct {
+	provider *tidbcloudProvider
+}
 
-func (t clustersDataSourceType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+func NewClustersDataSource() datasource.DataSource {
+	return &clustersDataSource{}
+}
+
+func (d *clustersDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_clusters"
+}
+
+func (d *clustersDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+	var ok bool
+	if d.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
+		resp.Diagnostics.AddError("Internal provider error",
+			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
+	}
+}
+
+func (d *clustersDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		MarkdownDescription: "clusters data source",
-		Attributes: map[string]tfsdk.Attribute{
-			"id": {
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
 				MarkdownDescription: "data source ID.",
 				Computed:            true,
-				Type:                types.StringType,
 			},
-			"page": {
+			"page": schema.Int64Attribute{
 				MarkdownDescription: "Default:1 The number of pages.",
 				Optional:            true,
 				Computed:            true,
-				Type:                types.Int64Type,
 			},
-			"page_size": {
+			"page_size": schema.Int64Attribute{
 				MarkdownDescription: "Default:10 The size of a pages.",
 				Optional:            true,
 				Computed:            true,
-				Type:                types.Int64Type,
 			},
-			"project_id": {
+			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project",
 				Required:            true,
-				Type:                types.StringType,
 			},
-			"items": {
+			"items": schema.ListNestedAttribute{
 				MarkdownDescription: "The items of clusters in the project.",
 				Computed:            true,
-				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
-					"id": {
-						MarkdownDescription: "The ID of the cluster.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"project_id": {
-						MarkdownDescription: "The ID of the project.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"name": {
-						MarkdownDescription: "The name of the cluster.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"cluster_type": {
-						MarkdownDescription: "The cluster type.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"cloud_provider": {
-						MarkdownDescription: "Enum: \"AWS\" \"GCP\", The cloud provider on which your TiDB cluster is hosted.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"region": {
-						MarkdownDescription: "Region of the cluster.",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"create_timestamp": {
-						MarkdownDescription: "The creation time of the cluster in Unix timestamp seconds (epoch time).",
-						Computed:            true,
-						Type:                types.StringType,
-					},
-					"config": {
-						MarkdownDescription: "The configuration of the cluster.",
-						Computed:            true,
-						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-							"port": {
-								MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080, 4000 in default.\n" +
-									"  - For a Serverless Tier cluster, only port 4000 is available.",
-								Computed: true,
-								Type:     types.Int64Type,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: "The ID of the cluster.",
+							Computed:            true,
+						},
+						"project_id": schema.StringAttribute{
+							MarkdownDescription: "The ID of the project.",
+							Computed:            true,
+						},
+						"name": schema.StringAttribute{
+							MarkdownDescription: "The name of the cluster.",
+							Computed:            true,
+						},
+						"cluster_type": schema.StringAttribute{
+							MarkdownDescription: "The cluster type.",
+							Computed:            true,
+						},
+						"cloud_provider": schema.StringAttribute{
+							MarkdownDescription: "Enum: \"AWS\" \"GCP\", The cloud provider on which your TiDB cluster is hosted.",
+							Computed:            true,
+						},
+						"region": schema.StringAttribute{
+							MarkdownDescription: "Region of the cluster.",
+							Computed:            true,
+						},
+						"create_timestamp": schema.StringAttribute{
+							MarkdownDescription: "The creation time of the cluster in Unix timestamp seconds (epoch time).",
+							Computed:            true,
+						},
+						"config": schema.SingleNestedAttribute{
+							MarkdownDescription: "The configuration of the cluster.",
+							Computed:            true,
+							Attributes: map[string]schema.Attribute{
+								"port": schema.Int64Attribute{
+									MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080, 4000 in default.\n" +
+										"  - For a Serverless Tier cluster, only port 4000 is available.",
+									Computed: true,
+								},
+								"components": schema.SingleNestedAttribute{
+									MarkdownDescription: "The components of the cluster.",
+									Computed:            true,
+									Attributes: map[string]schema.Attribute{
+										"tidb": schema.SingleNestedAttribute{
+											MarkdownDescription: "The TiDB component of the cluster",
+											Computed:            true,
+											Attributes: map[string]schema.Attribute{
+												"node_size": schema.StringAttribute{
+													Computed: true,
+													MarkdownDescription: "The size of the TiDB component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
+														"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.\n" +
+														"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.\n" +
+														"  - Can not modify node_size of an existing cluster.",
+												},
+												"node_quantity": schema.Int64Attribute{
+													MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).",
+													Computed:            true,
+												},
+											},
+										},
+										"tikv": schema.SingleNestedAttribute{
+											MarkdownDescription: "The TiKV component of the cluster",
+											Computed:            true,
+											Attributes: map[string]schema.Attribute{
+												"node_size": schema.StringAttribute{
+													MarkdownDescription: "The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
+														"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.\n" +
+														"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.\n" +
+														"  - Can not modify node_size of an existing cluster.",
+													Computed: true,
+												},
+												"storage_size_gib": schema.Int64Attribute{
+													MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
+														"  - Can not modify storage_size_gib of an existing cluster.",
+													Computed: true,
+												},
+												"node_quantity": schema.Int64Attribute{
+													MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
+														"  - TiKV do not support decreasing node quantity.\n" +
+														"  - The node_quantity of TiKV must be a multiple of 3.",
+													Computed: true,
+												},
+											},
+										},
+										"tiflash": schema.SingleNestedAttribute{
+											MarkdownDescription: "The TiFlash component of the cluster.",
+											Computed:            true,
+											Optional:            true,
+											Attributes: map[string]schema.Attribute{
+												"node_size": schema.StringAttribute{
+													MarkdownDescription: "The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
+														"  - Can not modify node_size of an existing cluster.",
+													Computed: true,
+												},
+												"storage_size_gib": schema.Int64Attribute{
+													MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
+														"  - Can not modify storage_size_gib of an existing cluster.",
+													Computed: true,
+												},
+												"node_quantity": schema.Int64Attribute{
+													MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
+														"  - TiFlash do not support decreasing node quantity.",
+													Computed: true,
+												},
+											},
+										},
+									},
+								},
 							},
-							"components": {
-								MarkdownDescription: "The components of the cluster.",
-								Computed:            true,
-								Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-									"tidb": {
-										MarkdownDescription: "The TiDB component of the cluster",
-										Computed:            true,
-										Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-											"node_size": {
-												Computed: true,
-												MarkdownDescription: "The size of the TiDB component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
-													"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.\n" +
-													"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.\n" +
-													"  - Can not modify node_size of an existing cluster.",
-												Type: types.StringType,
+						},
+						"status": schema.SingleNestedAttribute{
+							MarkdownDescription: "The status of the cluster.",
+							Computed:            true,
+							Attributes: map[string]schema.Attribute{
+								"tidb_version": schema.StringAttribute{
+									MarkdownDescription: "TiDB version.",
+									Computed:            true,
+								},
+								"cluster_status": schema.StringAttribute{
+									MarkdownDescription: "Status of the cluster.",
+									Computed:            true,
+								},
+								"connection_strings": schema.SingleNestedAttribute{
+									MarkdownDescription: "Connection strings.",
+									Computed:            true,
+									Attributes: map[string]schema.Attribute{
+										"default_user": schema.StringAttribute{
+											MarkdownDescription: "The default TiDB user for connection.",
+											Computed:            true,
+										},
+										"standard": schema.SingleNestedAttribute{
+											MarkdownDescription: "Standard connection string.",
+											Computed:            true,
+											Attributes: map[string]schema.Attribute{
+												"host": schema.StringAttribute{
+													MarkdownDescription: "The host of standard connection.",
+													Computed:            true,
+												},
+												"port": schema.Int64Attribute{
+													MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.",
+													Computed:            true,
+												},
 											},
-											"node_quantity": {
-												MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).",
-												Computed:            true,
-												Type:                types.Int64Type,
+										},
+										"vpc_peering": schema.SingleNestedAttribute{
+											MarkdownDescription: "VPC peering connection string.",
+											Computed:            true,
+											Attributes: map[string]schema.Attribute{
+												"host": schema.StringAttribute{
+													MarkdownDescription: "The host of VPC peering connection.",
+													Computed:            true,
+												},
+												"port": schema.Int64Attribute{
+													MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.",
+													Computed:            true,
+												},
 											},
-										}),
+										},
 									},
-									"tikv": {
-										MarkdownDescription: "The TiKV component of the cluster",
-										Computed:            true,
-										Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-											"node_size": {
-												MarkdownDescription: "The size of the TiKV component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
-													"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then their vCPUs need to be the same.\n" +
-													"  - If the vCPUs of TiDB or TiKV component is 2 or 4, then the cluster does not support TiFlash.\n" +
-													"  - Can not modify node_size of an existing cluster.",
-												Computed: true,
-												Type:     types.StringType,
-											},
-											"storage_size_gib": {
-												MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
-													"  - Can not modify storage_size_gib of an existing cluster.",
-												Computed: true,
-												Type:     types.Int64Type,
-											},
-											"node_quantity": {
-												MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
-													"  - TiKV do not support decreasing node quantity.\n" +
-													"  - The node_quantity of TiKV must be a multiple of 3.",
-												Computed: true,
-												Type:     types.Int64Type,
-											},
-										}),
-									},
-									"tiflash": {
-										MarkdownDescription: "The TiFlash component of the cluster.",
-										Computed:            true,
-										Optional:            true,
-										Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-											"node_size": {
-												MarkdownDescription: "The size of the TiFlash component in the cluster, You can get the available node size of each region from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
-													"  - Can not modify node_size of an existing cluster.",
-												Computed: true,
-												Type:     types.StringType,
-											},
-											"storage_size_gib": {
-												MarkdownDescription: "The storage size of a node in the cluster. You can get the minimum and maximum of storage size from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
-													"  - Can not modify storage_size_gib of an existing cluster.",
-												Computed: true,
-												Type:     types.Int64Type,
-											},
-											"node_quantity": {
-												MarkdownDescription: "The number of nodes in the cluster. You can get the minimum and step of a node quantity from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).\n" +
-													"  - TiFlash do not support decreasing node quantity.",
-												Computed: true,
-												Type:     types.Int64Type,
-											},
-										}),
-									},
-								}),
+								},
 							},
-						}),
+						},
 					},
-					"status": {
-						MarkdownDescription: "The status of the cluster.",
-						Computed:            true,
-						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-							"tidb_version": {
-								MarkdownDescription: "TiDB version.",
-								Computed:            true,
-								Type:                types.StringType,
-							},
-							"cluster_status": {
-								MarkdownDescription: "Status of the cluster.",
-								Computed:            true,
-								Type:                types.StringType,
-							},
-							"connection_strings": {
-								MarkdownDescription: "Connection strings.",
-								Computed:            true,
-								Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-									"default_user": {
-										MarkdownDescription: "The default TiDB user for connection.",
-										Computed:            true,
-										Type:                types.StringType,
-									},
-									"standard": {
-										MarkdownDescription: "Standard connection string.",
-										Computed:            true,
-										Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-											"host": {
-												MarkdownDescription: "The host of standard connection.",
-												Computed:            true,
-												Type:                types.StringType,
-											},
-											"port": {
-												MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.",
-												Computed:            true,
-												Type:                types.Int64Type,
-											},
-										}),
-									},
-									"vpc_peering": {
-										MarkdownDescription: "VPC peering connection string.",
-										Computed:            true,
-										Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
-											"host": {
-												MarkdownDescription: "The host of VPC peering connection.",
-												Computed:            true,
-												Type:                types.StringType,
-											},
-											"port": {
-												MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.",
-												Computed:            true,
-												Type:                types.Int64Type,
-											},
-										}),
-									},
-								}),
-							},
-						}),
-					},
-				}),
+				},
 			},
-			"total": {
+			"total": schema.Int64Attribute{
 				MarkdownDescription: "The total number of project clusters.",
 				Computed:            true,
-				Type:                types.Int64Type,
 			},
 		},
-	}, nil
+	}
 }
 
-func (t clustersDataSourceType) NewDataSource(ctx context.Context, in provider.Provider) (datasource.DataSource, diag.Diagnostics) {
-	provider, diags := convertProviderType(in)
-
-	return clustersDataSource{
-		provider: provider,
-	}, diags
-}
-
-type clustersDataSource struct {
-	provider tidbcloudProvider
-}
-
-func (d clustersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *clustersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data clustersDataSourceData
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -313,22 +293,24 @@ func (d clustersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	// set default value
-	if data.Page.IsNull() || data.Page.IsUnknown() {
-		data.Page = types.Int64{Value: 1}
+	var page int64 = 1
+	var pageSize int64 = 10
+	if !data.Page.IsNull() && !data.Page.IsUnknown() {
+		page = data.Page.ValueInt64()
 	}
-	if data.PageSize.IsNull() || data.PageSize.IsUnknown() {
-		data.PageSize = types.Int64{Value: 10}
+	if !data.PageSize.IsNull() && !data.PageSize.IsUnknown() {
+		pageSize = data.PageSize.ValueInt64()
 	}
 
 	tflog.Trace(ctx, "read clusters data source")
-	listClustersOfProjectParams := clusterApi.NewListClustersOfProjectParams().WithProjectID(data.ProjectId.Value).WithPage(&data.Page.Value).WithPageSize(&data.PageSize.Value)
+	listClustersOfProjectParams := clusterApi.NewListClustersOfProjectParams().WithProjectID(data.ProjectId.ValueString()).WithPage(&page).WithPageSize(&pageSize)
 	listClustersOfProjectResp, err := d.provider.client.ListClustersOfProject(listClustersOfProjectParams)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call read cluster, got error: %s", err))
 		return
 	}
 
-	data.Total = types.Int64{Value: *listClustersOfProjectResp.Payload.Total}
+	data.Total = types.Int64Value(*listClustersOfProjectResp.Payload.Total)
 	var items []clusterItems
 	for _, key := range listClustersOfProjectResp.Payload.Items {
 		clusterItem := clusterItems{
@@ -355,25 +337,25 @@ func (d clustersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			},
 			Status: &clusterStatusDataSource{
 				TidbVersion:   key.Status.TidbVersion,
-				ClusterStatus: key.Status.ClusterStatus,
+				ClusterStatus: types.StringValue(key.Status.ClusterStatus),
 				ConnectionStrings: &connection{
 					DefaultUser: key.Status.ConnectionStrings.DefaultUser,
 				},
 			},
 		}
-
+		var standard connectionStandard
+		var vpcPeering connectionVpcPeering
 		if key.Status.ConnectionStrings.Standard != nil {
-			clusterItem.Status.ConnectionStrings.Standard = &connectionStandard{
-				Host: key.Status.ConnectionStrings.Standard.Host,
-				Port: key.Status.ConnectionStrings.Standard.Port,
-			}
+			standard.Host = key.Status.ConnectionStrings.Standard.Host
+			standard.Port = key.Status.ConnectionStrings.Standard.Port
 		}
 		if key.Status.ConnectionStrings.VpcPeering != nil {
-			clusterItem.Status.ConnectionStrings.VpcPeering = &connectionVpcPeering{
-				Host: key.Status.ConnectionStrings.VpcPeering.Host,
-				Port: key.Status.ConnectionStrings.VpcPeering.Port,
-			}
+			vpcPeering.Host = key.Status.ConnectionStrings.VpcPeering.Host
+			vpcPeering.Port = key.Status.ConnectionStrings.VpcPeering.Port
 		}
+		clusterItem.Status.ConnectionStrings.Standard = &standard
+		clusterItem.Status.ConnectionStrings.VpcPeering = &vpcPeering
+
 		if key.Config.Components.Tiflash != nil {
 			clusterItem.Config.Components.TiFlash = &componentTiFlash{
 				NodeSize:       *key.Config.Components.Tiflash.NodeSize,
@@ -385,7 +367,7 @@ func (d clustersDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 	data.Clusters = items
 
-	data.Id = types.String{Value: strconv.FormatInt(rand.Int63(), 10)}
+	data.Id = types.StringValue(strconv.FormatInt(rand.Int63(), 10))
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
