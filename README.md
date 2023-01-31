@@ -38,6 +38,7 @@ Resources
 - [cluster](./docs/resources/cluster.md)
 - [backup](./docs/resources/backup.md) (not support update)
 - [restore](./docs/resources/restore.md) (not support update and delete)
+- [import](./docs/resources/import.md) (not support update)
 
 DataSource
 - [projects](./docs/data-sources/projects.md)
