@@ -33,19 +33,19 @@ func TestACCImportResourceLOCAL(t *testing.T) {
 // Please Fill pass the projectID and clusterID and fill in the aws_role_arn and source url to run the acc test
 func TestACCImportResourceS3(t *testing.T) {
 	config := fmt.Sprintf(`
-		resource "tidbcloud_import" "local" {
+		resource "tidbcloud_import" "s3" {
 		  project_id  = "%s"
 		  cluster_id  = "%s"
-		  type        = "LOCAL"
+		  type        = "S3"
 		  data_format = "CSV"
           aws_role_arn = "fake_arn"
           source_url   = "fake_url"
 		}
 		`, os.Getenv(TiDBCloudProjectID), os.Getenv(TiDBCloudClusterID))
-	testImportResourceLocal(t, config, false)
+	testImportResourceS3(t, config, false)
 }
 
-func TestUTImportResource_LOCAL(t *testing.T) {
+func TestUTImportResourceLOCAL(t *testing.T) {
 	if os.Getenv(TiDBCloudPublicKey) == "" {
 		os.Setenv(TiDBCloudPublicKey, "fake")
 	}
@@ -185,7 +185,7 @@ func testImportResourceLocal(t *testing.T, config string, useMock bool) {
 	})
 }
 
-func TestUTImportResource_S3(t *testing.T) {
+func TestUTImportResourceS3(t *testing.T) {
 	if os.Getenv(TiDBCloudPublicKey) == "" {
 		os.Setenv(TiDBCloudPublicKey, "fake")
 	}
@@ -231,13 +231,7 @@ func TestUTImportResource_S3(t *testing.T) {
     "processed_source_data_size": "20",
     "total_tables_count": 1,
     "post_import_completed_percent": 100,
-    "all_completed_tables": [
-        {
-            "table_name": "test.r",
-            "result": "SUCCESS",
-            "message": ""
-        }
-    ],
+    "all_completed_tables": [],
     "creation_details": {
         "project_id": "%s",
         "cluster_id": "%s",
