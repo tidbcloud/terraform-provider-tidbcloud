@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/c4pt0r/go-tidbcloud-sdk-v1/client/backup"
 	"github.com/c4pt0r/go-tidbcloud-sdk-v1/client/restore"
+	importService "github.com/tidbcloud/terraform-provider-tidbcloud/pkg/import/client/import_service"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +15,7 @@ import (
 	httpTransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	"github.com/icholy/digest"
+	importClient "github.com/tidbcloud/terraform-provider-tidbcloud/pkg/import/client"
 )
 
 const (
@@ -50,20 +52,32 @@ type TiDBCloudClient interface {
 
 	ListRestoreTasks(params *restore.ListRestoreTasksParams, opts ...restore.ClientOption) (*restore.ListRestoreTasksOK, error)
 
+	CancelImport(params *importService.CancelImportParams, opts ...importService.ClientOption) (*importService.CancelImportOK, error)
+
+	CreateImport(params *importService.CreateImportParams, opts ...importService.ClientOption) (*importService.CreateImportOK, error)
+
+	GetImport(params *importService.GetImportParams, opts ...importService.ClientOption) (*importService.GetImportOK, error)
+
+	ListImports(params *importService.ListImportsParams, opts ...importService.ClientOption) (*importService.ListImportsOK, error)
+
+	GenerateUploadURL(params *importService.GenerateUploadURLParams, opts ...importService.ClientOption) (*importService.GenerateUploadURLOK, error)
+
 	PreSignedUrlUpload(url *string, uploadFile *os.File, size int64) error
 }
 
 type ClientDelegate struct {
-	c *apiClient.GoTidbcloud
+	c  *apiClient.GoTidbcloud
+	ic *importClient.GoTidbcloudImport
 }
 
 func NewClientDelegate(publicKey string, privateKey string, apiUrl string, ver string) (*ClientDelegate, error) {
-	c, err := NewApiClient(publicKey, privateKey, apiUrl, ver)
+	c, ic, err := NewApiClient(publicKey, privateKey, apiUrl, ver)
 	if err != nil {
 		return nil, err
 	}
 	return &ClientDelegate{
-		c: c,
+		c:  c,
+		ic: ic,
 	}, nil
 }
 
@@ -123,6 +137,26 @@ func (d *ClientDelegate) ListRestoreTasks(params *restore.ListRestoreTasksParams
 	return d.c.Restore.ListRestoreTasks(params, opts...)
 }
 
+func (d *ClientDelegate) CancelImport(params *importService.CancelImportParams, opts ...importService.ClientOption) (*importService.CancelImportOK, error) {
+	return d.ic.ImportService.CancelImport(params, opts...)
+}
+
+func (d *ClientDelegate) CreateImport(params *importService.CreateImportParams, opts ...importService.ClientOption) (*importService.CreateImportOK, error) {
+	return d.ic.ImportService.CreateImport(params, opts...)
+}
+
+func (d *ClientDelegate) GetImport(params *importService.GetImportParams, opts ...importService.ClientOption) (*importService.GetImportOK, error) {
+	return d.ic.ImportService.GetImport(params, opts...)
+}
+
+func (d *ClientDelegate) ListImports(params *importService.ListImportsParams, opts ...importService.ClientOption) (*importService.ListImportsOK, error) {
+	return d.ic.ImportService.ListImports(params, opts...)
+}
+
+func (d *ClientDelegate) GenerateUploadURL(params *importService.GenerateUploadURLParams, opts ...importService.ClientOption) (*importService.GenerateUploadURLOK, error) {
+	return d.ic.ImportService.GenerateUploadURL(params, opts...)
+}
+
 func (d *ClientDelegate) PreSignedUrlUpload(url *string, uploadFile *os.File, size int64) error {
 	request, err := http.NewRequest("PUT", *url, uploadFile)
 	if err != nil {
@@ -143,7 +177,7 @@ func (d *ClientDelegate) PreSignedUrlUpload(url *string, uploadFile *os.File, si
 	return nil
 }
 
-func NewApiClient(publicKey string, privateKey string, apiUrl string, ver string) (*apiClient.GoTidbcloud, error) {
+func NewApiClient(publicKey string, privateKey string, apiUrl string, ver string) (*apiClient.GoTidbcloud, *importClient.GoTidbcloudImport, error) {
 	httpclient := &http.Client{
 		Transport: NewTransportWithAgent(&digest.Transport{
 			Username: publicKey,
@@ -154,11 +188,11 @@ func NewApiClient(publicKey string, privateKey string, apiUrl string, ver string
 	// Parse the URL
 	u, err := url.ParseRequestURI(apiUrl)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	transport := httpTransport.NewWithClient(u.Host, u.Path, []string{u.Scheme}, httpclient)
-	return apiClient.New(transport, strfmt.Default), nil
+	return apiClient.New(transport, strfmt.Default), importClient.New(transport, strfmt.Default), nil
 }
 
 // NewTransportWithAgent returns a new http.RoundTripper that add the User-Agent header,
