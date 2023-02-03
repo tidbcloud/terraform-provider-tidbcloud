@@ -1,10 +1,18 @@
 package provider
 
+import (
+	cryptorand "crypto/rand"
+	"math/big"
+	"math/rand"
+	"time"
+)
+
 const (
 	TiDBCloudPublicKey  string = "TIDBCLOUD_PUBLIC_KEY"
 	TiDBCloudPrivateKey string = "TIDBCLOUD_PRIVATE_KEY"
 	TiDBCloudHOST       string = "TIDBCLOUD_HOST"
 	TiDBCloudProjectID  string = "TIDBCLOUD_PROJECT_ID"
+	TiDBCloudClusterID  string = "TIDBCLOUD_CLUSTER_ID"
 	UserAgent           string = "terraform-provider-tidbcloud"
 )
 
@@ -19,4 +27,16 @@ func HookGlobal[T any](ptr *T, val T) func() {
 
 func Ptr[T any](v T) *T {
 	return &v
+}
+
+func GenerateRandomString(n int) string {
+	letters := "abcdefghijklmnopqrstuvwxyz"
+	rand.Seed(time.Now().UnixNano())
+	letterRunes := []rune(letters)
+	b := make([]rune, n)
+	for i := range b {
+		randNum, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(letterRunes))))
+		b[i] = letterRunes[randNum.Int64()]
+	}
+	return string(b)
 }

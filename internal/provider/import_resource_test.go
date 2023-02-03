@@ -12,6 +12,39 @@ import (
 	"testing"
 )
 
+// Please Fill pass the projectID and clusterID and fill in the file_name to run the acc test
+func TestACCImportResourceLOCAL(t *testing.T) {
+	config := fmt.Sprintf(`
+		resource "tidbcloud_import" "local" {
+		  project_id  = "%s"
+		  cluster_id  = "%s"
+		  type        = "LOCAL"
+		  data_format = "CSV"
+		  target_table = {
+			schema = "test"
+			table  = "import_test_%s"
+		  }
+		  file_name = "fake_file"
+		}
+		`, os.Getenv(TiDBCloudProjectID), os.Getenv(TiDBCloudClusterID), GenerateRandomString(3))
+	testImportResourceLocal(t, config, false)
+}
+
+// Please Fill pass the projectID and clusterID and fill in the aws_role_arn and source url to run the acc test
+func TestACCImportResourceS3(t *testing.T) {
+	config := fmt.Sprintf(`
+		resource "tidbcloud_import" "local" {
+		  project_id  = "%s"
+		  cluster_id  = "%s"
+		  type        = "LOCAL"
+		  data_format = "CSV"
+          aws_role_arn = "fake_arn"
+          source_url   = "fake_url"
+		}
+		`, os.Getenv(TiDBCloudProjectID), os.Getenv(TiDBCloudClusterID))
+	testImportResourceLocal(t, config, false)
+}
+
 func TestUTImportResource_LOCAL(t *testing.T) {
 	if os.Getenv(TiDBCloudPublicKey) == "" {
 		os.Setenv(TiDBCloudPublicKey, "fake")
@@ -115,7 +148,41 @@ func TestUTImportResource_LOCAL(t *testing.T) {
 	s.EXPECT().PreSignedUrlUpload(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil)
 
-	testImportresourceLocal(t, true)
+	config := fmt.Sprintf(`
+		resource "tidbcloud_import" "local" {
+		  project_id  = "%s"
+		  cluster_id  = "cluster-id"
+		  type        = "LOCAL"
+		  data_format = "CSV"
+		  target_table = {
+			schema = "test"
+			table  = "r"
+		  }
+		  file_name = "fake.csv"
+		}
+		`, os.Getenv(TiDBCloudProjectID))
+	testImportResourceLocal(t, config, true)
+}
+
+func testImportResourceLocal(t *testing.T, config string, useMock bool) {
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               useMock,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read import resource
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("tidbcloud_import.local", "id"),
+					resource.TestCheckResourceAttr("tidbcloud_import.local", "type", "LOCAL"),
+					resource.TestCheckResourceAttrSet("tidbcloud_import.local", "file_name"),
+					resource.TestCheckResourceAttrSet("tidbcloud_import.local", "new_file_name"),
+				),
+			},
+			// Delete testing automatically occurs in TestCase
+		},
+	})
 }
 
 func TestUTImportResource_S3(t *testing.T) {
@@ -215,10 +282,21 @@ func TestUTImportResource_S3(t *testing.T) {
 	s.EXPECT().PreSignedUrlUpload(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).AnyTimes()
 
-	testImportresourceS3(t, true)
+	config := fmt.Sprintf(`
+		resource "tidbcloud_import" "s3" {
+		  project_id  = "%s"
+		  cluster_id  = "cluster-id"
+		  type        = "S3"
+		  data_format  = "Parquet"
+		  aws_role_arn = "fake_arn"
+		  source_url   = "fake_url"
+		}
+		`, os.Getenv(TiDBCloudProjectID))
+
+	testImportResourceS3(t, config, true)
 }
 
-func testImportresourceLocal(t *testing.T, useMock bool) {
+func testImportResourceS3(t *testing.T, config string, useMock bool) {
 	resource.Test(t, resource.TestCase{
 		IsUnitTest:               useMock,
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -226,28 +304,7 @@ func testImportresourceLocal(t *testing.T, useMock bool) {
 		Steps: []resource.TestStep{
 			// Create and Read import resource
 			{
-				Config: testImportResourceConfig("LOCAL"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("tidbcloud_import.local", "id"),
-					resource.TestCheckResourceAttr("tidbcloud_import.local", "type", "LOCAL"),
-					resource.TestCheckResourceAttrSet("tidbcloud_import.local", "file_name"),
-					resource.TestCheckResourceAttrSet("tidbcloud_import.local", "new_file_name"),
-				),
-			},
-			// Delete testing automatically occurs in TestCase
-		},
-	})
-}
-
-func testImportresourceS3(t *testing.T, useMock bool) {
-	resource.Test(t, resource.TestCase{
-		IsUnitTest:               useMock,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			// Create and Read import resource
-			{
-				Config: testImportResourceConfig("S3"),
+				Config: config,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("tidbcloud_import.s3", "id"),
 					resource.TestCheckResourceAttr("tidbcloud_import.s3", "type", "S3"),
@@ -258,33 +315,4 @@ func testImportresourceS3(t *testing.T, useMock bool) {
 			// Delete testing automatically occurs in TestCase
 		},
 	})
-}
-
-func testImportResourceConfig(importType string) string {
-	if importType == "LOCAL" {
-		return fmt.Sprintf(`
-resource "tidbcloud_import" "local" {
-  project_id  = "%s"
-  cluster_id  = "cluster-id"
-  type        = "LOCAL"
-  data_format = "CSV"
-  target_table = {
-    schema = "test"
-    table  = "r"
-  }
-  file_name = "fake.csv"
-}
-`, os.Getenv(TiDBCloudProjectID))
-	} else {
-		return fmt.Sprintf(`
-resource "tidbcloud_import" "s3" {
-  project_id  = "%s"
-  cluster_id  = "cluster-id"
-  type        = "S3"
-  data_format  = "Parquet"
-  aws_role_arn = "fake_arn"
-  source_url   = "fake_url"
-}
-`, os.Getenv(TiDBCloudProjectID))
-	}
 }
