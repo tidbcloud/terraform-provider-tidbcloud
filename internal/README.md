@@ -1,3 +1,9 @@
+# Running the unit test
+
+```
+go test -v ./internal/provider/ 
+```
+
 # Running the acceptance test
 
 *Note:* Acceptance tests may create real resources, and often cost money to run.
