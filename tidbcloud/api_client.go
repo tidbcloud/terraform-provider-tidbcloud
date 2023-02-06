@@ -70,8 +70,8 @@ type ClientDelegate struct {
 	ic *importClient.GoTidbcloudImport
 }
 
-func NewClientDelegate(publicKey string, privateKey string, apiUrl string, ver string) (*ClientDelegate, error) {
-	c, ic, err := NewApiClient(publicKey, privateKey, apiUrl, ver)
+func NewClientDelegate(publicKey string, privateKey string, apiUrl string, userAgent string) (TiDBCloudClient, error) {
+	c, ic, err := NewApiClient(publicKey, privateKey, apiUrl, userAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -177,12 +177,12 @@ func (d *ClientDelegate) PreSignedUrlUpload(url *string, uploadFile *os.File, si
 	return nil
 }
 
-func NewApiClient(publicKey string, privateKey string, apiUrl string, ver string) (*apiClient.GoTidbcloud, *importClient.GoTidbcloudImport, error) {
+func NewApiClient(publicKey string, privateKey string, apiUrl string, userAgent string) (*apiClient.GoTidbcloud, *importClient.GoTidbcloudImport, error) {
 	httpclient := &http.Client{
 		Transport: NewTransportWithAgent(&digest.Transport{
 			Username: publicKey,
 			Password: privateKey,
-		}, fmt.Sprintf("terraform-provider-tidbcloud/%s", ver)),
+		}, userAgent),
 	}
 
 	// Parse the URL

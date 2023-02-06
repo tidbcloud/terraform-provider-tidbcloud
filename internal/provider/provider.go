@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -14,6 +15,9 @@ import (
 
 // Ensure the implementation satisfies the provider.Provider interface.
 var _ provider.Provider = &tidbcloudProvider{}
+
+// NewClient overrides the NewClientDelegate method for testing.
+var NewClient = tidbcloud.NewClientDelegate
 
 // provider satisfies the tfsdk.Provider interface and usually is included
 // with all Resource and DataSource implementations.
@@ -67,7 +71,7 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	if data.PublicKey.IsNull() {
-		publicKey = os.Getenv("TIDBCLOUD_PUBLIC_KEY")
+		publicKey = os.Getenv(TiDBCloudPublicKey)
 	} else {
 		publicKey = data.PublicKey.ValueString()
 	}
@@ -93,7 +97,7 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	if data.PrivateKey.IsNull() {
-		privateKey = os.Getenv("TIDBCLOUD_PRIVATE_KEY")
+		privateKey = os.Getenv(TiDBCloudPrivateKey)
 	} else {
 		privateKey = data.PrivateKey.ValueString()
 	}
@@ -109,10 +113,10 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 
 	// Create a new tidb client and set it to the provider client
 	var host = tidbcloud.DefaultApiUrl
-	if os.Getenv("TIDBCLOUD_HOST") != "" {
-		host = os.Getenv("TIDBCLOUD_HOST")
+	if os.Getenv(TiDBCloudHOST) != "" {
+		host = os.Getenv(TiDBCloudHOST)
 	}
-	c, err := tidbcloud.NewClientDelegate(publicKey, privateKey, host, p.version)
+	c, err := NewClient(publicKey, privateKey, host, fmt.Sprintf("%s/%s", UserAgent, p.version))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create client",
