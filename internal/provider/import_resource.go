@@ -150,7 +150,7 @@ func (r *ImportResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Required:            true,
 			},
 			"csv_format": schema.SingleNestedAttribute{
-				MarkdownDescription: "The CSV configuration.",
+				MarkdownDescription: "The CSV configuration.See https://docs.pingcap.com/tidbcloud/csv-config-for-import-data for more details.",
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"backslash_escape": schema.BoolAttribute{

@@ -49,6 +49,8 @@ DataSource
 
 ## Quick Start
 
+### Install terraform
+
 Install terraform in Mac. See [official doc](https://learn.hashicorp.com/tutorials/terraform/install-cli?in=terraform/aws-get-started) for other OS.
 
 ```
@@ -56,51 +58,58 @@ brew tap hashicorp/tap
 brew install hashicorp/tap/terraform
 ```
 
-Build a cluster.tf file:
+### Run the serverless example
 
-```
-variable "password" {
-  type      = string
-  nullable  = false
-  sensitive = true
-}
+1. In a terminal clone the terraform-provider-tidbcloud repository.
 
-terraform {
-  required_providers {
-    tidbcloud = {
-      source = "tidbcloud/tidbcloud"
-      version = "~> 0.1.0"
+  ```
+  git clone git@github.com:tidbcloud/terraform-provider-tidbcloud.git
+  ```
+
+2. Go to the examples/workflows/tidbcloud_serverless_cluster directory.
+
+  ```
+  cd examples/workflows/tidbcloud_serverless_cluster
+  ```
+
+3. The provider requires an API key set in an environment variable. Copy the [API key](https://docs.pingcap.com/tidbcloud/api/v1beta#section/Authentication/API-Key-Management) from the TiDB Cloud console and create the environment variables.
+
+  ```
+  export TIDBCLOUD_PUBLIC_KEY=fake_public_key
+  export TIDBCLOUD_PRIVATE_KEY=fake_private_key
+  ```
+
+4. Rename the `terraform.tfvars.templates` to `terraform.tfvars` and change the variables as you wish. You can also pass them by environment variables.
+
+  ```
+  export TF_VAR_password=fake_password
+  export TF_VAR_cluster_name=fake_cluster_name
+  ```
+
+5. Execute the following commands to create a serverless tier
+
+  ```
+  terraform init
+  terraform apply --auto-approve
+  ```
+
+6. The example will output the `connection_strings` for you.
+
+  ```
+  connection_strings = {
+    "default_user" = "3ybfFe46ZdoSR3b.root"
+    "standard" = {
+      "host" = "gateway01.us-west-2.prod.aws.tidbcloud.com"
+      "port" = 4000
+    }
+    "vpc_peering" = {
+      "host" = ""
+      "port" = 0
     }
   }
-  required_version = ">= 1.0.0"
-}
+  ```
 
-resource "tidbcloud_cluster" "serverless_tier_cluster" {
-  project_id     = "fake_id"
-  name           = "example2"
-  cluster_type   = "DEVELOPER"
-  cloud_provider = "AWS"
-  region         = "us-east-1"
-  config = {
-    root_password = var.password
-  }
-}
-```
-
-Set environment variables
-
-```
-export TIDBCLOUD_PUBLIC_KEY=fake_public_key
-export TIDBCLOUD_PRIVATE_KEY=fake_private_key
-export TF_VAR_password=fake_password
-```
-
-Execute the following commands to create a serverless tier
-
-```
-terraform init
-terraform apply --auto-approve
-```
+  The `connection_strings` will be generated after the cluster is available. If you find the output is empty, you can execute the `terraform apply --auto-approve` again to refresh the state of cluster.
 
 ## User Guide
 

@@ -1,0 +1,18 @@
+cluster_name = "cluster0"
+password     = "12345678"
+cloud_provider = "AWS"
+cloud_provider_region = "us-east-1"
+tidb = {
+   node_size    = "8C16G"
+   node_quantity = 3
+}
+tikv = {
+   node_size    = "8C32G"
+   node_quantity = 3
+   storage_size_gib = 500
+}
+tiflash = {
+   node_size    = "8C64G"
+   node_quantity = 1
+   storage_size_gib = 500
+}
