@@ -109,7 +109,7 @@ brew install hashicorp/tap/terraform
   }
   ```
 
-  The `connection_strings` will be generated after the cluster is available. If you find the output is empty, you can execute the `terraform apply --auto-approve` again to refresh the state of cluster.
+  The `connection_strings` will be generated after the cluster is available. If you find the output is empty, you can execute the `terraform refersh` to refresh the state of cluster.
 
 ## User Guide
 
