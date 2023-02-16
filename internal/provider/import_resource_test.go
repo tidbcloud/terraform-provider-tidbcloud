@@ -119,7 +119,7 @@ func TestUTImportResourceLOCAL(t *testing.T) {
         "aws_role_arn": "",
         "file_name": "fake.csv",
         "target_table": {
-            "schema": "test",
+            "database": "test",
             "table": "r"
         }
     }}`, clusterId, importId, os.Getenv(TiDBCloudProjectID), clusterId)))
@@ -155,7 +155,7 @@ func TestUTImportResourceLOCAL(t *testing.T) {
 		  type        = "LOCAL"
 		  data_format = "CSV"
 		  target_table = {
-			schema = "test"
+			database = "test"
 			table  = "r"
 		  }
 		  file_name = "fake.csv"
