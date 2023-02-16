@@ -1,3 +1,22 @@
+## [0.2.0] 2023-01-16
+
+**Feature**
+* Support import resource in [#52](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/52)
+
+**Enhancement**
+* Replace open api sdk in [#50](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/50)
+* Update terraform-plugin-framework to 1.1.1 in [#51](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/51)
+* Refactor test in [#55](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/55)
+
+**Docs**
+* Unify user guide in [#44](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/44)
+* Add workflow for terraform in [#56](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/56)
+
+**Deps**
+* Bump github.com/hashicorp/terraform-plugin-sdk/v2 from 2.21.0 to 2.24.1 in [#27](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/27)
+* Bump goreleaser/goreleaser-action from 3 to 4 in [#39](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/39)
+* Bump github.com/hashicorp/terraform-plugin-go from 0.14.1 to 0.14.3 in [#42](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/42)
+
 ## [0.1.1] 2022-11-15
 
 **Docs**
