@@ -91,8 +91,8 @@ type ImportCustomCSVFormat struct {
 }
 
 type ImportTargetTable struct {
-	// schema
-	Schema types.String `tfsdk:"schema"`
+	// database
+	Database types.String `tfsdk:"database"`
 	// table
 	Table types.String `tfsdk:"table"`
 }
@@ -183,8 +183,8 @@ func (r *ImportResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				MarkdownDescription: "The target db and table to import data, used for importing from LOCAL",
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
-					"schema": schema.StringAttribute{
-						MarkdownDescription: "The schema of your cluster.",
+					"database": schema.StringAttribute{
+						MarkdownDescription: "The database of your cluster.",
 						Optional:            true,
 					},
 					"table": schema.StringAttribute{
@@ -410,8 +410,14 @@ func buildCreateImportBody(data *ImportResourceModel) (*importService.CreateImpo
 		if data.TargetTable == nil {
 			return nil, errors.New("TargetTable can not be empty in Local type")
 		}
+		if data.TargetTable.Database.IsNull() || data.TargetTable.Database.IsUnknown() {
+			return nil, errors.New("TargetTable's Database can not be empty in Local type")
+		}
+		if data.TargetTable.Table.IsNull() || data.TargetTable.Table.IsUnknown() {
+			return nil, errors.New("TargetTable's Database can not be empty in Local type")
+		}
 		body.TargetTable = &importModel.OpenapiTable{
-			Schema: data.TargetTable.Schema.ValueString(),
+			Schema: data.TargetTable.Database.ValueString(),
 			Table:  data.TargetTable.Table.ValueString(),
 		}
 	} else {
