@@ -110,7 +110,7 @@ Optional:
 
 Optional:
 
-- `schema` (String) The schema of your cluster.
+- `database` (String) The database of your cluster.
 - `table` (String) The table of your cluster.
 
 
