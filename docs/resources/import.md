@@ -70,7 +70,7 @@ resource "tidbcloud_import" "example_s3_parquet" {
 ### Optional
 
 - `aws_role_arn` (String) The arn of AWS IAM role, used for importing from S3
-- `csv_format` (Attributes) The CSV configuration. (see [below for nested schema](#nestedatt--csv_format))
+- `csv_format` (Attributes) The CSV configuration.See https://docs.pingcap.com/tidbcloud/csv-config-for-import-data for more details. (see [below for nested schema](#nestedatt--csv_format))
 - `file_name` (String) The local file path, used for importing from LOCAL
 - `source_url` (String) The full s3 path that contains data to import, used for importing from S3
 - `target_table` (Attributes) The target db and table to import data, used for importing from LOCAL (see [below for nested schema](#nestedatt--target_table))
