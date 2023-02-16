@@ -5,7 +5,7 @@
 
 **Enhancement**
 * Replace open api sdk by in [#50](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/50)
-* Update terraform-plugin-framework tp 1.1.1 by in [#51](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/51)
+* Update terraform-plugin-framework to 1.1.1 by in [#51](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/51)
 * Refactor test by in [#55](https://github.com/tidbcloud/terraform-provider-tidbcloud/pull/55)
 
 **Docs**
