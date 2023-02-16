@@ -414,7 +414,7 @@ func buildCreateImportBody(data *ImportResourceModel) (*importService.CreateImpo
 			return nil, errors.New("TargetTable's Database can not be empty in Local type")
 		}
 		if data.TargetTable.Table.IsNull() || data.TargetTable.Table.IsUnknown() {
-			return nil, errors.New("TargetTable's Database can not be empty in Local type")
+			return nil, errors.New("TargetTable's Table can not be empty in Local type")
 		}
 		body.TargetTable = &importModel.OpenapiTable{
 			Schema: data.TargetTable.Database.ValueString(),
