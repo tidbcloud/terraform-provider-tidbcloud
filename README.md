@@ -3,6 +3,7 @@
   <a href="https://www.terraform.io/"><img src=".github/terraform_logo.svg" alt="Terraform logo" width="250"/></a>
 </p>
 
+
 # Terraform TiDB Cloud Provider
 
 [![License](https://img.shields.io/github/license/tidbcloud/terraform-provider-tidbcloud.svg)](https://github.com/tidbcloud/terraform-provider-tidbcloud/blob/master/LICENSE)
