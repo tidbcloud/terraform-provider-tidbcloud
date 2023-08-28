@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	clusterApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/cluster"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -13,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"strings"
 )
 
 const dev = "DEVELOPER"
@@ -468,8 +469,9 @@ func buildCreateClusterBody(data clusterResourceData) clusterApi.CreateClusterBo
 	if data.Config.IPAccessList != nil {
 		var IPAccessList []*clusterApi.CreateClusterParamsBodyConfigIPAccessListItems0
 		for _, key := range data.Config.IPAccessList {
+			cidr := key.CIDR
 			IPAccessList = append(IPAccessList, &clusterApi.CreateClusterParamsBodyConfigIPAccessListItems0{
-				Cidr:        &key.CIDR,
+				Cidr:        &cidr,
 				Description: key.Description,
 			})
 		}

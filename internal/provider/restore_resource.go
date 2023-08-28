@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+
 	restoreApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/restore"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -319,8 +320,9 @@ func buildCreateRestoreTaskBody(data restoreResourceData) restoreApi.CreateResto
 	if data.Config.IPAccessList != nil {
 		var IPAccessList []*restoreApi.CreateRestoreTaskParamsBodyConfigIPAccessListItems0
 		for _, key := range data.Config.IPAccessList {
+			cidr := key.CIDR
 			IPAccessList = append(IPAccessList, &restoreApi.CreateRestoreTaskParamsBodyConfigIPAccessListItems0{
-				Cidr:        &key.CIDR,
+				Cidr:        &cidr,
 				Description: key.Description,
 			})
 		}
