@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	clusterApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/cluster"
@@ -626,14 +627,54 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 	if data.Config.IPAccessList != nil {
-		for index, key := range data.Config.IPAccessList {
-			if state.Config.IPAccessList[index].CIDR != key.CIDR || state.Config.IPAccessList[index].Description != key.Description {
+		// You cannot add an IP access list to an existing cluster without an IP rule.
+		if len(state.Config.IPAccessList) == 0 {
+			resp.Diagnostics.AddError(
+				"Update error",
+				"ip_access_list can not be added to the existing cluster.",
+			)
+			return
+		}
+
+		// You cannot insert or delete IP rule.
+		if len(data.Config.IPAccessList) != len(state.Config.IPAccessList) {
+			resp.Diagnostics.AddError(
+				"Update error",
+				"ip_access_list can not be changed, only components can be changed now",
+			)
+			return
+		}
+
+		// You cannot update the IP rule.
+		newIPAccessList := make([]ipAccess, len(data.Config.IPAccessList))
+		copy(newIPAccessList, data.Config.IPAccessList)
+		sort.Slice(newIPAccessList, func(i, j int) bool {
+			return newIPAccessList[i].CIDR < newIPAccessList[j].CIDR
+		})
+
+		currentIPAccessList := make([]ipAccess, len(state.Config.IPAccessList))
+		copy(currentIPAccessList, state.Config.IPAccessList)
+		sort.Slice(currentIPAccessList, func(i, j int) bool {
+			return currentIPAccessList[i].CIDR < currentIPAccessList[j].CIDR
+		})
+
+		for index, key := range newIPAccessList {
+			if currentIPAccessList[index].CIDR != key.CIDR || currentIPAccessList[index].Description != key.Description {
 				resp.Diagnostics.AddError(
 					"Update error",
 					"ip_access_list can not be changed, only components can be changed now",
 				)
 				return
 			}
+		}
+	} else {
+		// You cannot remove the IP access list.
+		if len(state.Config.IPAccessList) > 0 {
+			resp.Diagnostics.AddError(
+				"Update error",
+				"ip_access_list can not be changed, only components can be changed now",
+			)
+			return
 		}
 	}
 
