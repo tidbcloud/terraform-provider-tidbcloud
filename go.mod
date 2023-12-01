@@ -3,6 +3,7 @@ module github.com/tidbcloud/terraform-provider-tidbcloud
 go 1.18
 
 require (
+	github.com/avast/retry-go/v4 v4.5.1
 	github.com/c4pt0r/go-tidbcloud-sdk-v1 v0.0.0-20221102224337-3b1c2179c517
 	github.com/go-openapi/errors v0.20.3
 	github.com/go-openapi/runtime v0.25.0

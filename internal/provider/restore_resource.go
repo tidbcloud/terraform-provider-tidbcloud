@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/avast/retry-go/v4"
 	restoreApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/restore"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -267,7 +269,12 @@ func (r restoreResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	tflog.Trace(ctx, "read restore resource")
-	getRestoreTaskOK, err := r.provider.client.GetRestoreTask(restoreApi.NewGetRestoreTaskParams().WithProjectID(data.ProjectId).WithRestoreID(createRestoreTaskOK.Payload.ID))
+	getRestoreTaskOK, err := retry.DoWithData(
+		func() (*restoreApi.GetRestoreTaskOK, error) {
+			return r.provider.client.GetRestoreTask(restoreApi.NewGetRestoreTaskParams().WithProjectID(data.ProjectId).WithRestoreID(createRestoreTaskOK.Payload.ID))
+		},
+		retry.Delay(1*time.Second),
+	)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetRestoreTask, got error: %s", err))
 		return
