@@ -360,10 +360,12 @@ func refreshRestoreResourceData(resp *restoreApi.GetRestoreTaskOKBody, data *res
 	data.RestoreId = types.StringValue(resp.ID)
 	data.CreateTimestamp = types.StringValue(resp.CreateTimestamp.String())
 	data.Status = types.StringValue(resp.Status)
-	data.Cluster = &cluster{
-		Id:     resp.Cluster.ID,
-		Name:   resp.Cluster.Name,
-		Status: resp.Cluster.Status,
+	if resp.Cluster != nil {
+		data.Cluster = &cluster{
+			Id:     resp.Cluster.ID,
+			Name:   resp.Cluster.Name,
+			Status: resp.Cluster.Status,
+		}
 	}
 	data.ErrorMessage = types.StringValue(resp.ErrorMessage)
 }
