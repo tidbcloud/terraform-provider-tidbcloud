@@ -149,6 +149,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					"cluster_status": schema.StringAttribute{
 						MarkdownDescription: "Status of the cluster.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"connection_strings": schema.SingleNestedAttribute{
 						MarkdownDescription: "Connection strings.",
