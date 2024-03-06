@@ -773,7 +773,9 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
 		return
 	}
+	preStatus := data.Status.ClusterStatus
 	refreshClusterResourceData(getClusterResp.Payload, &data)
+	data.Status.ClusterStatus = preStatus
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
