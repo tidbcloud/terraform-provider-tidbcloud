@@ -149,9 +149,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					"cluster_status": schema.StringAttribute{
 						MarkdownDescription: "Status of the cluster.",
 						Computed:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"connection_strings": schema.SingleNestedAttribute{
 						MarkdownDescription: "Connection strings.",
@@ -773,9 +770,7 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
 		return
 	}
-	preStatus := data.Status.ClusterStatus
 	refreshClusterResourceData(getClusterResp.Payload, &data)
-	data.Status.ClusterStatus = preStatus
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
