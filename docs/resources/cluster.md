@@ -195,5 +195,3 @@ Read-Only:
 
 - `host` (String) The host of VPC peering connection.
 - `port` (Number) The TiDB port for connection. The port must be in the range of 1024-65535 except 10080.
-
-

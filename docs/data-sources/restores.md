@@ -74,5 +74,3 @@ Read-Only:
 - `id` (String) The ID of the restored cluster. The restored cluster is the new cluster your backup data is restored to.
 - `name` (String) The name of the restored cluster. The restored cluster is the new cluster your backup data is restored to.
 - `status` (String) The status of the restored cluster. Possible values are "AVAILABLE", "CREATING", "MODIFYING", "PAUSED", "RESUMING", and "CLEARED".
-
-

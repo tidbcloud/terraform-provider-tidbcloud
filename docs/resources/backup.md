@@ -54,5 +54,3 @@ resource "tidbcloud_backup" "example" {
 - `size` (String) The bytes of the backup.
 - `status` (String) Enum: PENDING/RUNNING/FAILED/SUCCESS.The status of backup.
 - `type` (String) Enum: MANUAL/AUTO.The type of backup. TiDB Cloud only supports manual and auto backup. For more information, see [TiDB Cloud Documentation](https://docs.pingcap.com/tidbcloud/backup-and-restore#backup).
-
-
