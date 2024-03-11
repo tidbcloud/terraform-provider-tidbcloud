@@ -61,5 +61,3 @@ Read-Only:
 - `name` (String) The name of the project.
 - `org_id` (String) The ID of the TiDB Cloud organization to which the project belongs.
 - `user_count` (Number) The number of users in the project.
-
-

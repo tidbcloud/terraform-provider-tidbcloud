@@ -122,5 +122,3 @@ Read-Only:
 - `message` (String)
 - `result` (String)
 - `table_name` (String)
-
-

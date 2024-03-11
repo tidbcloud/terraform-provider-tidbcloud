@@ -126,5 +126,3 @@ Read-Only:
 
 - `max` (Number) The maximum storage size for each node of the component in the cluster.
 - `min` (Number) The minimum storage size for each node of the component in the cluster.
-
-
