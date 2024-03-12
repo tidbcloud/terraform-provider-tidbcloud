@@ -4,9 +4,9 @@ go 1.21
 
 require (
 	github.com/c4pt0r/go-tidbcloud-sdk-v1 v0.0.0-20221102224337-3b1c2179c517
-	github.com/go-openapi/errors v0.21.0
+	github.com/go-openapi/errors v0.22.0
 	github.com/go-openapi/runtime v0.25.0
-	github.com/go-openapi/strfmt v0.22.0
+	github.com/go-openapi/strfmt v0.23.0
 	github.com/go-openapi/swag v0.22.3
 	github.com/go-openapi/validate v0.22.0
 	github.com/golang/mock v1.6.0
@@ -42,7 +42,7 @@ require (
 	github.com/go-openapi/spec v0.20.4 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/uuid v1.5.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/cli v1.1.6 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
@@ -86,7 +86,7 @@ require (
 	github.com/yuin/goldmark v1.6.0 // indirect
 	github.com/yuin/goldmark-meta v1.1.0 // indirect
 	github.com/zclconf/go-cty v1.14.1 // indirect
-	go.mongodb.org/mongo-driver v1.13.1 // indirect
+	go.mongodb.org/mongo-driver v1.14.0 // indirect
 	go.opentelemetry.io/otel v1.11.1 // indirect
 	go.opentelemetry.io/otel/trace v1.11.1 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
