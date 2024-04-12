@@ -34,3 +34,4 @@ website/vendor
 *.winfile eol=crlf
 
 test.tf
+.terraform.lock.hcl

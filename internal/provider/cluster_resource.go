@@ -136,7 +136,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "The status of the cluster.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
+					clusterResourceStatus(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"tidb_version": schema.StringAttribute{
