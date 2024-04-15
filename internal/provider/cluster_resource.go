@@ -236,6 +236,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							"  - The cluster can be paused only when the cluster_status is \"AVAILABLE\"." +
 							"  - The cluster can be resumed only when the cluster_status is \"PAUSED\".",
 						Optional: true,
+						Computed: true,
 					},
 					"components": schema.SingleNestedAttribute{
 						MarkdownDescription: "The components of the cluster.\n" +
@@ -567,6 +568,11 @@ func refreshClusterResourceData(resp *clusterApi.GetClusterOKBody, data *cluster
 			VpcPeering:  &vpcPeering,
 		},
 	}
+	paused := false
+	if resp.Status.ClusterStatus == "PAUSED" || resp.Status.ClusterStatus == "PAUSING" {
+		paused = true
+	}
+	data.Config.Paused = &paused
 	// may return
 	tiflash := resp.Config.Components.Tiflash
 	if tiflash != nil {
@@ -578,7 +584,7 @@ func refreshClusterResourceData(resp *clusterApi.GetClusterOKBody, data *cluster
 	}
 
 	// not return
-	// IPAccessList, password and pause will not update for it will not return by read api
+	// IPAccessList, and password and pause will not update for it will not return by read api
 
 }
 
@@ -716,7 +722,7 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 	// build paused
 	if data.Config.Paused != nil {
 		if state.Config.Paused == nil || *data.Config.Paused != *state.Config.Paused {
-			updateClusterBody.Config.Paused = *data.Config.Paused
+			updateClusterBody.Config.Paused = data.Config.Paused
 		}
 	}
 	// build components
@@ -730,15 +736,15 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		if tiflashState == nil {
 			isComponentsChanged = true
 			componentTiFlash = &clusterApi.UpdateClusterParamsBodyConfigComponentsTiflash{
-				NodeQuantity:   tiflash.NodeQuantity,
-				NodeSize:       tiflash.NodeSize,
-				StorageSizeGib: tiflash.StorageSizeGib,
+				NodeQuantity:   &tiflash.NodeQuantity,
+				NodeSize:       &tiflash.NodeSize,
+				StorageSizeGib: &tiflash.StorageSizeGib,
 			}
 		} else if tiflash.NodeQuantity != tiflashState.NodeQuantity {
 			isComponentsChanged = true
 			// NodeSize can't be changed
 			componentTiFlash = &clusterApi.UpdateClusterParamsBodyConfigComponentsTiflash{
-				NodeQuantity: tiflash.NodeQuantity,
+				NodeQuantity: &tiflash.NodeQuantity,
 			}
 		}
 	}
@@ -749,7 +755,7 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 				NodeQuantity: &tidb.NodeQuantity,
 			},
 			Tikv: &clusterApi.UpdateClusterParamsBodyConfigComponentsTikv{
-				NodeQuantity: tikv.NodeQuantity,
+				NodeQuantity: &tikv.NodeQuantity,
 			},
 			Tiflash: componentTiFlash,
 		}

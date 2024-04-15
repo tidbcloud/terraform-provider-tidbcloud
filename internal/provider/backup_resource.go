@@ -128,7 +128,8 @@ func (r *backupResource) Create(ctx context.Context, req resource.CreateRequest,
 		Name: &data.Name,
 	}
 	if !data.Description.IsUnknown() && !data.Description.IsNull() {
-		createBackupBody.Description = data.Description.ValueString()
+		description := data.Description.ValueString()
+		createBackupBody.Description = &description
 	}
 	createBackupOK, err := r.provider.client.CreateBackup(backupApi.NewCreateBackupParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId).WithBody(createBackupBody))
 	if err != nil {
