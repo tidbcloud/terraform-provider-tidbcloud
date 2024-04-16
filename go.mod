@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/c4pt0r/go-tidbcloud-sdk-v1 v0.0.0-20240415110020-a27efb454da5
-	github.com/go-openapi/errors v0.21.0
+	github.com/go-openapi/errors v0.22.0
 	github.com/go-openapi/runtime v0.25.0
 	github.com/go-openapi/strfmt v0.22.0
 	github.com/go-openapi/swag v0.23.0
