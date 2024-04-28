@@ -236,7 +236,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							"  - The cluster can be paused only when the cluster_status is \"AVAILABLE\"." +
 							"  - The cluster can be resumed only when the cluster_status is \"PAUSED\".",
 						Optional: true,
-						Computed: true,
 					},
 					"components": schema.SingleNestedAttribute{
 						MarkdownDescription: "The components of the cluster.\n" +
@@ -420,7 +419,7 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetCluster, got error: %s", err))
 		return
 	}
-	refreshClusterResourceData(getClusterResp.Payload, &data)
+	refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -518,14 +517,14 @@ func (r clusterResource) Read(ctx context.Context, req resource.ReadRequest, res
 	data.Config.IPAccessList = iPAccessList
 	data.Config.Paused = paused
 
-	refreshClusterResourceData(getClusterResp.Payload, &data)
+	refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
 
 	// save into the Terraform state
 	diags := resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 }
 
-func refreshClusterResourceData(resp *clusterApi.GetClusterOKBody, data *clusterResourceData) {
+func refreshClusterResourceData(ctx context.Context, resp *clusterApi.GetClusterOKBody, data *clusterResourceData) {
 	// must return
 	data.Name = resp.Name
 	data.ClusterId = types.StringValue(*resp.ID)
@@ -568,11 +567,6 @@ func refreshClusterResourceData(resp *clusterApi.GetClusterOKBody, data *cluster
 			VpcPeering:  &vpcPeering,
 		},
 	}
-	paused := false
-	if resp.Status.ClusterStatus == "PAUSED" || resp.Status.ClusterStatus == "PAUSING" {
-		paused = true
-	}
-	data.Config.Paused = &paused
 	// may return
 	tiflash := resp.Config.Components.Tiflash
 	if tiflash != nil {
@@ -776,7 +770,7 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
 		return
 	}
-	refreshClusterResourceData(getClusterResp.Payload, &data)
+	refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
