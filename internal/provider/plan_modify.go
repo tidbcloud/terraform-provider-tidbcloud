@@ -36,7 +36,16 @@ func (m clusterResourceStatusModifier) PlanModifyObject(ctx context.Context, req
 	if req.ConfigValue.IsUnknown() {
 		return
 	}
-	// Does not apply to cluster_status attribute
+
+	// Apply state value if cluster is a serverless cluster
+	var data clusterResourceData
+	req.State.Get(ctx, &data)
+	if data.ClusterType == dev {
+		resp.PlanValue = req.StateValue
+		return
+	}
+
+	// Does not apply to cluster_status attribute for dedicated
 	attributes := req.StateValue.Attributes()
 	attributes["cluster_status"] = types.StringUnknown()
 	newStateValue, diag := basetypes.NewObjectValue(req.StateValue.AttributeTypes(ctx), attributes)
