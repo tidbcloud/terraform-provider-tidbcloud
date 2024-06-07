@@ -29,7 +29,6 @@ const ded = "DEDICATED"
 type clusterStatus string
 
 const (
-	clusterCreateTimeout                   = time.Hour
 	clusterStatusCreating    clusterStatus = "CREATING"
 	clusterStatusAvailable   clusterStatus = "AVAILABLE"
 	clusterStatusModifying   clusterStatus = "MODIFYING"
@@ -41,11 +40,17 @@ const (
 	clusterStatusPausing     clusterStatus = "PAUSING"
 )
 
+const (
+	clusterCreateTimeout  = time.Hour
+	clusterUpdateTimeout  = time.Hour
+	clusterCreateInterval = 60 * time.Second
+	clusterUpdateInterval = 30 * time.Second
+)
+
 type clusterResourceData struct {
 	ClusterId       types.String             `tfsdk:"id"`
 	ProjectId       string                   `tfsdk:"project_id"`
 	Name            string                   `tfsdk:"name"`
-	Sync            types.Bool               `tfsdk:"sync"`
 	ClusterType     string                   `tfsdk:"cluster_type"`
 	CloudProvider   string                   `tfsdk:"cloud_provider"`
 	Region          string                   `tfsdk:"region"`
@@ -133,10 +138,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"sync": schema.BoolAttribute{
-				Optional:            true,
-				MarkdownDescription: "Whether to wait for the cluster to be available when creating. Default is false.",
 			},
 			"cluster_type": schema.StringAttribute{
 				MarkdownDescription: "Enum: \"DEDICATED\" \"DEVELOPER\", The cluster type.",
@@ -435,7 +436,7 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 	// set clusterId. other computed attributes are not returned by create, they will be set when refresh
 	data.ClusterId = types.StringValue(*createClusterResp.Payload.ID)
-	if data.Sync.ValueBool() {
+	if r.provider.sync {
 		tflog.Info(ctx, "wait cluster ready")
 		cluster := &clusterApi.GetClusterOKBody{}
 		if data.ClusterType == dev {
@@ -448,7 +449,7 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 				return
 			}
 		} else {
-			if err = RetryWithInterval(ctx, clusterCreateTimeout, 60*time.Second,
+			if err = RetryWithInterval(ctx, clusterCreateTimeout, clusterCreateInterval,
 				waitClusterReadyFunc(ctx, data.ProjectId, data.ClusterId.String(), r.provider.client, cluster)); err != nil {
 				resp.Diagnostics.AddError(
 					"Cluster creation failed",
@@ -488,13 +489,20 @@ func waitClusterReadyFunc(ctx context.Context, projectId, clusterId string,
 			}
 		}
 		*cluster = *getClusterResp.Payload
-		if cluster.Status.ClusterStatus == string(clusterStatusAvailable) {
+
+		tflog.Debug(ctx, fmt.Sprintf("cluster status: %s", cluster.Status.ClusterStatus))
+		switch cluster.Status.ClusterStatus {
+		case string(clusterStatusPaused), string(clusterStatusAvailable):
+			tflog.Info(ctx, "cluster is ready")
 			return nil
+		case string(clusterStatusMaintaining):
+			return retry.NonRetryableError(fmt.Errorf("cluster is under maintaining"))
+		case string(clusterStatusUnavailable):
+			return retry.NonRetryableError(fmt.Errorf("cluster is unavailable"))
+		default:
+			tflog.Info(ctx, "cluster is not ready")
+			return retry.RetryableError(fmt.Errorf("cluster is not ready yet, got status: %s", cluster.Status.ClusterStatus))
 		}
-		if cluster.Status.ClusterStatus == string(clusterStatusCreating) {
-			return retry.RetryableError(fmt.Errorf("cluster is not ready yet"))
-		}
-		return retry.NonRetryableError(fmt.Errorf("cluster is not creating or avaliable, got status: %s", cluster.Status.ClusterStatus))
 	}
 }
 
@@ -588,12 +596,6 @@ func (r clusterResource) Read(ctx context.Context, req resource.ReadRequest, res
 	data.Config.RootPassword = rootPassword
 	data.Config.IPAccessList = iPAccessList
 	data.Config.Paused = paused
-	// add optional fields which will not return by api
-	var sync types.Bool
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("sync"), &sync)...)
-	if !sync.IsNull() && !sync.IsUnknown() {
-		data.Sync = sync
-	}
 	refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
 
 	// save into the Terraform state
@@ -840,14 +842,28 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	// we refresh for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
-	tflog.Trace(ctx, "read cluster_resource")
-	getClusterResp, err := r.provider.client.GetCluster(clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString()))
-	if err != nil {
-		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
-		return
+	if r.provider.sync {
+		tflog.Info(ctx, "wait cluster ready")
+		cluster := &clusterApi.GetClusterOKBody{}
+		if err = RetryWithInterval(ctx, clusterUpdateTimeout, clusterUpdateInterval,
+			waitClusterReadyFunc(ctx, data.ProjectId, data.ClusterId.String(), r.provider.client, cluster)); err != nil {
+			resp.Diagnostics.AddError(
+				"Cluster creation failed",
+				fmt.Sprintf("Cluster is not ready, get error: %s", err),
+			)
+			return
+		}
+		refreshClusterResourceData(ctx, cluster, &data)
+	} else {
+		// we refresh for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
+		tflog.Trace(ctx, "read cluster_resource")
+		getClusterResp, err := r.provider.client.GetCluster(clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString()))
+		if err != nil {
+			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
+			return
+		}
+		refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
 	}
-	refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)

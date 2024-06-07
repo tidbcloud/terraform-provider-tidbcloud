@@ -36,12 +36,15 @@ type tidbcloudProvider struct {
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
+
+	sync bool
 }
 
 // providerData can be used to store data from the Terraform configuration.
 type providerData struct {
 	PublicKey  types.String `tfsdk:"public_key"`
 	PrivateKey types.String `tfsdk:"private_key"`
+	Sync       types.Bool   `tfsdk:"sync"`
 }
 
 func (p *tidbcloudProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -125,6 +128,9 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
+	// sync
+	// p.sync = data.Sync.ValueBool()
+	p.sync = true
 	p.client = c
 	p.configured = true
 	resp.ResourceData = p
