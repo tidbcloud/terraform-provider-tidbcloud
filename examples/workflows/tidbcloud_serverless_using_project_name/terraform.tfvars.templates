@@ -1,0 +1,3 @@
+cluster_name = "cluster0"
+password     = "12345678"
+project_name   = "project_name"
