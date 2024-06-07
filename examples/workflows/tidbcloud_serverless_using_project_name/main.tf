@@ -40,7 +40,7 @@ data "tidbcloud_projects" "projects" {
 
 locals {
   project_id = {
-    value = element([for s in data.tidbcloud_projects.projects.items : s.id if s.name == var.project_name],0)
+    value = element([for s in data.tidbcloud_projects.projects.items : s.id if s.name == var.project_name], 0)
   }
 }
 
