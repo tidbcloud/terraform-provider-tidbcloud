@@ -3,8 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
-	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 	"net/http"
 	"sort"
 	"strings"
@@ -20,6 +18,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 )
 
 const dev = "DEVELOPER"
@@ -136,7 +136,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"sync": schema.BoolAttribute{
 				Optional:            true,
-				MarkdownDescription: "Whether to wait for the cluster to be created before returning. Default is false.",
+				MarkdownDescription: "Whether to wait for the cluster to be available when creating. Default is false.",
 			},
 			"cluster_type": schema.StringAttribute{
 				MarkdownDescription: "Enum: \"DEDICATED\" \"DEVELOPER\", The cluster type.",
@@ -436,11 +436,11 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 	// set clusterId. other computed attributes are not returned by create, they will be set when refresh
 	data.ClusterId = types.StringValue(*createClusterResp.Payload.ID)
 	if data.Sync.ValueBool() {
-		tflog.Trace(ctx, "wait cluster ready")
+		tflog.Info(ctx, "wait cluster ready")
 		cluster := &clusterApi.GetClusterOKBody{}
 		if data.ClusterType == dev {
-			if err = RetryWithInterval(ctx, clusterCreateTimeout, 500*time.Millisecond,
-				waitClusterReadyFunc(ctx, data.ProjectId, *createClusterResp.Payload.ID, r.provider.client, cluster)); err != nil {
+			if err = retry.RetryContext(ctx, clusterCreateTimeout,
+				waitClusterReadyFunc(ctx, data.ProjectId, data.ClusterId.String(), r.provider.client, cluster)); err != nil {
 				resp.Diagnostics.AddError(
 					"Cluster creation failed",
 					fmt.Sprintf("Cluster is not ready, get error: %s", err),
@@ -449,7 +449,7 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 			}
 		} else {
 			if err = RetryWithInterval(ctx, clusterCreateTimeout, 60*time.Second,
-				waitClusterReadyFunc(ctx, data.ProjectId, *createClusterResp.Payload.ID, r.provider.client, cluster)); err != nil {
+				waitClusterReadyFunc(ctx, data.ProjectId, data.ClusterId.String(), r.provider.client, cluster)); err != nil {
 				resp.Diagnostics.AddError(
 					"Cluster creation failed",
 					fmt.Sprintf("Cluster is not ready, get error: %s", err),

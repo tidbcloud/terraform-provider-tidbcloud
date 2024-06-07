@@ -77,6 +77,10 @@ resource "tidbcloud_cluster" "serverless_tier_cluster" {
 - `project_id` (String) The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).
 - `region` (String) the region value should match the cloud provider's region code. You can get the complete list of available regions from the [tidbcloud_cluster_specs datasource](../data-sources/cluster_specs.md).
 
+### Optional
+
+- `sync` (Boolean) Whether to wait for the cluster to be available when creating. Default is false.
+
 ### Read-Only
 
 - `create_timestamp` (String) The creation time of the cluster in Unix timestamp seconds (epoch time).

@@ -3,11 +3,12 @@ package provider
 import (
 	"context"
 	cryptorand "crypto/rand"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"math/big"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 )
 
 const (
