@@ -43,8 +43,8 @@ const (
 const (
 	clusterServerlessCreateTimeout = 180 * time.Second
 	clusterCreateTimeout           = time.Hour
-	clusterUpdateTimeout           = time.Hour
 	clusterCreateInterval          = 60 * time.Second
+	clusterUpdateTimeout           = time.Hour
 	clusterUpdateInterval          = 20 * time.Second
 )
 

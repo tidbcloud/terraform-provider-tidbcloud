@@ -169,7 +169,7 @@ func (p *tidbcloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 				Sensitive:           true,
 			},
 			"sync": schema.BoolAttribute{
-				MarkdownDescription: "Whether to create the cluster synchronously",
+				MarkdownDescription: "Whether to create the cluster resource synchronously",
 				Optional:            true,
 				Sensitive:           false,
 			},

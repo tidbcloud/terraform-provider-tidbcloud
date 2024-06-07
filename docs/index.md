@@ -40,3 +40,4 @@ provider "tidbcloud" {
 
 - `private_key` (String, Sensitive) Private Key
 - `public_key` (String, Sensitive) Public Key
+- `sync` (Boolean) Whether to create the cluster resource synchronously
