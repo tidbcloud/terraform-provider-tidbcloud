@@ -129,8 +129,7 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	// sync
-	// p.sync = data.Sync.ValueBool()
-	p.sync = true
+	p.sync = data.Sync.ValueBool()
 	p.client = c
 	p.configured = true
 	resp.ResourceData = p
@@ -168,6 +167,11 @@ func (p *tidbcloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 				MarkdownDescription: "Private Key",
 				Optional:            true,
 				Sensitive:           true,
+			},
+			"sync": schema.BoolAttribute{
+				MarkdownDescription: "Whether to create the cluster synchronously",
+				Optional:            true,
+				Sensitive:           false,
 			},
 		},
 	}
