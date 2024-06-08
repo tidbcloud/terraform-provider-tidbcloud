@@ -41,11 +41,12 @@ const (
 )
 
 const (
-	clusterServerlessCreateTimeout = 180 * time.Second
-	clusterCreateTimeout           = time.Hour
-	clusterCreateInterval          = 60 * time.Second
-	clusterUpdateTimeout           = time.Hour
-	clusterUpdateInterval          = 20 * time.Second
+	clusterServerlessCreateTimeout  = 180 * time.Second
+	clusterServerlessCreateInterval = 2 * time.Second
+	clusterCreateTimeout            = time.Hour
+	clusterCreateInterval           = 60 * time.Second
+	clusterUpdateTimeout            = time.Hour
+	clusterUpdateInterval           = 20 * time.Second
 )
 
 type clusterResourceData struct {
@@ -439,11 +440,11 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 	clusterId := *createClusterResp.Payload.ID
 	data.ClusterId = types.StringValue(clusterId)
 	if r.provider.sync {
-		cluster := &clusterApi.GetClusterOKBody{}
+		var cluster *clusterApi.GetClusterOKBody
 		if data.ClusterType == dev {
 			tflog.Info(ctx, "wait serverless cluster ready")
-			if err = retry.RetryContext(ctx, clusterServerlessCreateTimeout,
-				waitClusterReadyFunc(ctx, data.ProjectId, clusterId, r.provider.client, cluster)); err != nil {
+			cluster, err = WaitClusterReady(ctx, clusterServerlessCreateTimeout, clusterServerlessCreateInterval, data.ProjectId, clusterId, r.provider.client)
+			if err != nil {
 				resp.Diagnostics.AddError(
 					"Cluster creation failed",
 					fmt.Sprintf("Cluster is not ready, get error: %s", err),
@@ -452,8 +453,8 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 			}
 		} else {
 			tflog.Info(ctx, "wait dedicated cluster ready")
-			if err = RetryWithInterval(ctx, clusterCreateTimeout, clusterCreateInterval,
-				waitClusterReadyFunc(ctx, data.ProjectId, clusterId, r.provider.client, cluster)); err != nil {
+			cluster, err = WaitClusterReady(ctx, clusterCreateTimeout, clusterCreateInterval, data.ProjectId, clusterId, r.provider.client)
+			if err != nil {
 				resp.Diagnostics.AddError(
 					"Cluster creation failed",
 					fmt.Sprintf("Cluster is not ready, get error: %s", err),
@@ -477,32 +478,6 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
-}
-
-func waitClusterReadyFunc(ctx context.Context, projectId, clusterId string,
-	client tidbcloud.TiDBCloudClient, cluster *clusterApi.GetClusterOKBody) retry.RetryFunc {
-	return func() *retry.RetryError {
-		param := clusterApi.NewGetClusterParams().WithProjectID(projectId).WithClusterID(clusterId).WithContext(ctx)
-		getClusterResp, err := client.GetCluster(param)
-		if err != nil {
-			tflog.Warn(ctx, fmt.Sprintf("get clusrer error: %s", err))
-			if getClusterResp != nil && getClusterResp.Code() < http.StatusInternalServerError {
-				return retry.NonRetryableError(fmt.Errorf("error getting cluster: %s", err))
-			} else {
-				return retry.RetryableError(fmt.Errorf("encountered a server error while reading cluster status - trying again"))
-			}
-		}
-		*cluster = *getClusterResp.Payload
-		switch cluster.Status.ClusterStatus {
-		case string(clusterStatusPaused), string(clusterStatusAvailable), string(clusterStatusMaintaining):
-			return nil
-		case string(clusterStatusUnavailable):
-			return retry.NonRetryableError(fmt.Errorf("cluster is unavailable"))
-		default:
-			tflog.Info(ctx, fmt.Sprintf("cluster is not ready, status: %s", cluster.Status.ClusterStatus))
-			return retry.RetryableError(fmt.Errorf("cluster is not ready yet, got status: %s", cluster.Status.ClusterStatus))
-		}
-	}
 }
 
 func buildCreateClusterBody(data clusterResourceData) clusterApi.CreateClusterBody {
@@ -843,11 +818,10 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	if r.provider.sync {
 		tflog.Info(ctx, "wait cluster ready")
-		cluster := &clusterApi.GetClusterOKBody{}
-		if err = RetryWithInterval(ctx, clusterUpdateTimeout, clusterUpdateInterval,
-			waitClusterReadyFunc(ctx, data.ProjectId, data.ClusterId.ValueString(), r.provider.client, cluster)); err != nil {
+		cluster, err := WaitClusterReady(ctx, clusterUpdateTimeout, clusterUpdateInterval, data.ProjectId, data.ClusterId.ValueString(), r.provider.client)
+		if err != nil {
 			resp.Diagnostics.AddError(
-				"Cluster creation failed",
+				"Cluster update failed",
 				fmt.Sprintf("Cluster is not ready, get error: %s", err),
 			)
 			return
@@ -900,4 +874,52 @@ func (r clusterResource) ImportState(ctx context.Context, req resource.ImportSta
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), idParts[1])...)
+}
+
+func WaitClusterReady(ctx context.Context, timeout time.Duration, interval time.Duration, projectId, clusterId string,
+	client tidbcloud.TiDBCloudClient) (*clusterApi.GetClusterOKBody, error) {
+	stateConf := &retry.StateChangeConf{
+		Pending: []string{
+			string(clusterStatusCreating),
+			string(clusterStatusModifying),
+			string(clusterStatusResuming),
+			string(clusterStatusUnavailable),
+			string(clusterStatusImporting),
+			string(clusterStatusPausing),
+		},
+		Target: []string{
+			string(clusterStatusAvailable),
+			string(clusterStatusPaused),
+			string(clusterStatusMaintaining),
+		},
+		Timeout:      timeout,
+		MinTimeout:   500 * time.Millisecond,
+		PollInterval: interval,
+		Refresh:      clusterStateRefreshFunc(ctx, projectId, clusterId, client),
+	}
+
+	outputRaw, err := stateConf.WaitForStateContext(ctx)
+
+	if output, ok := outputRaw.(*clusterApi.GetClusterOKBody); ok {
+		return output, err
+	}
+	return nil, err
+}
+
+func clusterStateRefreshFunc(ctx context.Context, projectId, clusterId string,
+	client tidbcloud.TiDBCloudClient) retry.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		param := clusterApi.NewGetClusterParams().WithProjectID(projectId).WithClusterID(clusterId).WithContext(ctx)
+		getClusterResp, err := client.GetCluster(param)
+		if err != nil {
+			tflog.Warn(ctx, fmt.Sprintf("get clusrer error: %s", err))
+			if getClusterResp != nil && getClusterResp.Code() < http.StatusInternalServerError {
+				// regard as not found and retry again. Default is 20 times
+				return nil, "", nil
+			} else {
+				return nil, "", err
+			}
+		}
+		return getClusterResp.Payload, getClusterResp.Payload.Status.ClusterStatus, nil
+	}
 }

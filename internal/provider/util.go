@@ -1,14 +1,10 @@
 package provider
 
 import (
-	"context"
 	cryptorand "crypto/rand"
 	"math/big"
 	"math/rand"
-	"sync"
 	"time"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 )
 
 const (
@@ -45,52 +41,12 @@ func GenerateRandomString(n int) string {
 	return string(b)
 }
 
-// RetryWithInterval is a wrapper of retry.RetryContext, interval: (0s,180s)
-func RetryWithInterval(ctx context.Context, timeout time.Duration, interval time.Duration, f retry.RetryFunc) error {
-	// These are used to pull the error out of the function; need a mutex to
-	// avoid a data race.
-	var resultErr error
-	var resultErrMu sync.Mutex
+type Knowable interface {
+	IsUnknown() bool
+	IsNull() bool
+}
 
-	c := &retry.StateChangeConf{
-		Pending:      []string{"retryableerror"},
-		Target:       []string{"success"},
-		Timeout:      timeout,
-		MinTimeout:   500 * time.Millisecond,
-		PollInterval: interval,
-		Refresh: func() (interface{}, string, error) {
-			rerr := f()
-
-			resultErrMu.Lock()
-			defer resultErrMu.Unlock()
-
-			if rerr == nil {
-				resultErr = nil
-				return 42, "success", nil
-			}
-
-			resultErr = rerr.Err
-
-			if rerr.Retryable {
-				return 42, "retryableerror", nil
-			}
-			return nil, "quit", rerr.Err
-		},
-	}
-
-	_, waitErr := c.WaitForStateContext(ctx)
-
-	// Need to acquire the lock here to be able to avoid race using resultErr as
-	// the return value
-	resultErrMu.Lock()
-	defer resultErrMu.Unlock()
-
-	// resultErr may be nil because the wait timed out and resultErr was never
-	// set; this is still an error
-	if resultErr == nil {
-		return waitErr
-	}
-	// resultErr takes precedence over waitErr if both are set because it is
-	// more likely to be useful
-	return resultErr
+// IsKnown is a shortcut that checks in a value is neither null nor unknown.
+func IsKnown(t Knowable) bool {
+	return !t.IsUnknown() && !t.IsNull()
 }

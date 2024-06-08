@@ -64,21 +64,11 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 
 	// User must provide a public_key to the provider
 	var publicKey string
-	if data.PublicKey.IsUnknown() {
-		// Cannot connect to client with an unknown value
-		resp.Diagnostics.AddWarning(
-			"Unable to create client",
-			"Cannot use unknown value as public_key",
-		)
-		return
-	}
-
-	if data.PublicKey.IsNull() {
+	if !IsKnown(data.PublicKey) {
 		publicKey = os.Getenv(TiDBCloudPublicKey)
 	} else {
 		publicKey = data.PublicKey.ValueString()
 	}
-
 	if publicKey == "" {
 		// Error vs warning - empty value must stop execution
 		resp.Diagnostics.AddError(
@@ -90,21 +80,11 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 
 	// User must provide a private_key to the provider
 	var privateKey string
-	if data.PrivateKey.IsUnknown() {
-		// Cannot connect to client with an unknown value
-		resp.Diagnostics.AddError(
-			"Unable to create client",
-			"Cannot use unknown value as private_key",
-		)
-		return
-	}
-
-	if data.PrivateKey.IsNull() {
+	if !IsKnown(data.PrivateKey) {
 		privateKey = os.Getenv(TiDBCloudPrivateKey)
 	} else {
 		privateKey = data.PrivateKey.ValueString()
 	}
-
 	if privateKey == "" {
 		// Error vs warning - empty value must stop execution
 		resp.Diagnostics.AddError(
