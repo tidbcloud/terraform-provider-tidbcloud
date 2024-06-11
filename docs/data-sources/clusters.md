@@ -90,7 +90,7 @@ Read-Only:
 - `tikv` (Attributes) The TiKV component of the cluster (see [below for nested schema](#nestedatt--items--config--components--tikv))
 
 <a id="nestedatt--items--config--components--tiflash"></a>
-### Nested Schema for `items.config.components.tikv`
+### Nested Schema for `items.config.components.tiflash`
 
 Read-Only:
 
@@ -103,7 +103,7 @@ Read-Only:
 
 
 <a id="nestedatt--items--config--components--tidb"></a>
-### Nested Schema for `items.config.components.tikv`
+### Nested Schema for `items.config.components.tidb`
 
 Read-Only:
 
@@ -151,7 +151,7 @@ Read-Only:
 - `vpc_peering` (Attributes) VPC peering connection string. (see [below for nested schema](#nestedatt--items--status--connection_strings--vpc_peering))
 
 <a id="nestedatt--items--status--connection_strings--standard"></a>
-### Nested Schema for `items.status.connection_strings.vpc_peering`
+### Nested Schema for `items.status.connection_strings.standard`
 
 Read-Only:
 
