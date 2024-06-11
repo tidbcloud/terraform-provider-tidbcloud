@@ -1,3 +1,9 @@
+variable "project_name" {
+  type     = string
+  nullable = false
+  default  = "default_project"
+}
+
 variable "cluster_name" {
   type     = string
   nullable = false
@@ -29,10 +35,17 @@ provider "tidbcloud" {
 }
 
 data "tidbcloud_projects" "projects" {
+  page_size = "50"
+}
+
+locals {
+  project_id = {
+    value = element([for s in data.tidbcloud_projects.projects.items : s.id if s.name == var.project_name], 0)
+  }
 }
 
 resource "tidbcloud_cluster" "example" {
-  project_id     = element(data.tidbcloud_projects.projects.items, 0).id
+  project_id     = local.project_id.value
   name           = var.cluster_name
   cluster_type   = "DEVELOPER"
   cloud_provider = "AWS"
@@ -40,8 +53,4 @@ resource "tidbcloud_cluster" "example" {
   config = {
     root_password = var.password
   }
-}
-
-output "connection_strings" {
-  value = lookup(tidbcloud_cluster.example.status, "connection_strings")
 }

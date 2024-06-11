@@ -3,8 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	clusterApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/cluster"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -16,10 +18,36 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 )
 
 const dev = "DEVELOPER"
 const ded = "DEDICATED"
+
+// Enum: [AVAILABLE CREATING MODIFYING PAUSED RESUMING UNAVAILABLE IMPORTING MAINTAINING PAUSING]
+type clusterStatus string
+
+const (
+	clusterStatusCreating    clusterStatus = "CREATING"
+	clusterStatusAvailable   clusterStatus = "AVAILABLE"
+	clusterStatusModifying   clusterStatus = "MODIFYING"
+	clusterStatusPaused      clusterStatus = "PAUSED"
+	clusterStatusResuming    clusterStatus = "RESUMING"
+	clusterStatusUnavailable clusterStatus = "UNAVAILABLE"
+	clusterStatusImporting   clusterStatus = "IMPORTING"
+	clusterStatusMaintaining clusterStatus = "MAINTAINING"
+	clusterStatusPausing     clusterStatus = "PAUSING"
+)
+
+const (
+	clusterServerlessCreateTimeout  = 180 * time.Second
+	clusterServerlessCreateInterval = 2 * time.Second
+	clusterCreateTimeout            = time.Hour
+	clusterCreateInterval           = 60 * time.Second
+	clusterUpdateTimeout            = time.Hour
+	clusterUpdateInterval           = 20 * time.Second
+)
 
 type clusterResourceData struct {
 	ClusterId       types.String             `tfsdk:"id"`
@@ -409,17 +437,43 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 	// set clusterId. other computed attributes are not returned by create, they will be set when refresh
-	data.ClusterId = types.StringValue(*createClusterResp.Payload.ID)
-
-	// we refresh in create for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
-	tflog.Trace(ctx, "read cluster_resource")
-	getClusterParams := clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString())
-	getClusterResp, err := r.provider.client.GetCluster(getClusterParams)
-	if err != nil {
-		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetCluster, got error: %s", err))
-		return
+	clusterId := *createClusterResp.Payload.ID
+	data.ClusterId = types.StringValue(clusterId)
+	if r.provider.sync {
+		var cluster *clusterApi.GetClusterOKBody
+		if data.ClusterType == dev {
+			tflog.Info(ctx, "wait serverless cluster ready")
+			cluster, err = WaitClusterReady(ctx, clusterServerlessCreateTimeout, clusterServerlessCreateInterval, data.ProjectId, clusterId, r.provider.client)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Cluster creation failed",
+					fmt.Sprintf("Cluster is not ready, get error: %s", err),
+				)
+				return
+			}
+		} else {
+			tflog.Info(ctx, "wait dedicated cluster ready")
+			cluster, err = WaitClusterReady(ctx, clusterCreateTimeout, clusterCreateInterval, data.ProjectId, clusterId, r.provider.client)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Cluster creation failed",
+					fmt.Sprintf("Cluster is not ready, get error: %s", err),
+				)
+				return
+			}
+		}
+		refreshClusterResourceData(ctx, cluster, &data)
+	} else {
+		// we refresh in create for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
+		tflog.Trace(ctx, "read cluster_resource")
+		getClusterParams := clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString())
+		getClusterResp, err := r.provider.client.GetCluster(getClusterParams)
+		if err != nil {
+			resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetCluster, got error: %s", err))
+			return
+		}
+		refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
 	}
-	refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -516,7 +570,6 @@ func (r clusterResource) Read(ctx context.Context, req resource.ReadRequest, res
 	data.Config.RootPassword = rootPassword
 	data.Config.IPAccessList = iPAccessList
 	data.Config.Paused = paused
-
 	refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
 
 	// save into the Terraform state
@@ -763,14 +816,27 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	// we refresh for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
-	tflog.Trace(ctx, "read cluster_resource")
-	getClusterResp, err := r.provider.client.GetCluster(clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString()))
-	if err != nil {
-		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
-		return
+	if r.provider.sync {
+		tflog.Info(ctx, "wait cluster ready")
+		cluster, err := WaitClusterReady(ctx, clusterUpdateTimeout, clusterUpdateInterval, data.ProjectId, data.ClusterId.ValueString(), r.provider.client)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Cluster update failed",
+				fmt.Sprintf("Cluster is not ready, get error: %s", err),
+			)
+			return
+		}
+		refreshClusterResourceData(ctx, cluster, &data)
+	} else {
+		// we refresh for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
+		tflog.Trace(ctx, "read cluster_resource")
+		getClusterResp, err := r.provider.client.GetCluster(clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString()))
+		if err != nil {
+			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
+			return
+		}
+		refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
 	}
-	refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -808,4 +874,52 @@ func (r clusterResource) ImportState(ctx context.Context, req resource.ImportSta
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), idParts[1])...)
+}
+
+func WaitClusterReady(ctx context.Context, timeout time.Duration, interval time.Duration, projectId, clusterId string,
+	client tidbcloud.TiDBCloudClient) (*clusterApi.GetClusterOKBody, error) {
+	stateConf := &retry.StateChangeConf{
+		Pending: []string{
+			string(clusterStatusCreating),
+			string(clusterStatusModifying),
+			string(clusterStatusResuming),
+			string(clusterStatusUnavailable),
+			string(clusterStatusImporting),
+			string(clusterStatusPausing),
+		},
+		Target: []string{
+			string(clusterStatusAvailable),
+			string(clusterStatusPaused),
+			string(clusterStatusMaintaining),
+		},
+		Timeout:      timeout,
+		MinTimeout:   500 * time.Millisecond,
+		PollInterval: interval,
+		Refresh:      clusterStateRefreshFunc(ctx, projectId, clusterId, client),
+	}
+
+	outputRaw, err := stateConf.WaitForStateContext(ctx)
+
+	if output, ok := outputRaw.(*clusterApi.GetClusterOKBody); ok {
+		return output, err
+	}
+	return nil, err
+}
+
+func clusterStateRefreshFunc(ctx context.Context, projectId, clusterId string,
+	client tidbcloud.TiDBCloudClient) retry.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		param := clusterApi.NewGetClusterParams().WithProjectID(projectId).WithClusterID(clusterId).WithContext(ctx)
+		getClusterResp, err := client.GetCluster(param)
+		if err != nil {
+			tflog.Warn(ctx, fmt.Sprintf("get cluster error: %s", err))
+			if getClusterResp != nil && getClusterResp.Code() < http.StatusInternalServerError {
+				return nil, "", err
+			} else {
+				// regard as not found and retry again. Default is 20 times
+				return nil, "", nil
+			}
+		}
+		return getClusterResp.Payload, getClusterResp.Payload.Status.ClusterStatus, nil
+	}
 }

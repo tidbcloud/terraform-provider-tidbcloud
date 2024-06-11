@@ -36,12 +36,15 @@ type tidbcloudProvider struct {
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
+
+	sync bool
 }
 
 // providerData can be used to store data from the Terraform configuration.
 type providerData struct {
 	PublicKey  types.String `tfsdk:"public_key"`
 	PrivateKey types.String `tfsdk:"private_key"`
+	Sync       types.Bool   `tfsdk:"sync"`
 }
 
 func (p *tidbcloudProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -61,21 +64,11 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 
 	// User must provide a public_key to the provider
 	var publicKey string
-	if data.PublicKey.IsUnknown() {
-		// Cannot connect to client with an unknown value
-		resp.Diagnostics.AddWarning(
-			"Unable to create client",
-			"Cannot use unknown value as public_key",
-		)
-		return
-	}
-
-	if data.PublicKey.IsNull() {
+	if !IsKnown(data.PublicKey) {
 		publicKey = os.Getenv(TiDBCloudPublicKey)
 	} else {
 		publicKey = data.PublicKey.ValueString()
 	}
-
 	if publicKey == "" {
 		// Error vs warning - empty value must stop execution
 		resp.Diagnostics.AddError(
@@ -87,21 +80,11 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 
 	// User must provide a private_key to the provider
 	var privateKey string
-	if data.PrivateKey.IsUnknown() {
-		// Cannot connect to client with an unknown value
-		resp.Diagnostics.AddError(
-			"Unable to create client",
-			"Cannot use unknown value as private_key",
-		)
-		return
-	}
-
-	if data.PrivateKey.IsNull() {
+	if !IsKnown(data.PrivateKey) {
 		privateKey = os.Getenv(TiDBCloudPrivateKey)
 	} else {
 		privateKey = data.PrivateKey.ValueString()
 	}
-
 	if privateKey == "" {
 		// Error vs warning - empty value must stop execution
 		resp.Diagnostics.AddError(
@@ -125,6 +108,8 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
+	// sync
+	p.sync = data.Sync.ValueBool()
 	p.client = c
 	p.configured = true
 	resp.ResourceData = p
@@ -162,6 +147,11 @@ func (p *tidbcloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 				MarkdownDescription: "Private Key",
 				Optional:            true,
 				Sensitive:           true,
+			},
+			"sync": schema.BoolAttribute{
+				MarkdownDescription: "Whether to create or update the cluster resource synchronously",
+				Optional:            true,
+				Sensitive:           false,
 			},
 		},
 	}
