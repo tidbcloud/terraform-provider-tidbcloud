@@ -912,7 +912,7 @@ func clusterStateRefreshFunc(ctx context.Context, projectId, clusterId string,
 		param := clusterApi.NewGetClusterParams().WithProjectID(projectId).WithClusterID(clusterId).WithContext(ctx)
 		getClusterResp, err := client.GetCluster(param)
 		if err != nil {
-			tflog.Warn(ctx, fmt.Sprintf("get clusrer error: %s", err))
+			tflog.Warn(ctx, fmt.Sprintf("get cluster error: %s", err))
 			if getClusterResp != nil && getClusterResp.Code() < http.StatusInternalServerError {
 				return nil, "", err
 			} else {
