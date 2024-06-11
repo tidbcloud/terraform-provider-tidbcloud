@@ -914,10 +914,10 @@ func clusterStateRefreshFunc(ctx context.Context, projectId, clusterId string,
 		if err != nil {
 			tflog.Warn(ctx, fmt.Sprintf("get clusrer error: %s", err))
 			if getClusterResp != nil && getClusterResp.Code() < http.StatusInternalServerError {
+				return nil, "", err
+			} else {
 				// regard as not found and retry again. Default is 20 times
 				return nil, "", nil
-			} else {
-				return nil, "", err
 			}
 		}
 		return getClusterResp.Payload, getClusterResp.Payload.Status.ClusterStatus, nil
