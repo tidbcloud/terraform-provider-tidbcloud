@@ -9,6 +9,7 @@ terraform {
 provider "tidbcloud" {
   public_key  = "fake_public_key"
   private_key = "fake_private_key"
+  sync        = true
 }
 
 resource "tidbcloud_cluster" "dedicated_tier_cluster" {

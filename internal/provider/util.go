@@ -40,3 +40,13 @@ func GenerateRandomString(n int) string {
 	}
 	return string(b)
 }
+
+type Knowable interface {
+	IsUnknown() bool
+	IsNull() bool
+}
+
+// IsKnown is a shortcut that checks in a value is neither null nor unknown.
+func IsKnown(t Knowable) bool {
+	return !t.IsUnknown() && !t.IsNull()
+}

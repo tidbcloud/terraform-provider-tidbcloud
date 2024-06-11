@@ -71,6 +71,7 @@ terraform {
 
 provider "tidbcloud" {
   # export TIDBCLOUD_PUBLIC_KEY and TIDBCLOUD_PRIVATE_KEY with the TiDB Cloud API Key
+  sync = true
 }
 
 data "tidbcloud_projects" "projects" {
