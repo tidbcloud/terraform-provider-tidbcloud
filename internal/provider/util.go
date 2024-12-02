@@ -8,12 +8,14 @@ import (
 )
 
 const (
-	TiDBCloudPublicKey  string = "TIDBCLOUD_PUBLIC_KEY"
-	TiDBCloudPrivateKey string = "TIDBCLOUD_PRIVATE_KEY"
-	TiDBCloudHOST       string = "TIDBCLOUD_HOST"
-	TiDBCloudProjectID  string = "TIDBCLOUD_PROJECT_ID"
-	TiDBCloudClusterID  string = "TIDBCLOUD_CLUSTER_ID"
-	UserAgent           string = "terraform-provider-tidbcloud"
+	TiDBCloudPublicKey         string = "TIDBCLOUD_PUBLIC_KEY"
+	TiDBCloudPrivateKey        string = "TIDBCLOUD_PRIVATE_KEY"
+	TiDBCloudHOST              string = "TIDBCLOUD_HOST"
+	TiDBCloudDedicatedEndpoint string = "TIDBCLOUD_DEDICATED_ENDPOINT"
+	TiDBCloudIAMEndpoint       string = "TIDBCLOUD_IAM_ENDPOINT"
+	TiDBCloudProjectID         string = "TIDBCLOUD_PROJECT_ID"
+	TiDBCloudClusterID         string = "TIDBCLOUD_CLUSTER_ID"
+	UserAgent                  string = "terraform-provider-tidbcloud"
 )
 
 // HookGlobal sets `*ptr = val` and returns a closure for restoring `*ptr` to

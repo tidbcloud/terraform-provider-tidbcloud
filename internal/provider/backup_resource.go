@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	backupApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/backup"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -11,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"strings"
 )
 
 type backupResourceData struct {
@@ -31,7 +32,7 @@ var _ resource.Resource = &backupResource{}
 var _ resource.ResourceWithImportState = &backupResource{}
 
 type backupResource struct {
-	provider *tidbcloudProvider
+	provider *TidbcloudProvider
 }
 
 func NewBackupResource() resource.Resource {
@@ -49,9 +50,9 @@ func (r *backupResource) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 
 	var ok bool
-	if r.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
+	if r.provider, ok = req.ProviderData.(*TidbcloudProvider); !ok {
 		resp.Diagnostics.AddError("Internal provider error",
-			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
+			fmt.Sprintf("Error in Configure: expected %T but got %T", TidbcloudProvider{}, req.ProviderData))
 	}
 }
 

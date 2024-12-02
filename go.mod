@@ -1,6 +1,6 @@
 module github.com/tidbcloud/terraform-provider-tidbcloud
 
-go 1.21
+go 1.23
 
 require (
 	github.com/c4pt0r/go-tidbcloud-sdk-v1 v0.0.0-20240415110020-a27efb454da5
@@ -16,6 +16,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.34.0
 	github.com/icholy/digest v0.1.15
+	github.com/tidbcloud/tidbcloud-cli/pkg v0.0.0-20241125120734-8e2a11bc41c5
 )
 
 require (

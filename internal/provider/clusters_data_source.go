@@ -3,13 +3,14 @@ package provider
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"strconv"
+
 	clusterApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/cluster"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"math/rand"
-	"strconv"
 )
 
 type clustersDataSourceData struct {
@@ -64,7 +65,7 @@ type connectionVpcPeering struct {
 var _ datasource.DataSource = &clustersDataSource{}
 
 type clustersDataSource struct {
-	provider *tidbcloudProvider
+	provider *TidbcloudProvider
 }
 
 func NewClustersDataSource() datasource.DataSource {
@@ -80,9 +81,9 @@ func (d *clustersDataSource) Configure(_ context.Context, req datasource.Configu
 		return
 	}
 	var ok bool
-	if d.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
+	if d.provider, ok = req.ProviderData.(*TidbcloudProvider); !ok {
 		resp.Diagnostics.AddError("Internal provider error",
-			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
+			fmt.Sprintf("Error in Configure: expected %T but got %T", TidbcloudProvider{}, req.ProviderData))
 	}
 }
 
@@ -115,10 +116,6 @@ func (d *clustersDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							MarkdownDescription: "The ID of the cluster.",
-							Computed:            true,
-						},
-						"project_id": schema.StringAttribute{
-							MarkdownDescription: "The ID of the project.",
 							Computed:            true,
 						},
 						"name": schema.StringAttribute{

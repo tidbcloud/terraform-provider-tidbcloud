@@ -64,7 +64,6 @@ Read-Only:
 - `create_timestamp` (String) The creation time of the cluster in Unix timestamp seconds (epoch time).
 - `id` (String) The ID of the cluster.
 - `name` (String) The name of the cluster.
-- `project_id` (String) The ID of the project.
 - `region` (String) Region of the cluster.
 - `status` (Attributes) The status of the cluster. (see [below for nested schema](#nestedatt--items--status))
 

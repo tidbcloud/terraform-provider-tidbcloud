@@ -11,21 +11,26 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
+	// "github.com/tidbcloud/terraform-provider-tidbcloud/internal/provider/dedicated"
 )
 
 // Ensure the implementation satisfies the provider.Provider interface.
-var _ provider.Provider = &tidbcloudProvider{}
+var _ provider.Provider = &TidbcloudProvider{}
 
 // NewClient overrides the NewClientDelegate method for testing.
 var NewClient = tidbcloud.NewClientDelegate
 
+var NewDedicatedClient = tidbcloud.NewDedicatedClientDelegate
+
 // provider satisfies the tfsdk.Provider interface and usually is included
 // with all Resource and DataSource implementations.
-type tidbcloudProvider struct {
+type TidbcloudProvider struct {
 	// client can contain the upstream provider SDK or HTTP client used to
 	// communicate with the upstream service. Resource and DataSource
 	// implementations can then make calls using this client.
 	client tidbcloud.TiDBCloudClient
+
+	DedicatedClient tidbcloud.TiDBCloudDedicatedClient
 
 	// configured is set to true at the end of the Configure method.
 	// This can be used in Resource and DataSource implementations to verify
@@ -47,12 +52,12 @@ type providerData struct {
 	Sync       types.Bool   `tfsdk:"sync"`
 }
 
-func (p *tidbcloudProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+func (p *TidbcloudProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "tidbcloud"
 	resp.Version = p.version
 }
 
-func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+func (p *TidbcloudProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	// get providerData
 	var data providerData
 	diags := req.Config.Get(ctx, &data)
@@ -108,15 +113,33 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
+	// Create a new dedicated client and set it to the provider dedicated client
+	var dedicatedEndpoint = tidbcloud.DefaultDedicatedEndpoint
+	if os.Getenv(TiDBCloudDedicatedEndpoint) != "" {
+		dedicatedEndpoint = os.Getenv(TiDBCloudDedicatedEndpoint)
+	}
+	var iamEndpoint = tidbcloud.DefaultIAMEndpoint
+	if os.Getenv(TiDBCloudIAMEndpoint) != "" {
+		iamEndpoint = os.Getenv(TiDBCloudIAMEndpoint)
+	}
+	dc, err := NewDedicatedClient(publicKey, privateKey, dedicatedEndpoint, iamEndpoint, fmt.Sprintf("%s/%s", UserAgent, p.version))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to create client",
+			"Unable to create tidb dedicated client:\n\n"+err.Error(),
+		)
+		return
+	}
 	// sync
 	p.sync = data.Sync.ValueBool()
 	p.client = c
+	p.DedicatedClient = dc
 	p.configured = true
 	resp.ResourceData = p
 	resp.DataSourceData = p
 }
 
-func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (p *TidbcloudProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewClusterResource,
 		NewBackupResource,
@@ -125,17 +148,20 @@ func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Res
 	}
 }
 
-func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (p *TidbcloudProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewProjectsDataSource,
 		NewClusterSpecsDataSource,
 		NewBackupsDataSource,
 		NewRestoresDataSource,
 		NewClustersDataSource,
+
+		NewDedicatedRegionsDataSource,
+		NewDedicatedRegionDataSource,
 	}
 }
 
-func (p *tidbcloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *TidbcloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"public_key": schema.StringAttribute{
@@ -159,7 +185,7 @@ func (p *tidbcloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &tidbcloudProvider{
+		return &TidbcloudProvider{
 			version: version,
 		}
 	}

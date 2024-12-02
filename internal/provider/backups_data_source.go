@@ -3,13 +3,14 @@ package provider
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"strconv"
+
 	backupApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/backup"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"math/rand"
-	"strconv"
 )
 
 type backupsDataSourceData struct {
@@ -36,7 +37,7 @@ type backup struct {
 var _ datasource.DataSource = &backupsDataSource{}
 
 type backupsDataSource struct {
-	provider *tidbcloudProvider
+	provider *TidbcloudProvider
 }
 
 func NewBackupsDataSource() datasource.DataSource {
@@ -52,9 +53,9 @@ func (d *backupsDataSource) Configure(_ context.Context, req datasource.Configur
 		return
 	}
 	var ok bool
-	if d.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
+	if d.provider, ok = req.ProviderData.(*TidbcloudProvider); !ok {
 		resp.Diagnostics.AddError("Internal provider error",
-			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
+			fmt.Sprintf("Error in Configure: expected %T but got %T", TidbcloudProvider{}, req.ProviderData))
 	}
 }
 
@@ -149,7 +150,7 @@ func (d *backupsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	tflog.Trace(ctx, "read backups data source")
 	listBackUpOfClusterOK, err := d.provider.client.ListBackUpOfCluster(backupApi.NewListBackUpOfClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId).WithPage(&page).WithPageSize(&pageSize))
 	if err != nil {
-		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetBackups, got error: %s", err))
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call ListBackups, got error: %s", err))
 		return
 	}
 

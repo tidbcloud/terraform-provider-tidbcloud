@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -16,8 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	importService "github.com/tidbcloud/terraform-provider-tidbcloud/pkg/import/client/import_service"
 	importModel "github.com/tidbcloud/terraform-provider-tidbcloud/pkg/import/models"
-	"os"
-	"strconv"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -29,7 +30,7 @@ func NewImportResource() resource.Resource {
 
 // ImportResource defines the resource implementation.
 type ImportResource struct {
-	provider *tidbcloudProvider
+	provider *TidbcloudProvider
 }
 
 // ImportResourceModel describes the resource data model.
@@ -114,9 +115,9 @@ func (r *ImportResource) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 
 	var ok bool
-	if r.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
+	if r.provider, ok = req.ProviderData.(*TidbcloudProvider); !ok {
 		resp.Diagnostics.AddError("Internal provider error",
-			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
+			fmt.Sprintf("Error in Configure: expected %T but got %T", TidbcloudProvider{}, req.ProviderData))
 	}
 }
 
