@@ -60,7 +60,7 @@ type storageSizeGiRange struct {
 var _ datasource.DataSource = &clusterSpecsDataSource{}
 
 type clusterSpecsDataSource struct {
-	provider *TidbcloudProvider
+	provider *tidbcloudProvider
 }
 
 func NewClusterSpecsDataSource() datasource.DataSource {
@@ -76,9 +76,9 @@ func (d *clusterSpecsDataSource) Configure(_ context.Context, req datasource.Con
 		return
 	}
 	var ok bool
-	if d.provider, ok = req.ProviderData.(*TidbcloudProvider); !ok {
+	if d.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
 		resp.Diagnostics.AddError("Internal provider error",
-			fmt.Sprintf("Error in Configure: expected %T but got %T", TidbcloudProvider{}, req.ProviderData))
+			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
 	}
 }
 

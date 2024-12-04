@@ -15,7 +15,7 @@ import (
 )
 
 // Ensure the implementation satisfies the provider.Provider interface.
-var _ provider.Provider = &TidbcloudProvider{}
+var _ provider.Provider = &tidbcloudProvider{}
 
 // NewClient overrides the NewClientDelegate method for testing.
 var NewClient = tidbcloud.NewClientDelegate
@@ -24,7 +24,7 @@ var NewDedicatedClient = tidbcloud.NewDedicatedClientDelegate
 
 // provider satisfies the tfsdk.Provider interface and usually is included
 // with all Resource and DataSource implementations.
-type TidbcloudProvider struct {
+type tidbcloudProvider struct {
 	// client can contain the upstream provider SDK or HTTP client used to
 	// communicate with the upstream service. Resource and DataSource
 	// implementations can then make calls using this client.
@@ -52,12 +52,12 @@ type providerData struct {
 	Sync       types.Bool   `tfsdk:"sync"`
 }
 
-func (p *TidbcloudProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+func (p *tidbcloudProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "tidbcloud"
 	resp.Version = p.version
 }
 
-func (p *TidbcloudProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	// get providerData
 	var data providerData
 	diags := req.Config.Get(ctx, &data)
@@ -139,7 +139,7 @@ func (p *TidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 	resp.DataSourceData = p
 }
 
-func (p *TidbcloudProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewClusterResource,
 		NewBackupResource,
@@ -148,7 +148,7 @@ func (p *TidbcloudProvider) Resources(ctx context.Context) []func() resource.Res
 	}
 }
 
-func (p *TidbcloudProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewProjectsDataSource,
 		NewClusterSpecsDataSource,
@@ -161,7 +161,7 @@ func (p *TidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 	}
 }
 
-func (p *TidbcloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *tidbcloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"public_key": schema.StringAttribute{
@@ -185,7 +185,7 @@ func (p *TidbcloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &TidbcloudProvider{
+		return &tidbcloudProvider{
 			version: version,
 		}
 	}

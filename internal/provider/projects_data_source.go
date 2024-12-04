@@ -34,7 +34,7 @@ type project struct {
 var _ datasource.DataSource = &projectsDataSource{}
 
 type projectsDataSource struct {
-	provider *TidbcloudProvider
+	provider *tidbcloudProvider
 }
 
 func NewProjectsDataSource() datasource.DataSource {
@@ -50,9 +50,9 @@ func (d *projectsDataSource) Configure(_ context.Context, req datasource.Configu
 		return
 	}
 	var ok bool
-	if d.provider, ok = req.ProviderData.(*TidbcloudProvider); !ok {
+	if d.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
 		resp.Diagnostics.AddError("Internal provider error",
-			fmt.Sprintf("Error in Configure: expected %T but got %T", TidbcloudProvider{}, req.ProviderData))
+			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
 	}
 }
 

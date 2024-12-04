@@ -45,7 +45,7 @@ type cluster struct {
 var _ resource.Resource = &restoreResource{}
 
 type restoreResource struct {
-	provider *TidbcloudProvider
+	provider *tidbcloudProvider
 }
 
 func NewRestoreResource() resource.Resource {
@@ -63,9 +63,9 @@ func (r *restoreResource) Configure(_ context.Context, req resource.ConfigureReq
 	}
 
 	var ok bool
-	if r.provider, ok = req.ProviderData.(*TidbcloudProvider); !ok {
+	if r.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
 		resp.Diagnostics.AddError("Internal provider error",
-			fmt.Sprintf("Error in Configure: expected %T but got %T", TidbcloudProvider{}, req.ProviderData))
+			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
 	}
 }
 

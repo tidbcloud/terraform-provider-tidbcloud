@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	// "github.com/tidbcloud/terraform-provider-tidbcloud/internal/provider"
 )
 
 type dedicatedRegion struct {
@@ -20,7 +19,7 @@ type dedicatedRegion struct {
 var _ datasource.DataSource = &dedicatedRegionDataSource{}
 
 type dedicatedRegionDataSource struct {
-	provider *TidbcloudProvider
+	provider *tidbcloudProvider
 }
 
 func NewDedicatedRegionDataSource() datasource.DataSource {
@@ -36,9 +35,9 @@ func (d *dedicatedRegionDataSource) Configure(_ context.Context, req datasource.
 		return
 	}
 	var ok bool
-	if d.provider, ok = req.ProviderData.(*TidbcloudProvider); !ok {
+	if d.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
 		resp.Diagnostics.AddError("Internal provider error",
-			fmt.Sprintf("Error in Configure: expected %T but got %T", TidbcloudProvider{}, req.ProviderData))
+			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
 	}
 }
 

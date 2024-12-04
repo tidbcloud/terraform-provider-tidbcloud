@@ -32,7 +32,7 @@ var _ resource.Resource = &backupResource{}
 var _ resource.ResourceWithImportState = &backupResource{}
 
 type backupResource struct {
-	provider *TidbcloudProvider
+	provider *tidbcloudProvider
 }
 
 func NewBackupResource() resource.Resource {
@@ -50,9 +50,9 @@ func (r *backupResource) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 
 	var ok bool
-	if r.provider, ok = req.ProviderData.(*TidbcloudProvider); !ok {
+	if r.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
 		resp.Diagnostics.AddError("Internal provider error",
-			fmt.Sprintf("Error in Configure: expected %T but got %T", TidbcloudProvider{}, req.ProviderData))
+			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
 	}
 }
 

@@ -37,7 +37,7 @@ type backup struct {
 var _ datasource.DataSource = &backupsDataSource{}
 
 type backupsDataSource struct {
-	provider *TidbcloudProvider
+	provider *tidbcloudProvider
 }
 
 func NewBackupsDataSource() datasource.DataSource {
@@ -53,9 +53,9 @@ func (d *backupsDataSource) Configure(_ context.Context, req datasource.Configur
 		return
 	}
 	var ok bool
-	if d.provider, ok = req.ProviderData.(*TidbcloudProvider); !ok {
+	if d.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
 		resp.Diagnostics.AddError("Internal provider error",
-			fmt.Sprintf("Error in Configure: expected %T but got %T", TidbcloudProvider{}, req.ProviderData))
+			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
 	}
 }
 

@@ -10,21 +10,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	// "github.com/tidbcloud/terraform-provider-tidbcloud/internal/provider"
 )
 
 type dedicatedRegionsDataSourceData struct {
-	Id       types.String      `tfsdk:"id"`
-	Page     types.Int64       `tfsdk:"page"`
-	PageSize types.Int64       `tfsdk:"page_size"`
-	Items    []dedicatedRegion `tfsdk:"items"`
-	Total    types.Int64       `tfsdk:"total"`
+	Id    types.String      `tfsdk:"id"`
+	Items []dedicatedRegion `tfsdk:"items"`
+	Total types.Int64       `tfsdk:"total"`
 }
 
 var _ datasource.DataSource = &dedicatedRegionsDataSource{}
 
 type dedicatedRegionsDataSource struct {
-	provider *TidbcloudProvider
+	provider *tidbcloudProvider
 }
 
 func NewDedicatedRegionsDataSource() datasource.DataSource {
@@ -40,9 +37,9 @@ func (d *dedicatedRegionsDataSource) Configure(_ context.Context, req datasource
 		return
 	}
 	var ok bool
-	if d.provider, ok = req.ProviderData.(*TidbcloudProvider); !ok {
+	if d.provider, ok = req.ProviderData.(*tidbcloudProvider); !ok {
 		resp.Diagnostics.AddError("Internal provider error",
-			fmt.Sprintf("Error in Configure: expected %T but got %T", TidbcloudProvider{}, req.ProviderData))
+			fmt.Sprintf("Error in Configure: expected %T but got %T", tidbcloudProvider{}, req.ProviderData))
 	}
 }
 
@@ -52,16 +49,6 @@ func (d *dedicatedRegionsDataSource) Schema(_ context.Context, _ datasource.Sche
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "data source ID",
-				Computed:            true,
-			},
-			"page": schema.Int64Attribute{
-				MarkdownDescription: "Default:1 The number of pages.",
-				Optional:            true,
-				Computed:            true,
-			},
-			"page_size": schema.Int64Attribute{
-				MarkdownDescription: "Default:10 The size of a pages.",
-				Optional:            true,
 				Computed:            true,
 			},
 			"items": schema.ListNestedAttribute{
