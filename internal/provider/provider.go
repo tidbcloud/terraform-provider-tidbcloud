@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
-	// "github.com/tidbcloud/terraform-provider-tidbcloud/internal/provider/dedicated"
+	"github.com/tidbcloud/terraform-provider-tidbcloud/internal/service/dedicated"
 )
 
 // Ensure the implementation satisfies the provider.Provider interface.
