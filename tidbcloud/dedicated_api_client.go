@@ -16,7 +16,7 @@ const (
 )
 
 type TiDBCloudDedicatedClient interface {
-	ListRegions(ctx context.Context, cloudProvider string, projectId string, pageSize int32) ([]dedicated.Commonv1beta1Region, error)
+	ListRegions(ctx context.Context, cloudProvider string, projectId string) ([]dedicated.Commonv1beta1Region, error)
 	GetRegion(ctx context.Context, regionId string) (*dedicated.Commonv1beta1Region, error)
 	ListCloudProviders(ctx context.Context, projectId string) ([]dedicated.V1beta1RegionCloudProvider, error)
 }
@@ -61,12 +61,11 @@ func NewDedicatedClientDelegate(publicKey string, privateKey string, dedicatedEn
 	}, nil
 }
 
-func (d *DedicatedClientDelegate) ListRegions(ctx context.Context, cloudProvider string, projectId string, pageSize int32) ([]dedicated.Commonv1beta1Region, error) {
-	req := d.dc.RegionServiceAPI.RegionServiceListRegions(ctx).PageSize(pageSize)
+func (d *DedicatedClientDelegate) ListRegions(ctx context.Context, cloudProvider string, projectId string) ([]dedicated.Commonv1beta1Region, error) {
+	req := d.dc.RegionServiceAPI.RegionServiceListRegions(ctx).PageSize(100)
 	if cloudProvider != "" {
 		req = req.CloudProvider(cloudProvider)
 	}
-
 	if projectId != "" {
 		req = req.ProjectId(projectId)
 	}
@@ -91,28 +90,26 @@ func (d *DedicatedClientDelegate) ListCloudProviders(ctx context.Context, projec
 }
 
 func parseError(err error, resp *http.Response) error {
-	defer func() {
-		if resp != nil {
-			resp.Body.Close()
-		}
-	}()
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 	if err == nil {
 		return nil
 	}
 	if resp == nil {
 		return err
 	}
-	body, err1 := io.ReadAll(resp.Body)
-	if err1 != nil {
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
 		return err
 	}
 	path := "<path>"
 	if resp.Request != nil {
 		path = fmt.Sprintf("[%s %s]", resp.Request.Method, resp.Request.URL.Path)
 	}
-	traceId := "<trace_id>"
-	if resp.Header.Get("X-Debug-Trace-Id") != "" {
-		traceId = resp.Header.Get("X-Debug-Trace-Id")
+	traceId := resp.Header.Get("X-Debug-Trace-Id")
+	if traceId == "" {
+		traceId = "<trace_id>"
 	}
 	return fmt.Errorf("%s[%s][%s] %s", path, err.Error(), traceId, body)
 }

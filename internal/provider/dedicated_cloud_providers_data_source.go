@@ -49,7 +49,7 @@ func (d *dedicatedCloudProvidersDataSource) Schema(_ context.Context, _ datasour
 				Optional:            true,
 			},
 			"cloud_providers": schema.ListAttribute{
-				MarkdownDescription: "The items of cloud providers",
+				MarkdownDescription: "The cloud providers.",
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
