@@ -108,7 +108,7 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create client",
-			"Unable to create tidb client:\n\n"+err.Error(),
+			"Unable to create TiDB client:\n\n"+err.Error(),
 		)
 		return
 	}
@@ -118,15 +118,11 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 	if os.Getenv(TiDBCloudDedicatedEndpoint) != "" {
 		dedicatedEndpoint = os.Getenv(TiDBCloudDedicatedEndpoint)
 	}
-	var iamEndpoint = tidbcloud.DefaultIAMEndpoint
-	if os.Getenv(TiDBCloudIAMEndpoint) != "" {
-		iamEndpoint = os.Getenv(TiDBCloudIAMEndpoint)
-	}
-	dc, err := NewDedicatedClient(publicKey, privateKey, dedicatedEndpoint, iamEndpoint, fmt.Sprintf("%s/%s", UserAgent, p.version))
+	dc, err := NewDedicatedClient(publicKey, privateKey, dedicatedEndpoint, fmt.Sprintf("%s/%s", UserAgent, p.version))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create client",
-			"Unable to create tidb dedicated client:\n\n"+err.Error(),
+			"Unable to create TiDB Cloud Dedicated client:\n\n"+err.Error(),
 		)
 		return
 	}
@@ -158,6 +154,7 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 
 		NewDedicatedRegionsDataSource,
 		NewDedicatedRegionDataSource,
+		NewDedicatedCloudProvidersDataSource,
 	}
 }
 

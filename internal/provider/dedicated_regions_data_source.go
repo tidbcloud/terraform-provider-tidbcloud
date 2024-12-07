@@ -3,8 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"math/rand"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -12,10 +10,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
+const (
+	MaxListRegionsPageSize int32 = 100
+)
+
 type dedicatedRegionsDataSourceData struct {
-	Id    types.String      `tfsdk:"id"`
-	Items []dedicatedRegion `tfsdk:"items"`
-	Total types.Int64       `tfsdk:"total"`
+	CloudProvider types.String      `tfsdk:"cloud_provider"`
+	ProjectId     types.String      `tfsdk:"project_id"`
+	Regions       []dedicatedRegion `tfsdk:"regions"`
 }
 
 var _ datasource.DataSource = &dedicatedRegionsDataSource{}
@@ -47,11 +49,15 @@ func (d *dedicatedRegionsDataSource) Schema(_ context.Context, _ datasource.Sche
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "dedicated regions data source",
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				MarkdownDescription: "data source ID",
-				Computed:            true,
+			"cloud_provider": schema.StringAttribute{
+				MarkdownDescription: "The cloud provider of the regions.",
+				Optional:            true,
 			},
-			"items": schema.ListNestedAttribute{
+			"project_id": schema.StringAttribute{
+				MarkdownDescription: "The ID of the project.",
+				Optional:            true,
+			},
+			"regions": schema.ListNestedAttribute{
 				MarkdownDescription: "The items of regions",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
@@ -71,10 +77,6 @@ func (d *dedicatedRegionsDataSource) Schema(_ context.Context, _ datasource.Sche
 					},
 				},
 			},
-			"total": schema.Int64Attribute{
-				MarkdownDescription: "The total number of regions in the project.",
-				Computed:            true,
-			},
 		},
 	}
 }
@@ -88,23 +90,20 @@ func (d *dedicatedRegionsDataSource) Read(ctx context.Context, req datasource.Re
 	}
 
 	tflog.Trace(ctx, "read regions data source")
-	regions, err := d.provider.DedicatedClient.ListRegions(ctx)
+	regions, err := d.provider.DedicatedClient.ListRegions(ctx, data.CloudProvider.ValueString(), data.ProjectId.ValueString(), MaxListRegionsPageSize)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call ListRegions, got error: %s", err))
 		return
 	}
-
-	data.Id = types.StringValue(strconv.FormatInt(rand.Int63(), 10))
-	data.Total = types.Int64Value(int64(*regions.TotalSize))
 	var items []dedicatedRegion
-	for _, key := range regions.Regions {
+	for _, r := range regions {
 		items = append(items, dedicatedRegion{
-			RegionId:      types.StringValue(*key.RegionId),
-			CloudProvider: types.StringValue(string(*key.CloudProvider)),
-			DisplayName:   types.StringValue(*key.DisplayName),
+			RegionId:      types.StringValue(*r.RegionId),
+			CloudProvider: types.StringValue(string(*r.CloudProvider)),
+			DisplayName:   types.StringValue(*r.DisplayName),
 		})
 	}
-	data.Items = items
+	data.Regions = items
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
