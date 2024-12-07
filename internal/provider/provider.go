@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
-	// "github.com/tidbcloud/terraform-provider-tidbcloud/internal/provider/dedicated"
 )
 
 // Ensure the implementation satisfies the provider.Provider interface.
@@ -101,8 +100,8 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 
 	// Create a new tidb client and set it to the provider client
 	var host = tidbcloud.DefaultApiUrl
-	if os.Getenv(TiDBCloudHOST) != "" {
-		host = os.Getenv(TiDBCloudHOST)
+	if os.Getenv(TiDBCloudHost) != "" {
+		host = os.Getenv(TiDBCloudHost)
 	}
 	c, err := NewClient(publicKey, privateKey, host, fmt.Sprintf("%s/%s", UserAgent, p.version))
 	if err != nil {

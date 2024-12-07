@@ -546,7 +546,7 @@ func refreshImportResource(ctx context.Context, data *ImportResourceModel, paylo
 }
 
 func (r *ImportResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Unsupported", fmt.Sprintf("import resource can't be updated"))
+	resp.Diagnostics.AddError("Unsupported", "import resource can't be updated")
 }
 
 func (r *ImportResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

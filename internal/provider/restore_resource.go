@@ -371,9 +371,9 @@ func refreshRestoreResourceData(resp *restoreApi.GetRestoreTaskOKBody, data *res
 }
 
 func (r restoreResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Unsupported", fmt.Sprintf("restore can't be updated"))
+	resp.Diagnostics.AddError("Unsupported", "restore can't be updated")
 }
 
 func (r restoreResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
-	resp.Diagnostics.AddWarning("Unsupported", fmt.Sprintf("restore can't be deleted"))
+	resp.Diagnostics.AddWarning("Unsupported", "restore can't be deleted")
 }
