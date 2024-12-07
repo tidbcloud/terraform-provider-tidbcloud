@@ -114,11 +114,7 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	// Create a new dedicated client and set it to the provider dedicated client
-	var dedicatedEndpoint = tidbcloud.DefaultDedicatedEndpoint
-	if os.Getenv(TiDBCloudDedicatedEndpoint) != "" {
-		dedicatedEndpoint = os.Getenv(TiDBCloudDedicatedEndpoint)
-	}
-	dc, err := NewDedicatedClient(publicKey, privateKey, dedicatedEndpoint, fmt.Sprintf("%s/%s", UserAgent, p.version))
+	dc, err := NewDedicatedClient(publicKey, privateKey, os.Getenv(TiDBCloudDedicatedEndpoint), fmt.Sprintf("%s/%s", UserAgent, p.version))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create client",

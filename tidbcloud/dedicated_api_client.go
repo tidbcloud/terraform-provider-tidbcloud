@@ -27,6 +27,9 @@ func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userA
 	}
 
 	// v1beta1 api (dedicated)
+	if dedicatedEndpoint == "" {
+		dedicatedEndpoint = DefaultDedicatedEndpoint
+	}
 	dedicatedURL, err := url.ParseRequestURI(dedicatedEndpoint)
 	if err != nil {
 		return nil, err
