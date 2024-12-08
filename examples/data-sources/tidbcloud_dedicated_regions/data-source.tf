@@ -9,7 +9,7 @@ variable "cloud_provider" {
 }
 
 data "tidbcloud_dedicated_regions" "example" {
-  project_id = var.project_id
+  project_id     = var.project_id
   cloud_provider = var.cloud_provider
 }
 

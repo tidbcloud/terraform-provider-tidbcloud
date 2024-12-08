@@ -1,5 +1,5 @@
 variable "region_id" {
-  type     = string
+  type = string
 }
 
 data "tidbcloud_dedicated_region" "example" {
