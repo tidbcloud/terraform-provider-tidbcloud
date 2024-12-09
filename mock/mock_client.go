@@ -2,7 +2,7 @@
 // Source: github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud (interfaces: TiDBCloudClient)
 
 // Package mock_client is a generated GoMock package.
-package mock_client
+package mock
 
 import (
 	os "os"

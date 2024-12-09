@@ -14,7 +14,8 @@ dedicated region data source
 
 ```terraform
 variable "region_id" {
-  type = string
+  type     = string
+  nullable = false
 }
 
 data "tidbcloud_dedicated_region" "example" {
