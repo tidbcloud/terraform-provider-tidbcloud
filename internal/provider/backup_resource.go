@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	backupApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/backup"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -11,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"strings"
 )
 
 type backupResourceData struct {
@@ -188,7 +189,7 @@ func refreshBackupResourceData(resp *backupApi.GetBackupOfClusterOKBody, data *b
 }
 
 func (r *backupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Unsupported", fmt.Sprintf("backup can't be updated"))
+	resp.Diagnostics.AddError("Unsupported", "backup can't be updated")
 }
 
 func (r *backupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

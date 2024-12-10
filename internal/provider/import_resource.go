@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -16,8 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	importService "github.com/tidbcloud/terraform-provider-tidbcloud/pkg/import/client/import_service"
 	importModel "github.com/tidbcloud/terraform-provider-tidbcloud/pkg/import/models"
-	"os"
-	"strconv"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -545,7 +546,7 @@ func refreshImportResource(ctx context.Context, data *ImportResourceModel, paylo
 }
 
 func (r *ImportResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Unsupported", fmt.Sprintf("import resource can't be updated"))
+	resp.Diagnostics.AddError("Unsupported", "import resource can't be updated")
 }
 
 func (r *ImportResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

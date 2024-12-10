@@ -3,13 +3,14 @@ package provider
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"strconv"
+
 	backupApi "github.com/c4pt0r/go-tidbcloud-sdk-v1/client/backup"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"math/rand"
-	"strconv"
 )
 
 type backupsDataSourceData struct {
@@ -149,7 +150,7 @@ func (d *backupsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	tflog.Trace(ctx, "read backups data source")
 	listBackUpOfClusterOK, err := d.provider.client.ListBackUpOfCluster(backupApi.NewListBackUpOfClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId).WithPage(&page).WithPageSize(&pageSize))
 	if err != nil {
-		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetBackups, got error: %s", err))
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call ListBackups, got error: %s", err))
 		return
 	}
 

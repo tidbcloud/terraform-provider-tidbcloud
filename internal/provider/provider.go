@@ -19,6 +19,8 @@ var _ provider.Provider = &tidbcloudProvider{}
 // NewClient overrides the NewClientDelegate method for testing.
 var NewClient = tidbcloud.NewClientDelegate
 
+var NewDedicatedClient = tidbcloud.NewDedicatedClientDelegate
+
 // provider satisfies the tfsdk.Provider interface and usually is included
 // with all Resource and DataSource implementations.
 type tidbcloudProvider struct {
@@ -26,6 +28,8 @@ type tidbcloudProvider struct {
 	// communicate with the upstream service. Resource and DataSource
 	// implementations can then make calls using this client.
 	client tidbcloud.TiDBCloudClient
+
+	DedicatedClient tidbcloud.TiDBCloudDedicatedClient
 
 	// configured is set to true at the end of the Configure method.
 	// This can be used in Resource and DataSource implementations to verify
@@ -96,21 +100,31 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 
 	// Create a new tidb client and set it to the provider client
 	var host = tidbcloud.DefaultApiUrl
-	if os.Getenv(TiDBCloudHOST) != "" {
-		host = os.Getenv(TiDBCloudHOST)
+	if os.Getenv(TiDBCloudHost) != "" {
+		host = os.Getenv(TiDBCloudHost)
 	}
 	c, err := NewClient(publicKey, privateKey, host, fmt.Sprintf("%s/%s", UserAgent, p.version))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create client",
-			"Unable to create tidb client:\n\n"+err.Error(),
+			"Unable to create TiDB client:\n\n"+err.Error(),
 		)
 		return
 	}
 
+	// Create a new dedicated client and set it to the provider dedicated client
+	dc, err := NewDedicatedClient(publicKey, privateKey, os.Getenv(TiDBCloudDedicatedEndpoint), fmt.Sprintf("%s/%s", UserAgent, p.version))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to create client",
+			"Unable to create TiDB Cloud Dedicated client:\n\n"+err.Error(),
+		)
+		return
+	}
 	// sync
 	p.sync = data.Sync.ValueBool()
 	p.client = c
+	p.DedicatedClient = dc
 	p.configured = true
 	resp.ResourceData = p
 	resp.DataSourceData = p
@@ -132,6 +146,10 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 		NewBackupsDataSource,
 		NewRestoresDataSource,
 		NewClustersDataSource,
+
+		NewDedicatedRegionsDataSource,
+		NewDedicatedRegionDataSource,
+		NewDedicatedCloudProvidersDataSource,
 	}
 }
 
