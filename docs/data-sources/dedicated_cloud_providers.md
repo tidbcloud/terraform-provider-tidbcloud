@@ -32,7 +32,7 @@ output "output" {
 
 ### Optional
 
-- `project_id` (String) The ID of the project. If set, it will return the cloud providers that can be selected under this project.
+- `project_id` (String) The ID of the project. If not set, it will return the cloud providers that can be selected under the default project.
 
 ### Read-Only
 
