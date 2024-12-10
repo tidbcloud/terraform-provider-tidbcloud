@@ -25,7 +25,6 @@ func testDedicatedRegionsDataSource(t *testing.T) {
 			{
 				Config: testDedicatedRegionsConfig,
 				Check: resource.ComposeTestCheckFunc(
-					// 这里可以添加多个检查条件
 					func(s *terraform.State) error {
 						_, ok := s.RootModule().Resources[dedicatedRegionsDataSourceName]
 						if !ok {

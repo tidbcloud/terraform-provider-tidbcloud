@@ -25,7 +25,6 @@ func testDedicatedCloudProvidersDataSource(t *testing.T) {
 			{
 				Config: testDedicatedCloudProvidersConfig,
 				Check: resource.ComposeTestCheckFunc(
-					// 这里可以添加多个检查条件
 					func(s *terraform.State) error {
 						_, ok := s.RootModule().Resources[dedicatedCloudProvidersDataSourceName]
 						if !ok {
