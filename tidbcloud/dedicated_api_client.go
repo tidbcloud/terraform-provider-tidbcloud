@@ -90,26 +90,28 @@ func (d *DedicatedClientDelegate) ListCloudProviders(ctx context.Context, projec
 }
 
 func parseError(err error, resp *http.Response) error {
-	if resp != nil {
-		defer resp.Body.Close()
-	}
+	defer func() {
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}()
 	if err == nil {
 		return nil
 	}
 	if resp == nil {
 		return err
 	}
-	body, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
+	body, err1 := io.ReadAll(resp.Body)
+	if err1 != nil {
 		return err
 	}
 	path := "<path>"
 	if resp.Request != nil {
 		path = fmt.Sprintf("[%s %s]", resp.Request.Method, resp.Request.URL.Path)
 	}
-	traceId := resp.Header.Get("X-Debug-Trace-Id")
-	if traceId == "" {
-		traceId = "<trace_id>"
+	traceId := "<trace_id>"
+	if resp.Header.Get("X-Debug-Trace-Id") != "" {
+		traceId = resp.Header.Get("X-Debug-Trace-Id")
 	}
 	return fmt.Errorf("%s[%s][%s] %s", path, err.Error(), traceId, body)
 }

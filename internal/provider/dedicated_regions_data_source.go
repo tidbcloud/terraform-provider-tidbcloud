@@ -46,11 +46,11 @@ func (d *dedicatedRegionsDataSource) Schema(_ context.Context, _ datasource.Sche
 		MarkdownDescription: "dedicated regions data source",
 		Attributes: map[string]schema.Attribute{
 			"cloud_provider": schema.StringAttribute{
-				MarkdownDescription: "The cloud provider of the regions.",
+				MarkdownDescription: "The cloud provider of the regions. If set, it will return the regions that can be selected under this provider.",
 				Optional:            true,
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the project.",
+				MarkdownDescription: "The ID of the project. If set, it will return the regions that can be selected under this project.",
 				Optional:            true,
 			},
 			"regions": schema.ListNestedAttribute{

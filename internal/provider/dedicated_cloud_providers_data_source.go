@@ -45,7 +45,7 @@ func (d *dedicatedCloudProvidersDataSource) Schema(_ context.Context, _ datasour
 		MarkdownDescription: "dedicated cloud providers data source",
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the project.",
+				MarkdownDescription: "The ID of the project. If set, it will return the cloud providers that can be selected under this project.",
 				Optional:            true,
 			},
 			"cloud_providers": schema.ListAttribute{

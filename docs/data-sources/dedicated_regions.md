@@ -38,8 +38,8 @@ output "output" {
 
 ### Optional
 
-- `cloud_provider` (String) The cloud provider of the regions.
-- `project_id` (String) The ID of the project.
+- `cloud_provider` (String) The cloud provider of the regions. If set, it will return the regions that can be selected under this provider.
+- `project_id` (String) The ID of the project. If set, it will return the regions that can be selected under this project.
 
 ### Read-Only
 
