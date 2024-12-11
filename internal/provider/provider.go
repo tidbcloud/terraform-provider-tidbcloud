@@ -101,32 +101,24 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 
 	// Create a new tidb client and set it to the provider client
 	var host = tidbcloud.DefaultApiUrl
-	if os.Getenv(TiDBCloudHOST) != "" {
-		host = os.Getenv(TiDBCloudHOST)
+	if os.Getenv(TiDBCloudHost) != "" {
+		host = os.Getenv(TiDBCloudHost)
 	}
 	c, err := NewClient(publicKey, privateKey, host, fmt.Sprintf("%s/%s", UserAgent, p.version))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create client",
-			"Unable to create tidb client:\n\n"+err.Error(),
+			"Unable to create TiDB client:\n\n"+err.Error(),
 		)
 		return
 	}
 
 	// Create a new dedicated client and set it to the provider dedicated client
-	var dedicatedEndpoint = tidbcloud.DefaultDedicatedEndpoint
-	if os.Getenv(TiDBCloudDedicatedEndpoint) != "" {
-		dedicatedEndpoint = os.Getenv(TiDBCloudDedicatedEndpoint)
-	}
-	var iamEndpoint = tidbcloud.DefaultIAMEndpoint
-	if os.Getenv(TiDBCloudIAMEndpoint) != "" {
-		iamEndpoint = os.Getenv(TiDBCloudIAMEndpoint)
-	}
-	dc, err := NewDedicatedClient(publicKey, privateKey, dedicatedEndpoint, iamEndpoint, fmt.Sprintf("%s/%s", UserAgent, p.version))
+	dc, err := NewDedicatedClient(publicKey, privateKey, os.Getenv(TiDBCloudDedicatedEndpoint), fmt.Sprintf("%s/%s", UserAgent, p.version))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create client",
-			"Unable to create tidb dedicated client:\n\n"+err.Error(),
+			"Unable to create TiDB Cloud Dedicated client:\n\n"+err.Error(),
 		)
 		return
 	}
@@ -158,6 +150,10 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 
 		NewDedicatedRegionsDataSource,
 		NewDedicatedRegionDataSource,
+<<<<<<< HEAD
+=======
+		NewDedicatedCloudProvidersDataSource,
+>>>>>>> main
 	}
 }
 

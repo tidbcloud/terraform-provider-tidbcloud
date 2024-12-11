@@ -3,14 +3,12 @@ package provider
 import (
 	cryptorand "crypto/rand"
 	"math/big"
-	"math/rand"
-	"time"
 )
 
 const (
 	TiDBCloudPublicKey         string = "TIDBCLOUD_PUBLIC_KEY"
 	TiDBCloudPrivateKey        string = "TIDBCLOUD_PRIVATE_KEY"
-	TiDBCloudHOST              string = "TIDBCLOUD_HOST"
+	TiDBCloudHost              string = "TIDBCLOUD_HOST"
 	TiDBCloudDedicatedEndpoint string = "TIDBCLOUD_DEDICATED_ENDPOINT"
 	TiDBCloudIAMEndpoint       string = "TIDBCLOUD_IAM_ENDPOINT"
 	TiDBCloudProjectID         string = "TIDBCLOUD_PROJECT_ID"
@@ -33,7 +31,6 @@ func Ptr[T any](v T) *T {
 
 func GenerateRandomString(n int) string {
 	letters := "abcdefghijklmnopqrstuvwxyz"
-	rand.Seed(time.Now().UnixNano())
 	letterRunes := []rune(letters)
 	b := make([]rune, n)
 	for i := range b {

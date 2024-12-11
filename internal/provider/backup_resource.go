@@ -189,7 +189,7 @@ func refreshBackupResourceData(resp *backupApi.GetBackupOfClusterOKBody, data *b
 }
 
 func (r *backupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Unsupported", fmt.Sprintf("backup can't be updated"))
+	resp.Diagnostics.AddError("Unsupported", "backup can't be updated")
 }
 
 func (r *backupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

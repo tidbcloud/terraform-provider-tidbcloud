@@ -672,7 +672,7 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		)
 		return
 	}
-	if !data.Config.Port.IsNull() && !data.Config.Port.IsNull() && data.Config.Port.ValueInt64() != state.Config.Port.ValueInt64() {
+	if !data.Config.Port.IsNull() && data.Config.Port.ValueInt64() != state.Config.Port.ValueInt64() {
 		resp.Diagnostics.AddError(
 			"Update error",
 			"port can not be changed, only components can be changed now",
