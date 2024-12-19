@@ -3,6 +3,8 @@ package provider
 import (
 	cryptorand "crypto/rand"
 	"math/big"
+
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 const (
@@ -15,6 +17,8 @@ const (
 	TiDBCloudClusterID         string = "TIDBCLOUD_CLUSTER_ID"
 	UserAgent                  string = "terraform-provider-tidbcloud"
 )
+
+const ()
 
 // HookGlobal sets `*ptr = val` and returns a closure for restoring `*ptr` to
 // its original value. A runtime panic will occur if `val` is not assignable to
@@ -48,4 +52,11 @@ type Knowable interface {
 // IsKnown is a shortcut that checks in a value is neither null nor unknown.
 func IsKnown(t Knowable) bool {
 	return !t.IsUnknown() && !t.IsNull()
+}
+
+func convertInt32PtrToInt64(v *int32) types.Int64 {
+	if v == nil {
+		return types.Int64Null()
+	}
+	return types.Int64Value(int64(*v))
 }

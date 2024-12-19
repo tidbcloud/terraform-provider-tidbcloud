@@ -136,6 +136,7 @@ func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Res
 		NewBackupResource,
 		NewRestoreResource,
 		NewImportResource,
+		NewDedicatedClusterResource,
 	}
 }
 
