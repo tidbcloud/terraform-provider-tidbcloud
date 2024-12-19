@@ -19,6 +19,9 @@ type TiDBCloudDedicatedClient interface {
 	ListRegions(ctx context.Context, cloudProvider string, projectId string) ([]dedicated.Commonv1beta1Region, error)
 	GetRegion(ctx context.Context, regionId string) (*dedicated.Commonv1beta1Region, error)
 	ListCloudProviders(ctx context.Context, projectId string) ([]dedicated.V1beta1RegionCloudProvider, error)
+	CreateCluster(ctx context.Context, body *dedicated.TidbCloudOpenApidedicatedv1beta1Cluster) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	GetCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 }
 
 func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userAgent string) (*dedicated.APIClient, error) {
@@ -87,6 +90,25 @@ func (d *DedicatedClientDelegate) ListCloudProviders(ctx context.Context, projec
 
 	resp, h, err := req.Execute()
 	return resp.CloudProviders, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) CreateCluster(ctx context.Context, body *dedicated.TidbCloudOpenApidedicatedv1beta1Cluster) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	r := d.dc.ClusterServiceAPI.ClusterServiceCreateCluster(ctx)
+	if body != nil {
+		r = r.Cluster(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) GetCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	resp, h, err := d.dc.ClusterServiceAPI.ClusterServiceGetCluster(ctx, clusterId).Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	resp, h, err := d.dc.ClusterServiceAPI.ClusterServiceDeleteCluster(ctx, clusterId).Execute()
+	return resp, parseError(err, h)
 }
 
 func parseError(err error, resp *http.Response) error {

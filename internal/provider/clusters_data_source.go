@@ -118,6 +118,10 @@ func (d *clustersDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							MarkdownDescription: "The ID of the cluster.",
 							Computed:            true,
 						},
+						"project_id": schema.StringAttribute{
+							MarkdownDescription: "The ID of the project.",
+							Computed:            true,
+						},
 						"name": schema.StringAttribute{
 							MarkdownDescription: "The name of the cluster.",
 							Computed:            true,

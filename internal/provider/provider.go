@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
-	"github.com/tidbcloud/terraform-provider-tidbcloud/internal/service/dedicated"
 )
 
 // Ensure the implementation satisfies the provider.Provider interface.
@@ -137,6 +136,7 @@ func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Res
 		NewBackupResource,
 		NewRestoreResource,
 		NewImportResource,
+		NewDedicatedClusterResource,
 	}
 }
 
@@ -150,10 +150,7 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 
 		NewDedicatedRegionsDataSource,
 		NewDedicatedRegionDataSource,
-<<<<<<< HEAD
-=======
 		NewDedicatedCloudProvidersDataSource,
->>>>>>> main
 	}
 }
 
