@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -84,14 +85,14 @@ type tidbNodeSetting struct {
 }
 
 type nodeGroup struct {
-	NodeSpecKey          types.String          `tfsdk:"node_spec_key"`
-	NodeCount            types.Int64           `tfsdk:"node_count"`
-	NodeGroupId          types.String          `tfsdk:"node_group_id"`
-	NodeGroupDisplayName types.String          `tfsdk:"node_group_display_name"`
-	NodeSpecDisplayName  types.String          `tfsdk:"node_spec_display_name"`
-	IsDefaultGroup       types.Bool            `tfsdk:"is_default_group"`
-	State                types.String          `tfsdk:"state"`
-	NodeChangingProgress *nodeChangingProgress `tfsdk:"node_changing_progress"`
+	NodeSpecKey          types.String `tfsdk:"node_spec_key"`
+	NodeCount            types.Int64  `tfsdk:"node_count"`
+	NodeGroupId          types.String `tfsdk:"node_group_id"`
+	NodeGroupDisplayName types.String `tfsdk:"node_group_display_name"`
+	NodeSpecDisplayName  types.String `tfsdk:"node_spec_display_name"`
+	IsDefaultGroup       types.Bool   `tfsdk:"is_default_group"`
+	State                types.String `tfsdk:"state"`
+	// NodeChangingProgress *nodeChangingProgress `tfsdk:"node_changing_progress"`
 }
 
 type nodeChangingProgress struct {
@@ -100,21 +101,21 @@ type nodeChangingProgress struct {
 }
 
 type tikvNodeSetting struct {
-	NodeSpecKey          types.String          `tfsdk:"node_spec_key"`
-	NodeCount            types.Int64           `tfsdk:"node_count"`
-	StorageSizeGi        types.Int64           `tfsdk:"storage_size_gi"`
-	StorageType          types.String          `tfsdk:"storage_type"`
-	NodeSpecDisplayName  types.String          `tfsdk:"node_spec_display_name"`
-	NodeChangingProgress *nodeChangingProgress `tfsdk:"node_changing_progress"`
+	NodeSpecKey         types.String `tfsdk:"node_spec_key"`
+	NodeCount           types.Int64  `tfsdk:"node_count"`
+	StorageSizeGi       types.Int64  `tfsdk:"storage_size_gi"`
+	StorageType         types.String `tfsdk:"storage_type"`
+	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
+	// NodeChangingProgress *nodeChangingProgress `tfsdk:"node_changing_progress"`
 }
 
 type tiflashNodeSetting struct {
-	NodeSpecKey          types.String          `tfsdk:"node_spec_key"`
-	NodeCount            types.Int64           `tfsdk:"node_count"`
-	StorageSizeGi        types.Int64           `tfsdk:"storage_size_gi"`
-	StorageType          types.String          `tfsdk:"storage_type"`
-	NodeSpecDisplayName  types.String          `tfsdk:"node_spec_display_name"`
-	NodeChangingProgress *nodeChangingProgress `tfsdk:"node_changing_progress"`
+	NodeSpecKey         types.String `tfsdk:"node_spec_key"`
+	NodeCount           types.Int64  `tfsdk:"node_count"`
+	StorageSizeGi       types.Int64  `tfsdk:"storage_size_gi"`
+	StorageType         types.String `tfsdk:"storage_type"`
+	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
+	// NodeChangingProgress *nodeChangingProgress `tfsdk:"node_changing_progress"`
 }
 
 type dedicatedClusterResource struct {
@@ -282,20 +283,24 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 									MarkdownDescription: "The state of the node group.",
 									Computed:            true,
 								},
-								"node_changing_progress": schema.SingleNestedAttribute{
-									MarkdownDescription: "Details of node change progress.",
-									Computed:            true,
-									Attributes: map[string]schema.Attribute{
-										"matching_node_spec_node_count": schema.Int64Attribute{
-											MarkdownDescription: "Count of nodes matching the specification.",
-											Computed:            true,
-										},
-										"remaining_deletion_node_count": schema.Int64Attribute{
-											MarkdownDescription: "Count of nodes remaining to be deleted.",
-											Computed:            true,
-										},
-									},
-								},
+								// "node_changing_progress": schema.SingleNestedAttribute{
+								// 	MarkdownDescription: "Details of node change progress.",
+								// 	Computed:            true,
+								// 	Optional:            true,
+								// 	PlanModifiers: []planmodifier.Object{
+								// 		objectplanmodifier.UseStateForUnknown(),
+								// 	},
+								// 	Attributes: map[string]schema.Attribute{
+								// 		"matching_node_spec_node_count": schema.Int64Attribute{
+								// 			MarkdownDescription: "Count of nodes matching the specification.",
+								// 			Computed:            true,
+								// 		},
+								// 		"remaining_deletion_node_count": schema.Int64Attribute{
+								// 			MarkdownDescription: "Count of nodes remaining to be deleted.",
+								// 			Computed:            true,
+								// 		},
+								// 	},
+								// },
 							},
 						},
 					},
@@ -325,20 +330,20 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The display name of the node spec.",
 						Computed:            true,
 					},
-					"node_changing_progress": schema.SingleNestedAttribute{
-						MarkdownDescription: "Details of node change progress.",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"matching_node_spec_node_count": schema.Int64Attribute{
-								MarkdownDescription: "Count of nodes matching the specification.",
-								Computed:            true,
-							},
-							"remaining_deletion_node_count": schema.Int64Attribute{
-								MarkdownDescription: "Count of nodes remaining to be deleted.",
-								Computed:            true,
-							},
-						},
-					},
+					// "node_changing_progress": schema.SingleNestedAttribute{
+					// 	MarkdownDescription: "Details of node change progress.",
+					// 	Computed:            true,
+					// 	Attributes: map[string]schema.Attribute{
+					// 		"matching_node_spec_node_count": schema.Int64Attribute{
+					// 			MarkdownDescription: "Count of nodes matching the specification.",
+					// 			Computed:            true,
+					// 		},
+					// 		"remaining_deletion_node_count": schema.Int64Attribute{
+					// 			MarkdownDescription: "Count of nodes remaining to be deleted.",
+					// 			Computed:            true,
+					// 		},
+					// 	},
+					// },
 				},
 			},
 			"tiflash_node_setting": schema.SingleNestedAttribute{
@@ -365,20 +370,20 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The display name of the node spec.",
 						Computed:            true,
 					},
-					"node_changing_progress": schema.SingleNestedAttribute{
-						MarkdownDescription: "Details of node change progress.",
-						Computed:            true,
-						Attributes: map[string]schema.Attribute{
-							"matching_node_spec_node_count": schema.Int64Attribute{
-								MarkdownDescription: "Count of nodes matching the specification.",
-								Computed:            true,
-							},
-							"remaining_deletion_node_count": schema.Int64Attribute{
-								MarkdownDescription: "Count of nodes remaining to be deleted.",
-								Computed:            true,
-							},
-						},
-					},
+					// "node_changing_progress": schema.SingleNestedAttribute{
+					// 	MarkdownDescription: "Details of node change progress.",
+					// 	Computed:            true,
+					// 	Attributes: map[string]schema.Attribute{
+					// 		"matching_node_spec_node_count": schema.Int64Attribute{
+					// 			MarkdownDescription: "Count of nodes matching the specification.",
+					// 			Computed:            true,
+					// 		},
+					// 		"remaining_deletion_node_count": schema.Int64Attribute{
+					// 			MarkdownDescription: "Count of nodes remaining to be deleted.",
+					// 			Computed:            true,
+					// 		},
+					// 	},
+					// },
 				},
 			},
 		},
@@ -412,18 +417,16 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 	// set clusterId. other computed attributes are not returned by create, they will be set when refresh
 	clusterId := *cluster.ClusterId
 	data.ClusterId = types.StringValue(clusterId)
-	if r.provider.sync {
-		tflog.Info(ctx, "wait dedicated cluster ready")
-		cluster, err = WaitDedicatedClusterReady(ctx, clusterCreateTimeout, clusterCreateInterval, clusterId, r.provider.DedicatedClient)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Cluster creation failed",
-				fmt.Sprintf("Cluster is not ready, get error: %s", err),
-			)
-			return
-		}
-		refreshDedicatedClusterResourceData(ctx, cluster, &data)
+	tflog.Info(ctx, "wait dedicated cluster ready")
+	cluster, err = WaitDedicatedClusterReady(ctx, clusterCreateTimeout, clusterCreateInterval, clusterId, r.provider.DedicatedClient)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Cluster creation failed",
+			fmt.Sprintf("Cluster is not ready, get error: %s", err),
+		)
+		return
 	}
+	refreshDedicatedClusterResourceData(ctx, cluster, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -433,10 +436,11 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 func (r dedicatedClusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var clusterId string
 
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("cluster_id"), &clusterId)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("id"), &clusterId)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	tflog.Debug(ctx, fmt.Sprintf("read dedicated_cluster_resource clusterid: %s", clusterId))
 
 	// call read api
 	tflog.Trace(ctx, "read dedicated_cluster_resource")
@@ -449,13 +453,15 @@ func (r dedicatedClusterResource) Read(ctx context.Context, req resource.ReadReq
 	// refresh data with read result
 	var data dedicatedClusterResourceData
 	// root_password, ip_access_list and pause will not return by read api, so we just use state's value even it changed on console!
-	// use types.String in case ImportState method throw unhandled null value
+
 	var rootPassword types.String
 	var paused *bool
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("config").AtName("root_password"), &rootPassword)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("config").AtName("paused"), &paused)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("root_password"), &rootPassword)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("paused"), &paused)...)
 	data.RootPassword = rootPassword
-	data.Paused = types.BoolValue(*paused)
+	data.Paused = types.BoolPointerValue(paused)
+	data.Annotations = normalizeMap(*cluster.Annotations)
+	data.Labels = normalizeMap(*cluster.Labels)
 	refreshDedicatedClusterResourceData(ctx, cluster, &data)
 
 	// save into the Terraform state
@@ -483,13 +489,13 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	var tidbNodeCounts int64
 	var dataNodeGroups []nodeGroup
 	for _, g := range resp.TidbNodeSetting.TidbNodeGroups {
-		var tidbNodeChangingProgress *nodeChangingProgress
-		if g.NodeChangingProgress != nil {
-			tidbNodeChangingProgress = &nodeChangingProgress{
-				MatchingNodeSpecNodeCount:  convertInt32PtrToInt64(g.NodeChangingProgress.MatchingNodeSpecNodeCount),
-				RemainingDeletionNodeCount: convertInt32PtrToInt64(g.NodeChangingProgress.RemainingDeletionNodeCount),
-			}
-		}
+		// var tidbNodeChangingProgress *nodeChangingProgress
+		// if g.NodeChangingProgress != nil {
+		// 	tidbNodeChangingProgress = &nodeChangingProgress{
+		// 		MatchingNodeSpecNodeCount:  convertInt32PtrToInt64(g.NodeChangingProgress.MatchingNodeSpecNodeCount),
+		// 		RemainingDeletionNodeCount: convertInt32PtrToInt64(g.NodeChangingProgress.RemainingDeletionNodeCount),
+		// 	}
+		// }
 		dataNodeGroups = append(dataNodeGroups, nodeGroup{
 			NodeSpecKey:          types.StringValue(*g.NodeSpecKey),
 			NodeCount:            types.Int64Value(int64(g.NodeCount)),
@@ -498,7 +504,7 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 			NodeSpecDisplayName:  types.StringValue(*g.NodeSpecDisplayName),
 			IsDefaultGroup:       types.BoolValue(bool(*g.IsDefaultGroup)),
 			State:                types.StringValue(string(*g.State)),
-			NodeChangingProgress: tidbNodeChangingProgress,
+			// NodeChangingProgress: tidbNodeChangingProgress,
 		})
 		tidbNodeCounts += int64(g.NodeCount)
 	}
@@ -509,259 +515,175 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	}
 
 	// tikv node setting
-	var tikvNodeChangingProgress *nodeChangingProgress
-	if resp.TikvNodeSetting.NodeChangingProgress != nil {
-		tikvNodeChangingProgress = &nodeChangingProgress{
-			MatchingNodeSpecNodeCount:  convertInt32PtrToInt64(resp.TikvNodeSetting.NodeChangingProgress.MatchingNodeSpecNodeCount),
-			RemainingDeletionNodeCount: convertInt32PtrToInt64(resp.TikvNodeSetting.NodeChangingProgress.RemainingDeletionNodeCount),
-		}
-	}
+	// var tikvNodeChangingProgress *nodeChangingProgress
+	// if resp.TikvNodeSetting.NodeChangingProgress != nil {
+	// 	tikvNodeChangingProgress = &nodeChangingProgress{
+	// 		MatchingNodeSpecNodeCount:  convertInt32PtrToInt64(resp.TikvNodeSetting.NodeChangingProgress.MatchingNodeSpecNodeCount),
+	// 		RemainingDeletionNodeCount: convertInt32PtrToInt64(resp.TikvNodeSetting.NodeChangingProgress.RemainingDeletionNodeCount),
+	// 	}
+	// }
 	data.TiKVNodeSetting = tikvNodeSetting{
-		NodeSpecKey:          types.StringValue(resp.TikvNodeSetting.NodeSpecKey),
-		NodeCount:            types.Int64Value(int64(resp.TikvNodeSetting.NodeCount)),
-		StorageSizeGi:        types.Int64Value(int64(resp.TikvNodeSetting.StorageSizeGi)),
-		StorageType:          types.StringValue(string(resp.TikvNodeSetting.StorageType)),
-		NodeSpecDisplayName:  types.StringValue(*resp.TikvNodeSetting.NodeSpecDisplayName),
-		NodeChangingProgress: tikvNodeChangingProgress,
+		NodeSpecKey:         types.StringValue(resp.TikvNodeSetting.NodeSpecKey),
+		NodeCount:           types.Int64Value(int64(resp.TikvNodeSetting.NodeCount)),
+		StorageSizeGi:       types.Int64Value(int64(resp.TikvNodeSetting.StorageSizeGi)),
+		StorageType:         types.StringValue(string(resp.TikvNodeSetting.StorageType)),
+		NodeSpecDisplayName: types.StringValue(*resp.TikvNodeSetting.NodeSpecDisplayName),
+		// NodeChangingProgress: tikvNodeChangingProgress,
 	}
 
 	// may return
 	// tiflash node setting
 	if resp.TiflashNodeSetting != nil {
-		var tiflashNodeChangingProgress *nodeChangingProgress
-		if resp.TiflashNodeSetting.NodeChangingProgress != nil {
-			tiflashNodeChangingProgress = &nodeChangingProgress{
-				MatchingNodeSpecNodeCount:  convertInt32PtrToInt64(resp.TiflashNodeSetting.NodeChangingProgress.MatchingNodeSpecNodeCount),
-				RemainingDeletionNodeCount: convertInt32PtrToInt64(resp.TiflashNodeSetting.NodeChangingProgress.RemainingDeletionNodeCount),
-			}
-		}
+		// var tiflashNodeChangingProgress *nodeChangingProgress
+		// if resp.TiflashNodeSetting.NodeChangingProgress != nil {
+		// 	tiflashNodeChangingProgress = &nodeChangingProgress{
+		// 		MatchingNodeSpecNodeCount:  convertInt32PtrToInt64(resp.TiflashNodeSetting.NodeChangingProgress.MatchingNodeSpecNodeCount),
+		// 		RemainingDeletionNodeCount: convertInt32PtrToInt64(resp.TiflashNodeSetting.NodeChangingProgress.RemainingDeletionNodeCount),
+		// 	}
+		// }
 		data.TiFlashNodeSetting = &tiflashNodeSetting{
-			NodeSpecKey:          types.StringValue(resp.TiflashNodeSetting.NodeSpecKey),
-			NodeCount:            types.Int64Value(int64(resp.TiflashNodeSetting.NodeCount)),
-			StorageSizeGi:        types.Int64Value(int64(resp.TiflashNodeSetting.StorageSizeGi)),
-			StorageType:          types.StringValue(string(resp.TiflashNodeSetting.StorageType)),
-			NodeSpecDisplayName:  types.StringValue(*resp.TiflashNodeSetting.NodeSpecDisplayName),
-			NodeChangingProgress: tiflashNodeChangingProgress,
+			NodeSpecKey:         types.StringValue(resp.TiflashNodeSetting.NodeSpecKey),
+			NodeCount:           types.Int64Value(int64(resp.TiflashNodeSetting.NodeCount)),
+			StorageSizeGi:       types.Int64Value(int64(resp.TiflashNodeSetting.StorageSizeGi)),
+			StorageType:         types.StringValue(string(resp.TiflashNodeSetting.StorageType)),
+			NodeSpecDisplayName: types.StringValue(*resp.TiflashNodeSetting.NodeSpecDisplayName),
+			// NodeChangingProgress: tiflashNodeChangingProgress,
 		}
 	}
 
-	// not return
-	// IPAccessList, and password and pause will not update for it will not return by read api
 }
 
-// Update since open api is patch without check for the invalid parameter. we do a lot of check here to avoid inconsistency
-// check the date can't be updated
-// if plan and state is different, we can execute updated
 func (r dedicatedClusterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// // get plan
-	// var data clusterResourceData
-	// diags := req.Plan.Get(ctx, &data)
-	// resp.Diagnostics.Append(diags...)
-	// if resp.Diagnostics.HasError() {
-	// 	return
+	// get plan
+	var plan dedicatedClusterResourceData
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// get state
+	var state dedicatedClusterResourceData
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	body := &dedicated.ClusterServiceUpdateClusterRequest{}
+
+	if plan.Paused != state.Paused {
+		switch plan.Paused.ValueBool() {
+		case true:
+			tflog.Trace(ctx, "pause cluster")
+			_, err := r.provider.DedicatedClient.PauseCluster(ctx, state.ClusterId.ValueString())
+			if err != nil {
+				resp.Diagnostics.AddError("Pause Error", fmt.Sprintf("Unable to call PauseCluster, got error: %s", err))
+				return
+			}
+		case false:
+			tflog.Trace(ctx, "resume cluster")
+			_, err := r.provider.DedicatedClient.ResumeCluster(ctx, state.ClusterId.ValueString())
+			if err != nil {
+				resp.Diagnostics.AddError("Resume Error", fmt.Sprintf("Unable to call ResumeCluster, got error: %s", err))
+				return
+			}
+		}
+	}
+	// components change
+	// tidb
+	// update tidb node groups
+	// stateGroups := make(map[string]nodeGroup)
+	// for _, group := range state.TiDBNodeSetting.NodeGroups {
+    // 	stateGroups[group.NodeGroupDisplayName.ValueString()] = group
 	// }
-	// // get state
-	// var state clusterResourceData
-	// diags = req.State.Get(ctx, &state)
-	// resp.Diagnostics.Append(diags...)
-	// if resp.Diagnostics.HasError() {
-	// 	return
-	// }
 
-	// // Severless can not be changed now
-	// if data.ClusterType == dev {
-	// 	resp.Diagnostics.AddError(
-	// 		"Update error",
-	// 		"Unable to update Serverless cluster",
-	// 	)
-	// 	return
-	// }
+	// for _, group := range plan.TiDBNodeSetting.NodeGroups {
+	// 	stateGroup, ok := stateGroups[group.NodeGroupDisplayName.ValueString()]
+	// 	if !ok {
+	// 		tflog.Trace(ctx, "add tidb node group")
+	// 		body := &dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest{
+	// 			DisplayName: group.NodeGroupDisplayName.ValueStringPointer(),
+	// 			NodeCount: int32(group.NodeCount.ValueInt64()),
+	// 		}
+	// 		_, err := r.provider.DedicatedClient.CreateTiDBNodeGroup(ctx, state.ClusterId.ValueString(), body)
+	// 		if err != nil {
+	// 			resp.Diagnostics.AddError("Add TiDB Node Group Error", fmt.Sprintf("Unable to call CreateTiDBNodeGroup, got error: %s", err))
+	// 			return
+	// 		}
+	// 	} else if group.NodeCount != stateGroup.NodeCount || group. {
+	// 		tflog.Trace(ctx, "update tidb node group")
+	// 		nodeCountInt32 := int32(group.NodeCount.ValueInt64())
+	// 		body := &dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest{
+	// 			NodeCount:  *dedicated.NewNullableInt32(&nodeCountInt32),
 
-	// // only components and paused can be changed now
-	// if data.Name != state.Name || data.ClusterType != state.ClusterType || data.Region != state.Region || data.CloudProvider != state.CloudProvider ||
-	// 	data.ProjectId != state.ProjectId || data.ClusterId != state.ClusterId {
-	// 	resp.Diagnostics.AddError(
-	// 		"Update error",
-	// 		"You may update the name,cluster_type,region,cloud_provider or projectId. They can not be changed, only components can be changed now",
-	// 	)
-	// 	return
-	// }
-	// if !data.Config.Port.IsNull() && !data.Config.Port.IsNull() && data.Config.Port.ValueInt64() != state.Config.Port.ValueInt64() {
-	// 	resp.Diagnostics.AddError(
-	// 		"Update error",
-	// 		"port can not be changed, only components can be changed now",
-	// 	)
-	// 	return
-	// }
-	// if data.Config.IPAccessList != nil {
-	// 	// You cannot add an IP access list to an existing cluster without an IP rule.
-	// 	if len(state.Config.IPAccessList) == 0 {
-	// 		resp.Diagnostics.AddError(
-	// 			"Update error",
-	// 			"ip_access_list can not be added to the existing cluster.",
-	// 		)
-	// 		return
-	// 	}
-
-	// 	// You cannot insert or delete IP rule.
-	// 	if len(data.Config.IPAccessList) != len(state.Config.IPAccessList) {
-	// 		resp.Diagnostics.AddError(
-	// 			"Update error",
-	// 			"ip_access_list can not be changed, only components can be changed now",
-	// 		)
-	// 		return
-	// 	}
-
-	// 	// You cannot update the IP rule.
-	// 	newIPAccessList := make([]ipAccess, len(data.Config.IPAccessList))
-	// 	copy(newIPAccessList, data.Config.IPAccessList)
-	// 	sort.Slice(newIPAccessList, func(i, j int) bool {
-	// 		return newIPAccessList[i].CIDR < newIPAccessList[j].CIDR
-	// 	})
-
-	// 	currentIPAccessList := make([]ipAccess, len(state.Config.IPAccessList))
-	// 	copy(currentIPAccessList, state.Config.IPAccessList)
-	// 	sort.Slice(currentIPAccessList, func(i, j int) bool {
-	// 		return currentIPAccessList[i].CIDR < currentIPAccessList[j].CIDR
-	// 	})
-
-	// 	for index, key := range newIPAccessList {
-	// 		if currentIPAccessList[index].CIDR != key.CIDR || currentIPAccessList[index].Description != key.Description {
-	// 			resp.Diagnostics.AddError(
-	// 				"Update error",
-	// 				"ip_access_list can not be changed, only components can be changed now",
-	// 			)
+	// 		}
+	// 		_, err := r.provider.DedicatedClient.UpdateTiDBNodeGroup(ctx, state.ClusterId.ValueString(), stateGroup.NodeGroupId.ValueString(), body)
+	// 		if err != nil {
+	// 			resp.Diagnostics.AddError("Update TiDB Node Group Error", fmt.Sprintf("Unable to call UpdateTidbNodeGroup, got error: %s", err))
 	// 			return
 	// 		}
 	// 	}
-	// } else {
-	// 	// You cannot remove the IP access list.
-	// 	if len(state.Config.IPAccessList) > 0 {
-	// 		resp.Diagnostics.AddError(
-	// 			"Update error",
-	// 			"ip_access_list can not be changed, only components can be changed now",
-	// 		)
-	// 		return
-	// 	}
 	// }
 
-	// // check Components
-	// tidb := data.Config.Components.TiDB
-	// tikv := data.Config.Components.TiKV
-	// tiflash := data.Config.Components.TiFlash
-	// tidbState := state.Config.Components.TiDB
-	// tikvState := state.Config.Components.TiKV
-	// tiflashState := state.Config.Components.TiFlash
-	// if tidb.NodeSize != tidbState.NodeSize {
-	// 	resp.Diagnostics.AddError(
-	// 		"Update error",
-	// 		"tidb node_size can't be changed",
-	// 	)
-	// 	return
+	// body.TidbNodeSetting = &dedicated.V1beta1UpdateClusterRequestTidbNodeSetting{
+	// 	NodeSpecKey: plan.TiDBNodeSetting.NodeSpecKey.ValueStringPointer(),
 	// }
-	// if tikv.NodeSize != tikvState.NodeSize || tikv.StorageSizeGib != tikvState.StorageSizeGib {
-	// 	resp.Diagnostics.AddError(
-	// 		"Update error",
-	// 		"tikv node_size or storage_size_gib can't be changed",
-	// 	)
-	// 	return
-	// }
-	// if tiflash != nil && tiflashState != nil {
-	// 	// if cluster have tiflash already, then we can't specify NodeSize and StorageSizeGib
-	// 	if tiflash.NodeSize != tiflashState.NodeSize || tiflash.StorageSizeGib != tiflashState.StorageSizeGib {
-	// 		resp.Diagnostics.AddError(
-	// 			"Update error",
-	// 			"tiflash node_size or storage_size_gib can't be changed",
-	// 		)
-	// 		return
-	// 	}
-	// }
+	// tikv
+	if plan.TiKVNodeSetting != state.TiKVNodeSetting {
+		nodeCountInt32 := int32(plan.TiKVNodeSetting.NodeCount.ValueInt64())
+		storageSizeGiInt32 := int32(plan.TiKVNodeSetting.StorageSizeGi.ValueInt64())
+		body.TikvNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
+			NodeSpecKey:   plan.TiKVNodeSetting.NodeSpecKey.ValueStringPointer(),
+			NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
+			StorageSizeGi: &storageSizeGiInt32,
+		}
+	}
 
-	// // build UpdateClusterBody
-	// var updateClusterBody clusterApi.UpdateClusterBody
-	// updateClusterBody.Config = &clusterApi.UpdateClusterParamsBodyConfig{}
-	// // build paused
-	// if data.Config.Paused != nil {
-	// 	if state.Config.Paused == nil || *data.Config.Paused != *state.Config.Paused {
-	// 		updateClusterBody.Config.Paused = data.Config.Paused
-	// 	}
-	// }
-	// // build components
-	// var isComponentsChanged = false
-	// if tidb.NodeQuantity != tidbState.NodeQuantity || tikv.NodeQuantity != tikvState.NodeQuantity {
-	// 	isComponentsChanged = true
-	// }
+	// tiflash
+	if plan.TiFlashNodeSetting != nil {
+		nodeCountInt32 := int32(plan.TiFlashNodeSetting.NodeCount.ValueInt64())
+		storageSizeGiInt32 := int32(plan.TiFlashNodeSetting.StorageSizeGi.ValueInt64())
+		body.TiflashNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
+			NodeSpecKey:   plan.TiFlashNodeSetting.NodeSpecKey.ValueStringPointer(),
+			NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
+			StorageSizeGi: &storageSizeGiInt32,
+		}
+	}
 
-	// var componentTiFlash *clusterApi.UpdateClusterParamsBodyConfigComponentsTiflash
-	// if tiflash != nil {
-	// 	if tiflashState == nil {
-	// 		isComponentsChanged = true
-	// 		componentTiFlash = &clusterApi.UpdateClusterParamsBodyConfigComponentsTiflash{
-	// 			NodeQuantity:   &tiflash.NodeQuantity,
-	// 			NodeSize:       &tiflash.NodeSize,
-	// 			StorageSizeGib: &tiflash.StorageSizeGib,
-	// 		}
-	// 	} else if tiflash.NodeQuantity != tiflashState.NodeQuantity {
-	// 		isComponentsChanged = true
-	// 		// NodeSize can't be changed
-	// 		componentTiFlash = &clusterApi.UpdateClusterParamsBodyConfigComponentsTiflash{
-	// 			NodeQuantity: &tiflash.NodeQuantity,
-	// 		}
-	// 	}
-	// }
+	if plan.Name != state.Name {
+		body.DisplayName = plan.Name.ValueStringPointer()
+	}
 
-	// if isComponentsChanged {
-	// 	updateClusterBody.Config.Components = &clusterApi.UpdateClusterParamsBodyConfigComponents{
-	// 		Tidb: &clusterApi.UpdateClusterParamsBodyConfigComponentsTidb{
-	// 			NodeQuantity: &tidb.NodeQuantity,
-	// 		},
-	// 		Tikv: &clusterApi.UpdateClusterParamsBodyConfigComponentsTikv{
-	// 			NodeQuantity: &tikv.NodeQuantity,
-	// 		},
-	// 		Tiflash: componentTiFlash,
-	// 	}
-	// }
+	body.Labels = &plan.Labels
 
-	// tflog.Trace(ctx, "update cluster_resource")
-	// updateClusterParams := clusterApi.NewUpdateClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString()).WithBody(updateClusterBody)
-	// _, err := r.provider.client.UpdateCluster(updateClusterParams)
-	// if err != nil {
-	// 	resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateClusterById, got error: %s", err))
-	// 	return
-	// }
+	// call update api
+	tflog.Trace(ctx, "update dedicated_cluster_resource")
+	_, err := r.provider.DedicatedClient.UpdateCluster(ctx, state.ClusterId.ValueString(), body)
+	if err != nil {
+		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
+		return
+	}
 
-	// if r.provider.sync {
-	// 	tflog.Info(ctx, "wait cluster ready")
-	// 	cluster, err := WaitClusterReady(ctx, clusterUpdateTimeout, clusterUpdateInterval, data.ProjectId, data.ClusterId.ValueString(), r.provider.client)
-	// 	if err != nil {
-	// 		resp.Diagnostics.AddError(
-	// 			"Cluster update failed",
-	// 			fmt.Sprintf("Cluster is not ready, get error: %s", err),
-	// 		)
-	// 		return
-	// 	}
-	// 	refreshClusterResourceData(ctx, cluster, &data)
-	// } else {
-	// 	// we refresh for any unknown value. if someone has other opinions which is better, he can delete the refresh logic
-	// 	tflog.Trace(ctx, "read cluster_resource")
-	// 	getClusterResp, err := r.provider.client.GetCluster(clusterApi.NewGetClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString()))
-	// 	if err != nil {
-	// 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call GetClusterById, got error: %s", err))
-	// 		return
-	// 	}
-	// 	refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
-	// }
+	tflog.Info(ctx, "wait cluster ready")
+	cluster, err := WaitDedicatedClusterReady(ctx, clusterUpdateTimeout, clusterUpdateInterval, state.ClusterId.ValueString(), r.provider.DedicatedClient)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Cluster update failed",
+			fmt.Sprintf("Cluster is not ready, get error: %s", err),
+		)
+		return
+	}
+	refreshDedicatedClusterResourceData(ctx, cluster, &state)
 
-	// // save into the Terraform state.
-	// diags = resp.State.Set(ctx, &data)
-	// resp.Diagnostics.Append(diags...)
-	panic("not implemented")
+	// save into the Terraform state.
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }
 
 func (r dedicatedClusterResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var clusterId string
 
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("cluster_id"), &clusterId)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("id"), &clusterId)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -892,4 +814,20 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) dedicate
 		RootPassword:       &rootPassword,
 		Version:            &version,
 	}
+}
+
+// normalizeMap is used to sort the map to avoid the diff form terraform state and client response
+func normalizeMap(m map[string]string) map[string]string {
+	sortedKeys := make([]string, 0, len(m))
+	for k := range m {
+		sortedKeys = append(sortedKeys, k)
+	}
+	sort.Strings(sortedKeys)
+
+	sortedMap := make(map[string]string)
+	for _, k := range sortedKeys {
+		sortedMap[k] = m[k]
+	}
+
+	return sortedMap
 }

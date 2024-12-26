@@ -22,6 +22,12 @@ type TiDBCloudDedicatedClient interface {
 	CreateCluster(ctx context.Context, body *dedicated.TidbCloudOpenApidedicatedv1beta1Cluster) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	GetCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	UpdateCluster(ctx context.Context, clusterId string, body *dedicated.ClusterServiceUpdateClusterRequest) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	PauseCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	ResumeCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	DeleteTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) error
+	UpdateTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 }
 
 func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userAgent string) (*dedicated.APIClient, error) {
@@ -109,6 +115,48 @@ func (d *DedicatedClientDelegate) GetCluster(ctx context.Context, clusterId stri
 func (d *DedicatedClientDelegate) DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	resp, h, err := d.dc.ClusterServiceAPI.ClusterServiceDeleteCluster(ctx, clusterId).Execute()
 	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) UpdateCluster(ctx context.Context, clusterId string, body *dedicated.ClusterServiceUpdateClusterRequest) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	r := d.dc.ClusterServiceAPI.ClusterServiceUpdateCluster(ctx, clusterId)
+	if body != nil {
+		r = r.Cluster(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) PauseCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	resp, h, err := d.dc.ClusterServiceAPI.ClusterServicePauseCluster(ctx, clusterId).Execute()
+	return &resp.Cluster, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) ResumeCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	resp, h, err := d.dc.ClusterServiceAPI.ClusterServiceResumeCluster(ctx, clusterId).Execute()
+	return &resp.Cluster, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+	r := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceCreateTidbNodeGroup(ctx, clusterId)
+	if body != nil {
+		r = r.TidbNodeGroup(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) DeleteTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) error {
+	_, h, err := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceDeleteTidbNodeGroup(ctx, clusterId, nodeGroupId).Execute()
+	return parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) UpdateTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+	r := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceUpdateTidbNodeGroup(ctx, clusterId, nodeGroupId)
+	if body != nil {
+		r = r.TidbNodeGroup(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
 }
 
 func parseError(err error, resp *http.Response) error {
