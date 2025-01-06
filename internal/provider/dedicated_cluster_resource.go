@@ -456,12 +456,6 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	if plan.Paused != state.Paused {
-		// ignoredFields := []string{".Paused"}
-		// diags := validateFieldChanges(plan, state, ignoredFields)
-		// resp.Diagnostics.Append(diags...)
-		// if resp.Diagnostics.HasError() {
-		// 	return
-		// }
 		switch plan.Paused.ValueBool() {
 		case true:
 			tflog.Trace(ctx, "pause cluster")
@@ -555,21 +549,6 @@ func (r dedicatedClusterResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 }
-
-// func (r clusterResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-// 	idParts := strings.Split(req.ID, ",")
-
-// 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
-// 		resp.Diagnostics.AddError(
-// 			"Unexpected Import Identifier",
-// 			fmt.Sprintf("Expected import identifier with format: project_id,cluster_id. Got: %q", req.ID),
-// 		)
-// 		return
-// 	}
-
-// 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-// 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), idParts[1])...)
-// }
 
 func WaitDedicatedClusterReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string,
 	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {

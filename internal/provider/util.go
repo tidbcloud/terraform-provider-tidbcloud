@@ -3,8 +3,6 @@ package provider
 import (
 	cryptorand "crypto/rand"
 	"math/big"
-
-	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 const (
@@ -53,29 +51,3 @@ type Knowable interface {
 func IsKnown(t Knowable) bool {
 	return !t.IsUnknown() && !t.IsNull()
 }
-
-// func validateFieldChanges(plan, state interface{}, ignoredPaths []string) diag.Diagnostics {
-// 	var diagnostics diag.Diagnostics
-
-// 	ignoredFields := make(map[string]bool)
-// 	for _, path := range ignoredPaths {
-// 		ignoredFields[path] = true
-// 	}
-
-// 	// Create custom cmp.Options to ignore specified fields
-// 	opts := cmp.FilterPath(func(p cmp.Path) bool {
-// 		fieldPath := p.GoString()
-// 		_, isIgnored := ignoredFields[fieldPath]
-// 		return isIgnored
-// 	}, cmp.Ignore())
-
-// 	// Compare plan and state with options
-// 	if diff := cmp.Diff(state, plan, opts); diff != "" {
-// 		diagnostics.AddError(
-// 			"Unexpected field Changes Detected",
-// 			fmt.Sprintf("You cannot modify both %v and other fields at the same time. Unexpected field changes:\n%s", ignoredFields, diff),
-// 		)
-// 	}
-
-// 	return diagnostics
-// }
