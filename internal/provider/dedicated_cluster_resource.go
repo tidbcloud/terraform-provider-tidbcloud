@@ -41,15 +41,6 @@ const (
 	dedicatedClusterStatusResuming    clusterStatus = "RESUMING"
 )
 
-// const (
-// 	clusterServerlessCreateTimeout  = 180 * time.Second
-// 	clusterServerlessCreateInterval = 2 * time.Second
-// 	clusterCreateTimeout            = time.Hour
-// 	clusterCreateInterval           = 60 * time.Second
-// 	clusterUpdateTimeout            = time.Hour
-// 	clusterUpdateInterval           = 20 * time.Second
-// )
-
 type dedicatedClusterResourceData struct {
 	ProjectId          types.String        `tfsdk:"project_id"`
 	ClusterId          types.String        `tfsdk:"id"`
@@ -79,12 +70,6 @@ type pausePlan struct {
 }
 
 type tidbNodeSetting struct {
-	NodeSpecKey types.String `tfsdk:"node_spec_key"`
-	NodeCount   types.Int64  `tfsdk:"node_count"`
-	NodeGroups  []nodeGroup  `tfsdk:"node_groups"`
-}
-
-type nodeGroup struct {
 	NodeSpecKey          types.String `tfsdk:"node_spec_key"`
 	NodeCount            types.Int64  `tfsdk:"node_count"`
 	NodeGroupId          types.String `tfsdk:"node_group_id"`
@@ -92,12 +77,6 @@ type nodeGroup struct {
 	NodeSpecDisplayName  types.String `tfsdk:"node_spec_display_name"`
 	IsDefaultGroup       types.Bool   `tfsdk:"is_default_group"`
 	State                types.String `tfsdk:"state"`
-	// NodeChangingProgress *nodeChangingProgress `tfsdk:"node_changing_progress"`
-}
-
-type nodeChangingProgress struct {
-	MatchingNodeSpecNodeCount  types.Int64 `tfsdk:"matching_node_spec_node_count"`
-	RemainingDeletionNodeCount types.Int64 `tfsdk:"remaining_deletion_node_count"`
 }
 
 type tikvNodeSetting struct {
@@ -243,66 +222,32 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"node_spec_key": schema.StringAttribute{
-						MarkdownDescription: "The node specification key.",
+						MarkdownDescription: "The key of the node spec.",
 						Required:            true,
 					},
 					"node_count": schema.Int64Attribute{
-						MarkdownDescription: "The number of nodes in the cluster.",
+						MarkdownDescription: "The number of nodes in the default node group.",
 						Required:            true,
 					},
-					"node_groups": schema.ListNestedAttribute{
-						MarkdownDescription: "List of node groups.",
-						Optional:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"node_spec_key": schema.StringAttribute{
-									MarkdownDescription: "The node specification key.",
-									Computed:            true,
-								},
-								"node_count": schema.Int64Attribute{
-									MarkdownDescription: "The number of nodes in the group.",
-									Required:            true,
-								},
-								"node_group_id": schema.StringAttribute{
-									MarkdownDescription: "The ID of the TiDB node group.",
-									Computed:            true,
-								},
-								"node_group_display_name": schema.StringAttribute{
-									MarkdownDescription: "The display name of the TiDB node group.",
-									Computed:            true,
-								},
-								"node_spec_display_name": schema.StringAttribute{
-									MarkdownDescription: "The display name of the node spec.",
-									Computed:            true,
-								},
-								"is_default_group": schema.BoolAttribute{
-									MarkdownDescription: "Indicates if this is the default group.",
-									Computed:            true,
-								},
-								"state": schema.StringAttribute{
-									MarkdownDescription: "The state of the node group.",
-									Computed:            true,
-								},
-								// "node_changing_progress": schema.SingleNestedAttribute{
-								// 	MarkdownDescription: "Details of node change progress.",
-								// 	Computed:            true,
-								// 	Optional:            true,
-								// 	PlanModifiers: []planmodifier.Object{
-								// 		objectplanmodifier.UseStateForUnknown(),
-								// 	},
-								// 	Attributes: map[string]schema.Attribute{
-								// 		"matching_node_spec_node_count": schema.Int64Attribute{
-								// 			MarkdownDescription: "Count of nodes matching the specification.",
-								// 			Computed:            true,
-								// 		},
-								// 		"remaining_deletion_node_count": schema.Int64Attribute{
-								// 			MarkdownDescription: "Count of nodes remaining to be deleted.",
-								// 			Computed:            true,
-								// 		},
-								// 	},
-								// },
-							},
-						},
+					"node_group_id": schema.StringAttribute{
+						MarkdownDescription: "The ID of the default node group.",
+						Computed:            true,
+					},
+					"node_group_display_name": schema.StringAttribute{
+						MarkdownDescription: "The display name of the default node group.",
+						Computed:            true,
+					},
+					"node_spec_display_name": schema.StringAttribute{
+						MarkdownDescription: "The display name of the node spec.",
+						Computed:            true,
+					},
+					"is_default_group": schema.BoolAttribute{
+						MarkdownDescription: "Indicates if this is the default group.",
+						Computed:            true,
+					},
+					"state": schema.StringAttribute{
+						MarkdownDescription: "The state of the node group.",
+						Computed:            true,
 					},
 				},
 			},
@@ -330,20 +275,6 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The display name of the node spec.",
 						Computed:            true,
 					},
-					// "node_changing_progress": schema.SingleNestedAttribute{
-					// 	MarkdownDescription: "Details of node change progress.",
-					// 	Computed:            true,
-					// 	Attributes: map[string]schema.Attribute{
-					// 		"matching_node_spec_node_count": schema.Int64Attribute{
-					// 			MarkdownDescription: "Count of nodes matching the specification.",
-					// 			Computed:            true,
-					// 		},
-					// 		"remaining_deletion_node_count": schema.Int64Attribute{
-					// 			MarkdownDescription: "Count of nodes remaining to be deleted.",
-					// 			Computed:            true,
-					// 		},
-					// 	},
-					// },
 				},
 			},
 			"tiflash_node_setting": schema.SingleNestedAttribute{
@@ -370,20 +301,6 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The display name of the node spec.",
 						Computed:            true,
 					},
-					// "node_changing_progress": schema.SingleNestedAttribute{
-					// 	MarkdownDescription: "Details of node change progress.",
-					// 	Computed:            true,
-					// 	Attributes: map[string]schema.Attribute{
-					// 		"matching_node_spec_node_count": schema.Int64Attribute{
-					// 			MarkdownDescription: "Count of nodes matching the specification.",
-					// 			Computed:            true,
-					// 		},
-					// 		"remaining_deletion_node_count": schema.Int64Attribute{
-					// 			MarkdownDescription: "Count of nodes remaining to be deleted.",
-					// 			Computed:            true,
-					// 		},
-					// 	},
-					// },
 				},
 			},
 		},
@@ -407,7 +324,7 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	tflog.Trace(ctx, "created dedicated_cluster_resource")
+	tflog.Trace(ctx, "create dedicated_cluster_resource")
 	body := buildCreateDedicatedClusterBody(data)
 	cluster, err := r.provider.DedicatedClient.CreateCluster(ctx, &body)
 	if err != nil {
@@ -486,68 +403,37 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	data.Annotations = *resp.Annotations
 
 	// tidb node setting
-	var tidbNodeCounts int64
-	var dataNodeGroups []nodeGroup
-	for _, g := range resp.TidbNodeSetting.TidbNodeGroups {
-		// var tidbNodeChangingProgress *nodeChangingProgress
-		// if g.NodeChangingProgress != nil {
-		// 	tidbNodeChangingProgress = &nodeChangingProgress{
-		// 		MatchingNodeSpecNodeCount:  convertInt32PtrToInt64(g.NodeChangingProgress.MatchingNodeSpecNodeCount),
-		// 		RemainingDeletionNodeCount: convertInt32PtrToInt64(g.NodeChangingProgress.RemainingDeletionNodeCount),
-		// 	}
-		// }
-		dataNodeGroups = append(dataNodeGroups, nodeGroup{
-			NodeSpecKey:          types.StringValue(*g.NodeSpecKey),
-			NodeCount:            types.Int64Value(int64(g.NodeCount)),
-			NodeGroupId:          types.StringValue(*g.TidbNodeGroupId),
-			NodeGroupDisplayName: types.StringValue(*g.DisplayName),
-			NodeSpecDisplayName:  types.StringValue(*g.NodeSpecDisplayName),
-			IsDefaultGroup:       types.BoolValue(bool(*g.IsDefaultGroup)),
-			State:                types.StringValue(string(*g.State)),
-			// NodeChangingProgress: tidbNodeChangingProgress,
-		})
-		tidbNodeCounts += int64(g.NodeCount)
-	}
-	data.TiDBNodeSetting = tidbNodeSetting{
-		NodeSpecKey: types.StringValue(resp.TidbNodeSetting.NodeSpecKey),
-		NodeCount:   types.Int64Value(tidbNodeCounts),
-		NodeGroups:  dataNodeGroups,
+	for _, group := range resp.TidbNodeSetting.TidbNodeGroups {
+		if *group.IsDefaultGroup {
+			data.TiDBNodeSetting = tidbNodeSetting{
+				NodeSpecKey:          types.StringValue(*group.NodeSpecKey),
+				NodeCount:            types.Int64Value(int64(group.NodeCount)),
+				NodeGroupId:          types.StringValue(*group.TidbNodeGroupId),
+				NodeGroupDisplayName: types.StringValue(*group.DisplayName),
+				NodeSpecDisplayName:  types.StringValue(*group.NodeSpecDisplayName),
+				IsDefaultGroup:       types.BoolValue(*group.IsDefaultGroup),
+				State:                types.StringValue(string(*group.State)),
+			}
+		}
 	}
 
-	// tikv node setting
-	// var tikvNodeChangingProgress *nodeChangingProgress
-	// if resp.TikvNodeSetting.NodeChangingProgress != nil {
-	// 	tikvNodeChangingProgress = &nodeChangingProgress{
-	// 		MatchingNodeSpecNodeCount:  convertInt32PtrToInt64(resp.TikvNodeSetting.NodeChangingProgress.MatchingNodeSpecNodeCount),
-	// 		RemainingDeletionNodeCount: convertInt32PtrToInt64(resp.TikvNodeSetting.NodeChangingProgress.RemainingDeletionNodeCount),
-	// 	}
-	// }
 	data.TiKVNodeSetting = tikvNodeSetting{
 		NodeSpecKey:         types.StringValue(resp.TikvNodeSetting.NodeSpecKey),
 		NodeCount:           types.Int64Value(int64(resp.TikvNodeSetting.NodeCount)),
 		StorageSizeGi:       types.Int64Value(int64(resp.TikvNodeSetting.StorageSizeGi)),
 		StorageType:         types.StringValue(string(resp.TikvNodeSetting.StorageType)),
 		NodeSpecDisplayName: types.StringValue(*resp.TikvNodeSetting.NodeSpecDisplayName),
-		// NodeChangingProgress: tikvNodeChangingProgress,
 	}
 
 	// may return
 	// tiflash node setting
 	if resp.TiflashNodeSetting != nil {
-		// var tiflashNodeChangingProgress *nodeChangingProgress
-		// if resp.TiflashNodeSetting.NodeChangingProgress != nil {
-		// 	tiflashNodeChangingProgress = &nodeChangingProgress{
-		// 		MatchingNodeSpecNodeCount:  convertInt32PtrToInt64(resp.TiflashNodeSetting.NodeChangingProgress.MatchingNodeSpecNodeCount),
-		// 		RemainingDeletionNodeCount: convertInt32PtrToInt64(resp.TiflashNodeSetting.NodeChangingProgress.RemainingDeletionNodeCount),
-		// 	}
-		// }
 		data.TiFlashNodeSetting = &tiflashNodeSetting{
 			NodeSpecKey:         types.StringValue(resp.TiflashNodeSetting.NodeSpecKey),
 			NodeCount:           types.Int64Value(int64(resp.TiflashNodeSetting.NodeCount)),
 			StorageSizeGi:       types.Int64Value(int64(resp.TiflashNodeSetting.StorageSizeGi)),
 			StorageType:         types.StringValue(string(resp.TiflashNodeSetting.StorageType)),
 			NodeSpecDisplayName: types.StringValue(*resp.TiflashNodeSetting.NodeSpecDisplayName),
-			// NodeChangingProgress: tiflashNodeChangingProgress,
 		}
 	}
 
@@ -569,13 +455,19 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	body := &dedicated.ClusterServiceUpdateClusterRequest{}
-
 	if plan.Paused != state.Paused {
+		// ignoredFields := []string{".Paused"}
+		// diags := validateFieldChanges(plan, state, ignoredFields)
+		// resp.Diagnostics.Append(diags...)
+		// if resp.Diagnostics.HasError() {
+		// 	return
+		// }
 		switch plan.Paused.ValueBool() {
 		case true:
 			tflog.Trace(ctx, "pause cluster")
+			tflog.Debug(ctx, fmt.Sprintf("state.ClusterId: %s", state.ClusterId))
 			_, err := r.provider.DedicatedClient.PauseCluster(ctx, state.ClusterId.ValueString())
+			tflog.Debug(ctx, fmt.Sprintf("state.ClusterId: %s", err))
 			if err != nil {
 				resp.Diagnostics.AddError("Pause Error", fmt.Sprintf("Unable to call PauseCluster, got error: %s", err))
 				return
@@ -588,80 +480,48 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 				return
 			}
 		}
-	}
-	// components change
-	// tidb
-	// update tidb node groups
-	// stateGroups := make(map[string]nodeGroup)
-	// for _, group := range state.TiDBNodeSetting.NodeGroups {
-    // 	stateGroups[group.NodeGroupDisplayName.ValueString()] = group
-	// }
-
-	// for _, group := range plan.TiDBNodeSetting.NodeGroups {
-	// 	stateGroup, ok := stateGroups[group.NodeGroupDisplayName.ValueString()]
-	// 	if !ok {
-	// 		tflog.Trace(ctx, "add tidb node group")
-	// 		body := &dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest{
-	// 			DisplayName: group.NodeGroupDisplayName.ValueStringPointer(),
-	// 			NodeCount: int32(group.NodeCount.ValueInt64()),
-	// 		}
-	// 		_, err := r.provider.DedicatedClient.CreateTiDBNodeGroup(ctx, state.ClusterId.ValueString(), body)
-	// 		if err != nil {
-	// 			resp.Diagnostics.AddError("Add TiDB Node Group Error", fmt.Sprintf("Unable to call CreateTiDBNodeGroup, got error: %s", err))
-	// 			return
-	// 		}
-	// 	} else if group.NodeCount != stateGroup.NodeCount || group. {
-	// 		tflog.Trace(ctx, "update tidb node group")
-	// 		nodeCountInt32 := int32(group.NodeCount.ValueInt64())
-	// 		body := &dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest{
-	// 			NodeCount:  *dedicated.NewNullableInt32(&nodeCountInt32),
-
-	// 		}
-	// 		_, err := r.provider.DedicatedClient.UpdateTiDBNodeGroup(ctx, state.ClusterId.ValueString(), stateGroup.NodeGroupId.ValueString(), body)
-	// 		if err != nil {
-	// 			resp.Diagnostics.AddError("Update TiDB Node Group Error", fmt.Sprintf("Unable to call UpdateTidbNodeGroup, got error: %s", err))
-	// 			return
-	// 		}
-	// 	}
-	// }
-
-	// body.TidbNodeSetting = &dedicated.V1beta1UpdateClusterRequestTidbNodeSetting{
-	// 	NodeSpecKey: plan.TiDBNodeSetting.NodeSpecKey.ValueStringPointer(),
-	// }
-	// tikv
-	if plan.TiKVNodeSetting != state.TiKVNodeSetting {
-		nodeCountInt32 := int32(plan.TiKVNodeSetting.NodeCount.ValueInt64())
-		storageSizeGiInt32 := int32(plan.TiKVNodeSetting.StorageSizeGi.ValueInt64())
-		body.TikvNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
-			NodeSpecKey:   plan.TiKVNodeSetting.NodeSpecKey.ValueStringPointer(),
-			NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
-			StorageSizeGi: &storageSizeGiInt32,
+	} else {
+		body := &dedicated.ClusterServiceUpdateClusterRequest{}
+		// components change
+		// tidb
+		body.TidbNodeSetting = &dedicated.V1beta1UpdateClusterRequestTidbNodeSetting{
+			NodeSpecKey: plan.TiDBNodeSetting.NodeSpecKey.ValueStringPointer(),
 		}
-	}
-
-	// tiflash
-	if plan.TiFlashNodeSetting != nil {
-		nodeCountInt32 := int32(plan.TiFlashNodeSetting.NodeCount.ValueInt64())
-		storageSizeGiInt32 := int32(plan.TiFlashNodeSetting.StorageSizeGi.ValueInt64())
-		body.TiflashNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
-			NodeSpecKey:   plan.TiFlashNodeSetting.NodeSpecKey.ValueStringPointer(),
-			NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
-			StorageSizeGi: &storageSizeGiInt32,
+		// tikv
+		if plan.TiKVNodeSetting != state.TiKVNodeSetting {
+			nodeCountInt32 := int32(plan.TiKVNodeSetting.NodeCount.ValueInt64())
+			storageSizeGiInt32 := int32(plan.TiKVNodeSetting.StorageSizeGi.ValueInt64())
+			body.TikvNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
+				NodeSpecKey:   plan.TiKVNodeSetting.NodeSpecKey.ValueStringPointer(),
+				NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
+				StorageSizeGi: &storageSizeGiInt32,
+			}
 		}
-	}
 
-	if plan.Name != state.Name {
-		body.DisplayName = plan.Name.ValueStringPointer()
-	}
+		// tiflash
+		if plan.TiFlashNodeSetting != nil {
+			nodeCountInt32 := int32(plan.TiFlashNodeSetting.NodeCount.ValueInt64())
+			storageSizeGiInt32 := int32(plan.TiFlashNodeSetting.StorageSizeGi.ValueInt64())
+			body.TiflashNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
+				NodeSpecKey:   plan.TiFlashNodeSetting.NodeSpecKey.ValueStringPointer(),
+				NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
+				StorageSizeGi: &storageSizeGiInt32,
+			}
+		}
 
-	body.Labels = &plan.Labels
+		if plan.Name != state.Name {
+			body.DisplayName = plan.Name.ValueStringPointer()
+		}
 
-	// call update api
-	tflog.Trace(ctx, "update dedicated_cluster_resource")
-	_, err := r.provider.DedicatedClient.UpdateCluster(ctx, state.ClusterId.ValueString(), body)
-	if err != nil {
-		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
-		return
+		body.Labels = &plan.Labels
+
+		// call update api
+		tflog.Trace(ctx, "update dedicated_cluster_resource")
+		_, err := r.provider.DedicatedClient.UpdateCluster(ctx, state.ClusterId.ValueString(), body)
+		if err != nil {
+			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
+			return
+		}
 	}
 
 	tflog.Info(ctx, "wait cluster ready")
@@ -688,7 +548,7 @@ func (r dedicatedClusterResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	tflog.Trace(ctx, "delete cluster_resource")
+	tflog.Trace(ctx, "delete dedicated_cluster_resource")
 	_, err := r.provider.DedicatedClient.DeleteCluster(ctx, clusterId)
 	if err != nil {
 		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteCluster, got error: %s", err))
@@ -761,13 +621,9 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) dedicate
 
 	// tidb node groups
 	var nodeGroups []dedicated.Dedicatedv1beta1TidbNodeGroup
-	for _, group := range data.TiDBNodeSetting.NodeGroups {
-		displayName := group.NodeGroupDisplayName.ValueString()
-		nodeGroups = append(nodeGroups, dedicated.Dedicatedv1beta1TidbNodeGroup{
-			NodeCount:   int32(group.NodeCount.ValueInt64()),
-			DisplayName: &displayName,
-		})
-	}
+	nodeGroups = append(nodeGroups, dedicated.Dedicatedv1beta1TidbNodeGroup{
+		NodeCount: int32(data.TiDBNodeSetting.NodeCount.ValueInt64()),
+	})
 
 	// tidb node setting
 	tidbNodeSpeckKey := data.TiDBNodeSetting.NodeSpecKey.ValueString()
