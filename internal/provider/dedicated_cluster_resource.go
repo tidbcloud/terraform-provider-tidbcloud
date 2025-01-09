@@ -2,8 +2,8 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -47,7 +47,7 @@ type dedicatedClusterResourceData struct {
 	Name               types.String        `tfsdk:"name"`
 	CloudProvider      types.String        `tfsdk:"cloud_provider"`
 	RegionId           types.String        `tfsdk:"region_id"`
-	Labels             map[string]string   `tfsdk:"labels"`
+	Labels             types.Map           `tfsdk:"labels"`
 	RootPassword       types.String        `tfsdk:"root_password"`
 	Port               types.Int64         `tfsdk:"port"`
 	Paused             types.Bool          `tfsdk:"paused"`
@@ -58,7 +58,7 @@ type dedicatedClusterResourceData struct {
 	CreateTime         types.String        `tfsdk:"create_time"`
 	UpdateTime         types.String        `tfsdk:"update_time"`
 	RegionDisplayName  types.String        `tfsdk:"region_display_name"`
-	Annotations        map[string]string   `tfsdk:"annotations"`
+	Annotations        types.Map           `tfsdk:"annotations"`
 	TiDBNodeSetting    tidbNodeSetting     `tfsdk:"tidb_node_setting"`
 	TiKVNodeSetting    tikvNodeSetting     `tfsdk:"tikv_node_setting"`
 	TiFlashNodeSetting *tiflashNodeSetting `tfsdk:"tiflash_node_setting"`
@@ -85,7 +85,6 @@ type tikvNodeSetting struct {
 	StorageSizeGi       types.Int64  `tfsdk:"storage_size_gi"`
 	StorageType         types.String `tfsdk:"storage_type"`
 	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
-	// NodeChangingProgress *nodeChangingProgress `tfsdk:"node_changing_progress"`
 }
 
 type tiflashNodeSetting struct {
@@ -94,7 +93,6 @@ type tiflashNodeSetting struct {
 	StorageSizeGi       types.Int64  `tfsdk:"storage_size_gi"`
 	StorageType         types.String `tfsdk:"storage_type"`
 	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
-	// NodeChangingProgress *nodeChangingProgress `tfsdk:"node_changing_progress"`
 }
 
 type dedicatedClusterResource struct {
@@ -210,7 +208,6 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			},
 			"annotations": schema.MapAttribute{
 				MarkdownDescription: "A map of annotations for the cluster.",
-				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.UseStateForUnknown(),
@@ -325,7 +322,11 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	tflog.Trace(ctx, "create dedicated_cluster_resource")
-	body := buildCreateDedicatedClusterBody(data)
+	body, err := buildCreateDedicatedClusterBody(ctx, data)
+	if err != nil {
+		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to build CreateCluster body, got error: %s", err))
+		return
+	}
 	cluster, err := r.provider.DedicatedClient.CreateCluster(ctx, &body)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call CreateCluster, got error: %s", err))
@@ -372,13 +373,18 @@ func (r dedicatedClusterResource) Read(ctx context.Context, req resource.ReadReq
 	// root_password, ip_access_list and pause will not return by read api, so we just use state's value even it changed on console!
 
 	var rootPassword types.String
-	var paused *bool
+	labels, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Labels)
+	if diag.HasError() {
+		return
+	}
+	annotations, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Annotations)
+	if diag.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("root_password"), &rootPassword)...)
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("paused"), &paused)...)
 	data.RootPassword = rootPassword
-	data.Paused = types.BoolPointerValue(paused)
-	data.Annotations = normalizeMap(*cluster.Annotations)
-	data.Labels = normalizeMap(*cluster.Labels)
+	data.Annotations = annotations
+	data.Labels = labels
 	refreshDedicatedClusterResourceData(ctx, cluster, &data)
 
 	// save into the Terraform state
@@ -388,11 +394,19 @@ func (r dedicatedClusterResource) Read(ctx context.Context, req resource.ReadReq
 
 func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, data *dedicatedClusterResourceData) {
 	// must return
+	labels, diag := types.MapValueFrom(ctx, types.StringType, *resp.Labels)
+	if diag.HasError() {
+		return
+	}
+	annotations, diag := types.MapValueFrom(ctx, types.StringType, *resp.Annotations)
+	if diag.HasError() {
+		return
+	}
 	data.ClusterId = types.StringValue(*resp.ClusterId)
 	data.Name = types.StringValue(resp.DisplayName)
 	data.CloudProvider = types.StringValue(string(*resp.CloudProvider))
 	data.RegionId = types.StringValue(resp.RegionId)
-	data.Labels = *resp.Labels
+	data.Labels = labels
 	data.Port = types.Int64Value(int64(resp.Port))
 	data.State = types.StringValue(string(*resp.State))
 	data.Version = types.StringValue(*resp.Version)
@@ -400,7 +414,7 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	data.CreateTime = types.StringValue(resp.CreateTime.String())
 	data.UpdateTime = types.StringValue(resp.UpdateTime.String())
 	data.RegionDisplayName = types.StringValue(*resp.RegionDisplayName)
-	data.Annotations = *resp.Annotations
+	data.Annotations = annotations
 
 	// tidb node setting
 	for _, group := range resp.TidbNodeSetting.TidbNodeGroups {
@@ -459,9 +473,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		switch plan.Paused.ValueBool() {
 		case true:
 			tflog.Trace(ctx, "pause cluster")
-			tflog.Debug(ctx, fmt.Sprintf("state.ClusterId: %s", state.ClusterId))
 			_, err := r.provider.DedicatedClient.PauseCluster(ctx, state.ClusterId.ValueString())
-			tflog.Debug(ctx, fmt.Sprintf("state.ClusterId: %s", err))
 			if err != nil {
 				resp.Diagnostics.AddError("Pause Error", fmt.Sprintf("Unable to call PauseCluster, got error: %s", err))
 				return
@@ -474,6 +486,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 				return
 			}
 		}
+		state.Paused = plan.Paused
 	} else {
 		body := &dedicated.ClusterServiceUpdateClusterRequest{}
 		// components change
@@ -507,7 +520,12 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 			body.DisplayName = plan.Name.ValueStringPointer()
 		}
 
-		body.Labels = &plan.Labels
+		var labels map[string]string
+		diag := plan.Labels.ElementsAs(ctx, &labels, false)
+		if diag.HasError() {
+			return
+		}
+		body.Labels = &labels
 
 		// call update api
 		tflog.Trace(ctx, "update dedicated_cluster_resource")
@@ -592,7 +610,7 @@ func dedicatedClusterStateRefreshFunc(ctx context.Context, clusterId string,
 	}
 }
 
-func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) dedicated.TidbCloudOpenApidedicatedv1beta1Cluster {
+func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterResourceData) (dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	displayName := data.Name.ValueString()
 	regionId := data.RegionId.ValueString()
 	rootPassword := data.RootPassword.ValueString()
@@ -638,31 +656,37 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) dedicate
 		}
 	}
 
+	var labels map[string]string
+	diag := data.Labels.ElementsAs(ctx, &labels, false)
+	if diag.HasError() {
+		return dedicated.TidbCloudOpenApidedicatedv1beta1Cluster{}, errors.New("Unable to convert labels")
+	}
+
 	return dedicated.TidbCloudOpenApidedicatedv1beta1Cluster{
 		DisplayName:        displayName,
 		RegionId:           regionId,
-		Labels:             &data.Labels,
+		Labels:             &labels,
 		TidbNodeSetting:    tidbNodeSetting,
 		TikvNodeSetting:    tikvNodeSetting,
 		TiflashNodeSetting: tiflashNodeSetting,
 		Port:               int32(data.Port.ValueInt64()),
 		RootPassword:       &rootPassword,
 		Version:            &version,
-	}
+	}, nil
 }
 
-// normalizeMap is used to sort the map to avoid the diff form terraform state and client response
-func normalizeMap(m map[string]string) map[string]string {
-	sortedKeys := make([]string, 0, len(m))
-	for k := range m {
-		sortedKeys = append(sortedKeys, k)
-	}
-	sort.Strings(sortedKeys)
+// // normalizeMap is used to sort the map to avoid the diff form terraform state and client response
+// func normalizeMap(m map[string]string) map[string]string {
+// 	sortedKeys := make([]string, 0, len(m))
+// 	for k := range m {
+// 		sortedKeys = append(sortedKeys, k)
+// 	}
+// 	sort.Strings(sortedKeys)
 
-	sortedMap := make(map[string]string)
-	for _, k := range sortedKeys {
-		sortedMap[k] = m[k]
-	}
+// 	sortedMap := make(map[string]string)
+// 	for _, k := range sortedKeys {
+// 		sortedMap[k] = m[k]
+// 	}
 
-	return sortedMap
-}
+// 	return sortedMap
+// }
