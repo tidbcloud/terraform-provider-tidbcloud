@@ -209,10 +209,7 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			"annotations": schema.MapAttribute{
 				MarkdownDescription: "A map of annotations for the cluster.",
 				Computed:            true,
-				PlanModifiers: []planmodifier.Map{
-					mapplanmodifier.UseStateForUnknown(),
-				},
-				ElementType: types.StringType,
+				ElementType:         types.StringType,
 			},
 			"tidb_node_setting": schema.SingleNestedAttribute{
 				MarkdownDescription: "Settings for TiDB nodes.",
@@ -344,6 +341,7 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 		)
 		return
 	}
+	data.Paused = types.BoolValue(false)
 	refreshDedicatedClusterResourceData(ctx, cluster, &data)
 
 	// save into the Terraform state.
@@ -373,6 +371,7 @@ func (r dedicatedClusterResource) Read(ctx context.Context, req resource.ReadReq
 	// root_password, ip_access_list and pause will not return by read api, so we just use state's value even it changed on console!
 
 	var rootPassword types.String
+	var paused types.Bool
 	labels, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Labels)
 	if diag.HasError() {
 		return
@@ -382,7 +381,9 @@ func (r dedicatedClusterResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("root_password"), &rootPassword)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("paused"), &paused)...)
 	data.RootPassword = rootPassword
+	data.Paused = paused
 	data.Annotations = annotations
 	data.Labels = labels
 	refreshDedicatedClusterResourceData(ctx, cluster, &data)
@@ -469,7 +470,27 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	if plan.Paused != state.Paused {
+	// Check if paused state is changing
+    isPauseStateChanging := plan.Paused.ValueBool() != state.Paused.ValueBool()
+
+    // Check if any other attributes are changing
+    isOtherAttributesChanging := (plan.Name != state.Name ||
+        plan.TiDBNodeSetting != state.TiDBNodeSetting ||
+        plan.TiKVNodeSetting != state.TiKVNodeSetting ||
+        !plan.Labels.Equal(state.Labels)) ||
+		plan.TiFlashNodeSetting != state.TiFlashNodeSetting ||
+		plan.RootPassword != state.RootPassword
+
+    // If trying to change pause state along with other attributes, return an error
+    if isPauseStateChanging && isOtherAttributesChanging {
+        resp.Diagnostics.AddError(
+            "Invalid Update",
+            "Cannot change cluster pause state along with other attributes. Please update pause state in a separate operation.",
+        )
+        return
+    }
+
+	if isPauseStateChanging {
 		switch plan.Paused.ValueBool() {
 		case true:
 			tflog.Trace(ctx, "pause cluster")
@@ -486,13 +507,28 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 				return
 			}
 		}
-		state.Paused = plan.Paused
 	} else {
+		if plan.RootPassword != state.RootPassword {
+			err := r.provider.DedicatedClient.ChangeClusterRootPassword(ctx, state.ClusterId.ValueString(), &dedicated.ClusterServiceResetRootPasswordBody{
+				RootPassword: plan.RootPassword.ValueString(),
+			})
+			if err != nil {
+				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call ChangeClusterRootPassword, got error: %s", err))
+				return
+			}
+		}
+
 		body := &dedicated.ClusterServiceUpdateClusterRequest{}
 		// components change
 		// tidb
+		nodeCountInt32 := int32(plan.TiDBNodeSetting.NodeCount.ValueInt64())
 		body.TidbNodeSetting = &dedicated.V1beta1UpdateClusterRequestTidbNodeSetting{
 			NodeSpecKey: plan.TiDBNodeSetting.NodeSpecKey.ValueStringPointer(),
+			TidbNodeGroups: []dedicated.UpdateClusterRequestTidbNodeSettingTidbNodeGroup{
+				{
+					NodeCount: *dedicated.NewNullableInt32(&nodeCountInt32),
+				},
+			},
 		}
 		// tikv
 		if plan.TiKVNodeSetting != state.TiKVNodeSetting {
@@ -545,7 +581,9 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		)
 		return
 	}
+
 	refreshDedicatedClusterResourceData(ctx, cluster, &state)
+	state.Paused = plan.Paused
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)
@@ -611,6 +649,10 @@ func dedicatedClusterStateRefreshFunc(ctx context.Context, clusterId string,
 }
 
 func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterResourceData) (dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	if data.Paused.ValueBool() {
+		return dedicated.TidbCloudOpenApidedicatedv1beta1Cluster{}, errors.New("can not create a cluster with paused set to true")
+	}
+
 	displayName := data.Name.ValueString()
 	regionId := data.RegionId.ValueString()
 	rootPassword := data.RootPassword.ValueString()
@@ -674,19 +716,3 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 		Version:            &version,
 	}, nil
 }
-
-// // normalizeMap is used to sort the map to avoid the diff form terraform state and client response
-// func normalizeMap(m map[string]string) map[string]string {
-// 	sortedKeys := make([]string, 0, len(m))
-// 	for k := range m {
-// 		sortedKeys = append(sortedKeys, k)
-// 	}
-// 	sort.Strings(sortedKeys)
-
-// 	sortedMap := make(map[string]string)
-// 	for _, k := range sortedKeys {
-// 		sortedMap[k] = m[k]
-// 	}
-
-// 	return sortedMap
-// }
