@@ -341,7 +341,6 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 		)
 		return
 	}
-	data.Paused = types.BoolValue(false)
 	refreshDedicatedClusterResourceData(ctx, cluster, &data)
 
 	// save into the Terraform state.
@@ -471,24 +470,41 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	// Check if paused state is changing
-    isPauseStateChanging := plan.Paused.ValueBool() != state.Paused.ValueBool()
+	isPauseStateChanging := plan.Paused.ValueBool() != state.Paused.ValueBool()
+		
+	// Check if TiFlashNodeSetting is changing
+	isTiFlashNodeSettingChanging := false
+	if plan.TiFlashNodeSetting != nil && state.TiFlashNodeSetting != nil {
+		isTiFlashNodeSettingChanging = plan.TiFlashNodeSetting.NodeCount != state.TiFlashNodeSetting.NodeCount ||
+			plan.TiFlashNodeSetting.NodeSpecKey != state.TiFlashNodeSetting.NodeSpecKey ||
+			plan.TiFlashNodeSetting.StorageSizeGi != state.TiFlashNodeSetting.StorageSizeGi
+	} else if plan.TiFlashNodeSetting != nil {
+		isTiFlashNodeSettingChanging = true
+	} else if state.TiFlashNodeSetting != nil {
+		isTiFlashNodeSettingChanging = true
+	}
 
-    // Check if any other attributes are changing
-    isOtherAttributesChanging := (plan.Name != state.Name ||
-        plan.TiDBNodeSetting != state.TiDBNodeSetting ||
-        plan.TiKVNodeSetting != state.TiKVNodeSetting ||
-        !plan.Labels.Equal(state.Labels)) ||
-		plan.TiFlashNodeSetting != state.TiFlashNodeSetting ||
-		plan.RootPassword != state.RootPassword
+	// Check if any other attributes are changing
+	isOtherAttributesChanging := (plan.Name != state.Name ||
+		plan.TiDBNodeSetting.NodeCount != state.TiDBNodeSetting.NodeCount ||
+		plan.TiDBNodeSetting.NodeSpecKey != state.TiDBNodeSetting.NodeSpecKey ||
 
-    // If trying to change pause state along with other attributes, return an error
-    if isPauseStateChanging && isOtherAttributesChanging {
-        resp.Diagnostics.AddError(
-            "Invalid Update",
-            "Cannot change cluster pause state along with other attributes. Please update pause state in a separate operation.",
-        )
-        return
-    }
+		plan.TiKVNodeSetting.NodeCount != state.TiKVNodeSetting.NodeCount ||
+		plan.TiKVNodeSetting.NodeSpecKey != state.TiKVNodeSetting.NodeSpecKey ||
+		plan.TiKVNodeSetting.StorageSizeGi != state.TiKVNodeSetting.StorageSizeGi ||
+
+		!plan.Labels.Equal(state.Labels)) ||
+		plan.RootPassword != state.RootPassword ||
+		isTiFlashNodeSettingChanging
+
+	// If trying to change pause state along with other attributes, return an error
+	if isPauseStateChanging && isOtherAttributesChanging {
+		resp.Diagnostics.AddError(
+			"Invalid Update",
+			"Cannot change cluster pause state along with other attributes. Please update pause state in a separate operation.",
+		)
+		return
+	}
 
 	if isPauseStateChanging {
 		switch plan.Paused.ValueBool() {
