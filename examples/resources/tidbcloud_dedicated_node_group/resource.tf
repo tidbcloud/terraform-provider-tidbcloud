@@ -9,7 +9,7 @@ variable "display_name" {
 }
 
 resource "tidbcloud_dedicated_node_group" "example_group" {
-    cluster_id = var.cluster_id
-    node_count = 1
-    display_name = var.display_name
+  cluster_id   = var.cluster_id
+  node_count   = 1
+  display_name = var.display_name
 }

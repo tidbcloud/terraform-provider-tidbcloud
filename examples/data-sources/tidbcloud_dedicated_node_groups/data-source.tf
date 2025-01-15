@@ -4,7 +4,7 @@ variable "cluster_id" {
 }
 
 data "tidbcloud_dedicated_node_groups" "example" {
-  cluster_id     = var.cluster_id
+  cluster_id = var.cluster_id
 }
 
 output "output" {
