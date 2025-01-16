@@ -19,12 +19,6 @@ import (
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
-// const dev = "DEVELOPER"
-// const ded = "DEDICATED"
-
-// // Enum: [AVAILABLE CREATING MODIFYING PAUSED RESUMING UNAVAILABLE IMPORTING MAINTAINING PAUSING]
-// type clusterStatus string
-
 const (
 	dedicatedClusterStatusCreating    clusterStatus = "CREATING"
 	dedicatedClusterStatusDeleting    clusterStatus = "DELETING"
