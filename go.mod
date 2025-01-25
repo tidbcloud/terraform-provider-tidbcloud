@@ -18,7 +18,7 @@ require (
 	github.com/hashicorp/terraform-plugin-testing v1.11.0
 	github.com/icholy/digest v1.0.1
 	github.com/stretchr/testify v1.10.0
-	github.com/tidbcloud/tidbcloud-cli/pkg v0.0.0-20241125120734-8e2a11bc41c5
+	github.com/tidbcloud/tidbcloud-cli/pkg v0.0.0-20250123095511-9ad4684cee39
 )
 
 require (

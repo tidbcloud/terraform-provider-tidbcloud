@@ -31,6 +31,10 @@ type TiDBCloudDedicatedClient interface {
 	UpdateTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	GetTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	ListTiDBNodeGroups(ctx context.Context, clusterId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	CreatePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.V1beta1PrivateEndpointConnection, error)
+	DeletePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) error
+	GetPrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) (*dedicated.V1beta1PrivateEndpointConnection, error)
+	ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string) ([]dedicated.V1beta1PrivateEndpointConnection, error)
 }
 
 func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userAgent string) (*dedicated.APIClient, error) {
@@ -179,6 +183,30 @@ func (d *DedicatedClientDelegate) GetTiDBNodeGroup(ctx context.Context, clusterI
 func (d *DedicatedClientDelegate) ListTiDBNodeGroups(ctx context.Context, clusterId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
 	resp, h, err := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceListTidbNodeGroups(ctx, clusterId).Execute()
 	return resp.TidbNodeGroups, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) CreatePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.V1beta1PrivateEndpointConnection, error) {
+	r := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceCreatePrivateEndpointConnection(ctx, clusterId, nodeGroupId)
+	if body != nil {
+		r = r.PrivateEndpointConnection(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) DeletePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) error {
+	_, h, err := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceDeletePrivateEndpointConnection(ctx, clusterId, nodeGroupId, privateEndpointConnectionId).Execute()
+	return parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) GetPrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) (*dedicated.V1beta1PrivateEndpointConnection, error) {
+	resp, h, err := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceGetPrivateEndpointConnection(ctx, clusterId, nodeGroupId, privateEndpointConnectionId).Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string) ([]dedicated.V1beta1PrivateEndpointConnection, error) {
+	resp, h, err := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceListPrivateEndpointConnections(ctx, clusterId, nodeGroupId).Execute()
+	return resp.PrivateEndpointConnections, parseError(err, h)
 }
 
 func parseError(err error, resp *http.Response) error {
