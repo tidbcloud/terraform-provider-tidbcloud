@@ -61,7 +61,7 @@ func (d *dedicatedPrivateEndpointConnectionsDataSource) Configure(_ context.Cont
 
 func (d *dedicatedPrivateEndpointConnectionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "dedicated private endpoint connection data source",
+		MarkdownDescription: "dedicated private endpoint connections data source",
 		Attributes: map[string]schema.Attribute{
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
