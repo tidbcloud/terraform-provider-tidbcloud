@@ -67,19 +67,19 @@ func (r *DedicatedNetworkContainerResource) Schema(_ context.Context, _ resource
 				Computed:    true,
 			},
 			"state": schema.StringAttribute{
-				Description: "The state of the network container",
+				MarkdownDescription: "The state of the network container",
 				Computed:    true,
 			},
 			"cloud_provider": schema.StringAttribute{
-				Description: "The cloud provider for the network container",
+				MarkdownDescription: "The cloud provider for the network container",
 				Computed:    true,
 			},
 			"region_display_name": schema.StringAttribute{
-				Description: "The display name of the region",
+				MarkdownDescription: "The display name of the region",
 				Computed:    true,
 			},
 			"vpc_id": schema.StringAttribute{
-				Description: "The VPC ID for the network container",
+				MarkdownDescription: "The VPC ID for the network container",
 				Computed:    true,
 			},
 			"labels": schema.MapAttribute{
