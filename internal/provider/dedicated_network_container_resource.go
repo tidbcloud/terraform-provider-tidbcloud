@@ -52,19 +52,19 @@ func (r *DedicatedNetworkContainerResource) Metadata(_ context.Context, req reso
 
 func (r *DedicatedNetworkContainerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Resource for managing MongoDB Atlas Dedicated Network Containers.",
+		Description: "dedicated network container resource.",
 		Attributes: map[string]schema.Attribute{
 			"network_container_id": schema.StringAttribute{
 				Description: "The ID of the network container",
-				Computed:    true,
+				Required:    true,
 			},
 			"region_id": schema.StringAttribute{
 				Description: "The region ID for the network container",
-				Required:    true,
+				Computed:    true,
 			},
 			"cidr_notion": schema.StringAttribute{
 				Description: "CIDR notation for the network container",
-				Required:    true,
+				Computed:    true,
 			},
 			"state": schema.StringAttribute{
 				Description: "The state of the network container",
@@ -84,7 +84,7 @@ func (r *DedicatedNetworkContainerResource) Schema(_ context.Context, _ resource
 			},
 			"labels": schema.MapAttribute{
 				Description: "The labels for the network container",
-				Optional:    true,
+				Computed:    true,
 				ElementType: types.StringType,
 			},
 		},

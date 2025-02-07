@@ -65,11 +65,11 @@ func (d *dedicatedNetworkContainersDataSource) Schema(_ context.Context, _ datas
 						},
 						"region_id": schema.StringAttribute{
 							Description: "The region ID for the network container",
-							Required:    true,
+							Computed:    true,
 						},
 						"cidr_notion": schema.StringAttribute{
 							Description: "CIDR notation for the network container",
-							Required:    true,
+							Computed:    true,
 						},
 						"state": schema.StringAttribute{
 							Description: "The state of the network container",
@@ -89,7 +89,7 @@ func (d *dedicatedNetworkContainersDataSource) Schema(_ context.Context, _ datas
 						},
 						"labels": schema.MapAttribute{
 							Description: "The labels for the network container",
-							Optional:    true,
+							Computed:    true,
 							ElementType: types.StringType,
 						},
 					},
@@ -110,7 +110,7 @@ func (d *dedicatedNetworkContainersDataSource) Read(ctx context.Context, req dat
 	tflog.Trace(ctx, "read network containers data source")
 	networkContainers, err := d.provider.DedicatedClient.ListNetworkContainers(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetPrivateEndpointConnection, got error: %s", err))
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call ListNetworkContainers, got error: %s", err))
 		return
 	}
 
