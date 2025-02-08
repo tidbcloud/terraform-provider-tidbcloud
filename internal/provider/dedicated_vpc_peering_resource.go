@@ -219,7 +219,7 @@ func (r *DedicatedVpcPeeringResource) Delete(ctx context.Context, req resource.D
 func buildCreateDedicatedVpcPeeringBody(ctx context.Context, data DedicatedVpcPeeringResourceData) dedicated.Dedicatedv1beta1VpcPeering {
 	customerRegionId := data.CustomerRegionId.ValueString()
 	return dedicated.Dedicatedv1beta1VpcPeering{
-		TidbCloudRegionId: data.VpcPeeringId.ValueString(),
+		TidbCloudRegionId: data.TiDBCloudRegionId.ValueString(),
 		CustomerRegionId:  &customerRegionId,
 		CustomerAccountId: data.CustomerAccountId.ValueString(),
 		CustomerVpcId:     data.CustomerVpcId.ValueString(),
