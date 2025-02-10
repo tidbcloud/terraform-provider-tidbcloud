@@ -56,31 +56,31 @@ func (r *DedicatedNetworkContainerResource) Schema(_ context.Context, _ resource
 		Attributes: map[string]schema.Attribute{
 			"network_container_id": schema.StringAttribute{
 				Description: "The ID of the network container",
-				Required:    true,
+				Computed:    true,
 			},
 			"region_id": schema.StringAttribute{
 				Description: "The region ID for the network container",
-				Computed:    true,
+				Required:    true,
 			},
 			"cidr_notion": schema.StringAttribute{
 				Description: "CIDR notation for the network container",
-				Computed:    true,
+				Required:    true,
 			},
 			"state": schema.StringAttribute{
 				MarkdownDescription: "The state of the network container",
-				Computed:    true,
+				Computed:            true,
 			},
 			"cloud_provider": schema.StringAttribute{
 				MarkdownDescription: "The cloud provider for the network container",
-				Computed:    true,
+				Computed:            true,
 			},
 			"region_display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the region",
-				Computed:    true,
+				Computed:            true,
 			},
 			"vpc_id": schema.StringAttribute{
 				MarkdownDescription: "The VPC ID for the network container",
-				Computed:    true,
+				Computed:            true,
 			},
 			"labels": schema.MapAttribute{
 				Description: "The labels for the network container",
@@ -199,9 +199,11 @@ func buildCreateDedicatedNetworkContainerBody(ctx context.Context, data Dedicate
 	regionId := data.RegionId.ValueString()
 	cidrNotion := data.CidrNotion.ValueString()
 	var labels map[string]string
-	diag := data.Labels.ElementsAs(ctx, &labels, false)
-	if diag.HasError() {
-		return dedicated.V1beta1NetworkContainer{}, errors.New("Unable to convert labels")
+	if !data.Labels.IsUnknown() {
+		diag := data.Labels.ElementsAs(ctx, &labels, false)
+		if diag.HasError() {
+			return dedicated.V1beta1NetworkContainer{}, errors.New("unable to convert labels")
+		}
 	}
 	return dedicated.V1beta1NetworkContainer{
 		RegionId:   regionId,
