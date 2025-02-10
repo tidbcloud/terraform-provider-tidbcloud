@@ -31,6 +31,13 @@ type TiDBCloudDedicatedClient interface {
 	UpdateTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	GetTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	ListTiDBNodeGroups(ctx context.Context, clusterId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	CreateAuditLogConfig(ctx context.Context, clusterId string, body *dedicated.DatabaseAuditLogServiceCreateAuditLogConfigRequest) (*dedicated.Dedicatedv1beta1AuditLogConfig, error)
+	UpdateAuditLogConfig(ctx context.Context, clusterId string, body *dedicated.DatabaseAuditLogServiceUpdateAuditLogConfigRequest) (*dedicated.Dedicatedv1beta1AuditLogConfig, error)
+	GetAuditLogConfig(ctx context.Context, clusterId string) (*dedicated.Dedicatedv1beta1AuditLogConfig, error)
+	CreateAuditLogFilterRule(ctx context.Context, clusterId string, body *dedicated.DatabaseAuditLogServiceCreateAuditLogFilterRuleRequest) (*dedicated.V1beta1AuditLogFilterRule, error)
+	DeleteAuditLogFilterRule(ctx context.Context, clusterId string, auditLogFilterRuleId string) error
+	GetAuditLogFilterRule(ctx context.Context, clusterId string, auditLogFilterRuleId string) (*dedicated.V1beta1AuditLogFilterRule, error)
+	ListAuditLogFilterRules(ctx context.Context, clusterId string) ([]dedicated.V1beta1AuditLogFilterRule, error)
 }
 
 func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userAgent string) (*dedicated.APIClient, error) {
@@ -179,6 +186,53 @@ func (d *DedicatedClientDelegate) GetTiDBNodeGroup(ctx context.Context, clusterI
 func (d *DedicatedClientDelegate) ListTiDBNodeGroups(ctx context.Context, clusterId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
 	resp, h, err := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceListTidbNodeGroups(ctx, clusterId).Execute()
 	return resp.TidbNodeGroups, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) CreateAuditLogConfig(ctx context.Context, clusterId string, body *dedicated.DatabaseAuditLogServiceCreateAuditLogConfigRequest) (*dedicated.Dedicatedv1beta1AuditLogConfig, error) {
+	r := d.dc.DatabaseAuditLogServiceAPI.DatabaseAuditLogServiceCreateAuditLogConfig(ctx, clusterId)
+	if body != nil {
+		r = r.AuditLogConfig(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) UpdateAuditLogConfig(ctx context.Context, clusterId string, body *dedicated.DatabaseAuditLogServiceUpdateAuditLogConfigRequest) (*dedicated.Dedicatedv1beta1AuditLogConfig, error) {
+	r := d.dc.DatabaseAuditLogServiceAPI.DatabaseAuditLogServiceUpdateAuditLogConfig(ctx, clusterId)
+	if body != nil {
+		r = r.AuditLogConfig(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) GetAuditLogConfig(ctx context.Context, clusterId string) (*dedicated.Dedicatedv1beta1AuditLogConfig, error) {
+	resp, h, err := d.dc.DatabaseAuditLogServiceAPI.DatabaseAuditLogServiceGetAuditLogConfig(ctx, clusterId).Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) CreateAuditLogFilterRule(ctx context.Context, clusterId string, body *dedicated.DatabaseAuditLogServiceCreateAuditLogFilterRuleRequest) (*dedicated.V1beta1AuditLogFilterRule, error) {
+	r := d.dc.DatabaseAuditLogServiceAPI.DatabaseAuditLogServiceCreateAuditLogFilterRule(ctx, clusterId)
+	if body != nil {
+		r = r.AuditLogFilterRule(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) DeleteAuditLogFilterRule(ctx context.Context, clusterId string, auditLogFilterRuleId string) error {
+	_, h, err := d.dc.DatabaseAuditLogServiceAPI.DatabaseAuditLogServiceDeleteAuditLogFilterRule(ctx, clusterId, auditLogFilterRuleId).Execute()
+	return parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) GetAuditLogFilterRule(ctx context.Context, clusterId string, auditLogFilterRuleId string) (*dedicated.V1beta1AuditLogFilterRule, error) {
+	resp, h, err := d.dc.DatabaseAuditLogServiceAPI.DatabaseAuditLogServiceGetAuditLogFilterRule(ctx, clusterId, auditLogFilterRuleId).Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) ListAuditLogFilterRules(ctx context.Context, clusterId string) ([]dedicated.V1beta1AuditLogFilterRule, error) {
+	resp, h, err := d.dc.DatabaseAuditLogServiceAPI.DatabaseAuditLogServiceListAuditLogFilterRules(ctx, clusterId).Execute()
+	return resp.AuditLogFilterRules, parseError(err, h)
 }
 
 func parseError(err error, resp *http.Response) error {
