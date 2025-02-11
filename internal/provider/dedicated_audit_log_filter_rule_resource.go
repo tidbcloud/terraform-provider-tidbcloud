@@ -2,16 +2,14 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
-	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
@@ -115,18 +113,7 @@ func (r *DedicatedAuditLogFilterRuleResource) Create(ctx context.Context, req re
 		return
 	}
 
-	AuditLogFilterRuleId := *AuditLogFilterRule.AuditLogFilterRuleId
-	data.AuditLogFilterRuleId = types.StringValue(AuditLogFilterRuleId)
-	tflog.Info(ctx, "wait dedicated audit log filter rule ready")
-	AuditLogFilterRule, err = WaitDedicatedAuditLogFilterRuleReady(ctx, clusterCreateTimeout, clusterCreateInterval, AuditLogFilterRuleId, r.provider.DedicatedClient)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Dedicated audit log filter rule creation failed",
-			fmt.Sprintf("Dedicated audit log filter rule is not ready, get error: %s", err),
-		)
-		return
-	}
-	refreshDedicatedAuditLogFilterRuleResourceData(ctx, AuditLogFilterRule, &data)
+	data.AuditLogFilterRuleId = types.StringValue(*AuditLogFilterRule.AuditLogFilterRuleId)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -145,12 +132,11 @@ func (r *DedicatedAuditLogFilterRuleResource) Read(ctx context.Context, req reso
 
 	// call read api
 	tflog.Trace(ctx, "read dedicated_audit_log_filter_rule_resource")
-	AuditLogFilterRule, err := r.provider.DedicatedClient.GetAuditLogFilterRule(ctx, data.AuditLogFilterRuleId.ValueString())
+	_, err := r.provider.DedicatedClient.GetAuditLogFilterRule(ctx, data.ClusterId.ValueString(), data.AuditLogFilterRuleId.ValueString())
 	if err != nil {
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetAuditLogFilterRule, error: %s", err))
 		return
 	}
-	refreshDedicatedAuditLogFilterRuleResourceData(ctx, AuditLogFilterRule, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -164,13 +150,18 @@ func (r *DedicatedAuditLogFilterRuleResource) Update(ctx context.Context, req re
 
 func (r *DedicatedAuditLogFilterRuleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var AuditLogFilterRuleId string
+	var ClusterId string
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("audit_log_filter_rule_id"), &AuditLogFilterRuleId)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("cluster_id"), &ClusterId)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tflog.Trace(ctx, "delete dedicated_audit_log_filter_rule_resource")
-	err := r.provider.DedicatedClient.DeleteAuditLogFilterRule(ctx, AuditLogFilterRuleId)
+	err := r.provider.DedicatedClient.DeleteAuditLogFilterRule(ctx, ClusterId, AuditLogFilterRuleId)
 	if err != nil {
 		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteAuditLogFilterRule, got error: %s", err))
 		return
@@ -182,55 +173,17 @@ func buildCreateDedicatedAuditLogFilterRuleBody(ctx context.Context, data Dedica
 	dbExpr := data.DBExpr.ValueString()
 	tableExpr := data.TableExpr.ValueString()
 
-	accessTypeList := data.AccessTypeList.Elements()
+	var accessTypeList []string
+	diag := data.AccessTypeList.ElementsAs(ctx, &accessTypeList, false)
+	if diag.HasError() {
+		return dedicated.DatabaseAuditLogServiceCreateAuditLogFilterRuleRequest{}, errors.New("Unable to get access type list")
+	}
 
 	return dedicated.DatabaseAuditLogServiceCreateAuditLogFilterRuleRequest{
 		UserExpr:       &userExpr,
-		DBExpr:         &dbExpr,
+		DbExpr:         &dbExpr,
 		TableExpr:      &tableExpr,
 		AccessTypeList: accessTypeList,
 	}, nil
 }
 
-func refreshDedicatedAuditLogFilterRuleResourceData(ctx context.Context, AuditLogFilterRule *dedicated.V1beta1AuditLogFilterRule, data *DedicatedAuditLogFilterRuleResourceData) {
-	data.AuditLogFilterRuleId = types.StringValue(*AuditLogFilterRule.AuditLogFilterRuleId)
-	data.State = types.StringValue(string(*AuditLogFilterRule.State))
-	data.CloudProvider = types.StringValue(string(*AuditLogFilterRule.CloudProvider))
-	data.RegionDisplayName = types.StringValue(*AuditLogFilterRule.RegionDisplayName)
-	data.VpcId = types.StringValue(*AuditLogFilterRule.VpcId)
-}
-
-func WaitDedicatedAuditLogFilterRuleReady(ctx context.Context, timeout time.Duration, interval time.Duration, AuditLogFilterRuleId string,
-	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.V1beta1AuditLogFilterRule, error) {
-	stateConf := &retry.StateChangeConf{
-		Pending: []string{
-			string(dedicatedAuditLogFilterRuleStatusInActive),
-		},
-		Target: []string{
-			string(dedicatedAuditLogFilterRuleStatusActive),
-		},
-		Timeout:      timeout,
-		MinTimeout:   500 * time.Millisecond,
-		PollInterval: interval,
-		Refresh:      dedicatedAuditLogFilterRuleStateRefreshFunc(ctx, AuditLogFilterRuleId, client),
-	}
-
-	outputRaw, err := stateConf.WaitForStateContext(ctx)
-
-	if output, ok := outputRaw.(*dedicated.V1beta1AuditLogFilterRule); ok {
-		return output, err
-	}
-	return nil, err
-}
-
-func dedicatedAuditLogFilterRuleStateRefreshFunc(ctx context.Context, AuditLogFilterRuleId string,
-	client tidbcloud.TiDBCloudDedicatedClient) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
-		tflog.Trace(ctx, "Waiting for dedicated audit log filter rule ready")
-		AuditLogFilterRule, err := client.GetAuditLogFilterRule(ctx, AuditLogFilterRuleId)
-		if err != nil {
-			return nil, "", err
-		}
-		return AuditLogFilterRule, string(*AuditLogFilterRule.State), nil
-	}
-}
