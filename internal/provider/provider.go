@@ -136,6 +136,8 @@ func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Res
 		NewBackupResource,
 		NewRestoreResource,
 		NewImportResource,
+		NewDedicatedClusterResource,
+		NewDedicatedNodeGroupResource,
 	}
 }
 
@@ -150,6 +152,8 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 		NewDedicatedRegionsDataSource,
 		NewDedicatedRegionDataSource,
 		NewDedicatedCloudProvidersDataSource,
+		NewDedicatedNodeGroupDataSource,
+		NewDedicatedNodeGroupsDataSource,
 	}
 }
 

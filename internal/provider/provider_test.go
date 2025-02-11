@@ -22,7 +22,7 @@ func testAccPreCheck(t *testing.T) {
 	projectId = os.Getenv(TiDBCloudProjectID)
 	if publicKey == "" {
 		t.Fatalf("%s must be set for acceptance tests", TiDBCloudPublicKey)
-	}
+	} 
 	if privateKey == "" {
 		t.Fatalf("%s must be set for acceptance tests", TiDBCloudPrivateKey)
 	}
