@@ -132,11 +132,13 @@ func (r *DedicatedAuditLogFilterRuleResource) Read(ctx context.Context, req reso
 
 	// call read api
 	tflog.Trace(ctx, "read dedicated_audit_log_filter_rule_resource")
-	_, err := r.provider.DedicatedClient.GetAuditLogFilterRule(ctx, data.ClusterId.ValueString(), data.AuditLogFilterRuleId.ValueString())
+	auditLogFilterRule, err := r.provider.DedicatedClient.GetAuditLogFilterRule(ctx, data.ClusterId.ValueString(), data.AuditLogFilterRuleId.ValueString())
 	if err != nil {
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetAuditLogFilterRule, error: %s", err))
 		return
 	}
+
+	data.AuditLogFilterRuleId = types.StringValue(*auditLogFilterRule.AuditLogFilterRuleId)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -176,7 +178,7 @@ func buildCreateDedicatedAuditLogFilterRuleBody(ctx context.Context, data Dedica
 	var accessTypeList []string
 	diag := data.AccessTypeList.ElementsAs(ctx, &accessTypeList, false)
 	if diag.HasError() {
-		return dedicated.DatabaseAuditLogServiceCreateAuditLogFilterRuleRequest{}, errors.New("Unable to get access type list")
+		return dedicated.DatabaseAuditLogServiceCreateAuditLogFilterRuleRequest{}, errors.New("unable to get access type list")
 	}
 
 	return dedicated.DatabaseAuditLogServiceCreateAuditLogFilterRuleRequest{
