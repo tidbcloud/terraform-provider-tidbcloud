@@ -21,6 +21,8 @@ var NewClient = tidbcloud.NewClientDelegate
 
 var NewDedicatedClient = tidbcloud.NewDedicatedClientDelegate
 
+var NewServerlessClient = tidbcloud.NewServerlessClientDelegate
+
 // provider satisfies the tfsdk.Provider interface and usually is included
 // with all Resource and DataSource implementations.
 type tidbcloudProvider struct {
@@ -30,6 +32,8 @@ type tidbcloudProvider struct {
 	client tidbcloud.TiDBCloudClient
 
 	DedicatedClient tidbcloud.TiDBCloudDedicatedClient
+
+	ServerlessClient tidbcloud.TiDBCloudServerlessClient
 
 	// configured is set to true at the end of the Configure method.
 	// This can be used in Resource and DataSource implementations to verify
@@ -121,10 +125,21 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 		)
 		return
 	}
+
+	// Create a new serverless client and set it to the provider serverless client
+	sc, err := NewServerlessClient(publicKey, privateKey, os.Getenv(TiDBCloudServerlessEndpoint), fmt.Sprintf("%s/%s", UserAgent, p.version))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to create client",
+			"Unable to create TiDB Cloud Serverless client:\n\n"+err.Error(),
+		)
+		return
+	}
 	// sync
 	p.sync = data.Sync.ValueBool()
 	p.client = c
 	p.DedicatedClient = dc
+	p.ServerlessClient = sc
 	p.configured = true
 	resp.ResourceData = p
 	resp.DataSourceData = p
@@ -136,6 +151,8 @@ func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Res
 		NewBackupResource,
 		NewRestoreResource,
 		NewImportResource,
+
+		NewServerlessClusterResource,
 	}
 }
 
@@ -150,6 +167,9 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 		NewDedicatedRegionsDataSource,
 		NewDedicatedRegionDataSource,
 		NewDedicatedCloudProvidersDataSource,
+
+		NewServerlessClusterDataSource,
+		NewServerlessClustersDataSource,
 	}
 }
 
