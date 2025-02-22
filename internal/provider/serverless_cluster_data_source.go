@@ -264,10 +264,12 @@ func (d *serverlessClusterDataSource) Read(ctx context.Context, req datasource.R
 
 	labels, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Labels)
 	if diag.HasError() {
+		diags.AddError("Read Error", "unable to convert labels")
 		return
 	}
 	annotations, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Annotations)
 	if diag.HasError() {
+		diags.AddError("Read Error", "unable to convert annotations")
 		return
 	}
 	data.ClusterId = types.StringValue(*cluster.ClusterId)

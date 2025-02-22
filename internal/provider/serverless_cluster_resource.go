@@ -9,8 +9,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -18,34 +20,22 @@ import (
 	clusterV1beta1 "github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/serverless/cluster"
 )
 
-type serverlessClusterStatus string
-
-const (
-	serverlessClusterStatusCreating    serverlessClusterStatus = "CREATING"
-	serverlessClusterStatusDeleting    serverlessClusterStatus = "DELETING"
-	serverlessClusterStatusActive      serverlessClusterStatus = "ACTIVE"
-	serverlessClusterStatusRestoring   serverlessClusterStatus = "RESTORING"
-	serverlessClusterStatusMaintenance serverlessClusterStatus = "MAINTENANCE"
-	serverlessClusterStatusDeleted     serverlessClusterStatus = "DELETED"
-	serverlessClusterStatusInactive    serverlessClusterStatus = "INACTIVE"
-	serverlessClusterStatusUpgrading   serverlessClusterStatus = "UPGRADING"
-	serverlessClusterStatusImporting   serverlessClusterStatus = "IMPORTING"
-	serverlessClusterStatusModifying   serverlessClusterStatus = "MODIFYING"
-	serverlessClusterStatusPausing     serverlessClusterStatus = "PAUSING"
-	serverlessClusterStatusPaused      serverlessClusterStatus = "PAUSED"
-	serverlessClusterStatusResuming    serverlessClusterStatus = "RESUMING"
-)
-
 type mutableField string
 
 const (
-	DisplayName            mutableField = "displayName"
-	Labels                 mutableField = "labels"
-	PublicEndpointDisabled mutableField = "endpoints.public.disabled"
-	SpendingLimitMonthly   mutableField = "spendingLimit.monthly"
+	DisplayName                   mutableField = "displayName"
+	Labels                        mutableField = "labels"
+	PublicEndpointDisabled        mutableField = "endpoints.public.disabled"
+	SpendingLimitMonthly          mutableField = "spendingLimit.monthly"
+	AutomatedBackupPolicySchedule mutableField = "automatedBackupPolicy.schedule"
+)
+
+const (
+	LabelsKeyProjectId = "tidb.cloud/project"
 )
 
 type serverlessClusterResourceData struct {
+	ProjectId             types.String           `tfsdk:"project_id"`
 	ClusterId             types.String           `tfsdk:"cluster_id"`
 	DisplayName           types.String           `tfsdk:"display_name"`
 	Region                *region                `tfsdk:"region"`
@@ -148,33 +138,59 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "serverless cluster resource",
 		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{
+				MarkdownDescription: "The ID of the project. When not provided, the default project will be used.",
+				Optional:            true,
+				Computed:            true,
+			},
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the cluster.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region": schema.SingleNestedAttribute{
 				MarkdownDescription: "The region of the cluster.",
 				Required:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						MarkdownDescription: "The unique name of the region.",
+						MarkdownDescription: "The unique name of the region. The format is `regions/{region-id}`.",
 						Required:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"region_id": schema.StringAttribute{
 						MarkdownDescription: "The ID of the region.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"cloud_provider": schema.StringAttribute{
 						MarkdownDescription: "The cloud provider of the region.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the region.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 				},
 			},
@@ -204,10 +220,18 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 					"start_time": schema.StringAttribute{
 						MarkdownDescription: "The time of day when the automated backup will start.",
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"retention_days": schema.Int64Attribute{
 						MarkdownDescription: "The number of days to retain automated backups.",
 						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
 					},
 				},
 			},
@@ -285,7 +309,11 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"root_password": schema.StringAttribute{
 				MarkdownDescription: "The root password of the cluster.",
 				Optional:            true,
+				Computed:            true,
 				Sensitive:           true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"encryption_config": schema.SingleNestedAttribute{
 				MarkdownDescription: "The encryption settings for the cluster.",
@@ -304,19 +332,32 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			},
 			"high_availability_type": schema.StringAttribute{
 				MarkdownDescription: "The high availability type of the clusterV1beta1. ZONAL: High availability within a single zone. REGIONAL: High availability across multiple zones within a region",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"version": schema.StringAttribute{
 				MarkdownDescription: "The version of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"created_by": schema.StringAttribute{
 				MarkdownDescription: "The email of the creator of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				MarkdownDescription: "The time the cluster was created.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				MarkdownDescription: "The time the cluster was last updated.",
@@ -325,6 +366,9 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"user_prefix": schema.StringAttribute{
 				MarkdownDescription: "The unique prefix in SQL user name.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"state": schema.StringAttribute{
 				MarkdownDescription: "The state of the cluster.",
@@ -383,7 +427,7 @@ func (r serverlessClusterResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	tflog.Trace(ctx, "create serverless_cluster_resource")
-	body, err := buildCreateServerlessClusterBody(ctx, data)
+	body, err := buildCreateServerlessClusterBody(data)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to build CreateCluster body, got error: %s", err))
 		return
@@ -405,7 +449,11 @@ func (r serverlessClusterResource) Create(ctx context.Context, req resource.Crea
 		)
 		return
 	}
-	refreshServerlessClusterResourceData(ctx, cluster, &data)
+	err = refreshServerlessClusterResourceData(ctx, cluster, &data)
+	if err != nil {
+		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless cluster resource data, got error: %s", err))
+		return
+	}
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -429,7 +477,11 @@ func (r serverlessClusterResource) Read(ctx context.Context, req resource.ReadRe
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
 		return
 	}
-	refreshServerlessClusterResourceData(ctx, cluster, &data)
+	err = refreshServerlessClusterResourceData(ctx, cluster, &data)
+	if err != nil {
+		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless cluster resource data, got error: %s", err))
+		return
+	}
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -508,6 +560,25 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 		}
 	}
 
+	if plan.AutomatedBackupPolicy != nil {
+		if plan.AutomatedBackupPolicy.StartTime.ValueString() != state.AutomatedBackupPolicy.StartTime.ValueString() {
+			if fieldName != "" {
+				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change %s and %s at the same time", fieldName, string(AutomatedBackupPolicySchedule)))
+				return
+			}
+			automatedBackupPolicyStartTime := plan.AutomatedBackupPolicy.StartTime.ValueString()
+			body.Cluster.AutomatedBackupPolicy = &clusterV1beta1.V1beta1ClusterAutomatedBackupPolicy{
+				StartTime: &automatedBackupPolicyStartTime,
+			}
+			fieldName = string(AutomatedBackupPolicySchedule)
+		}
+	}
+
+	if fieldName == "" {
+		resp.Diagnostics.AddError("Update Error", "No updatable field found")
+		return
+	}
+
 	body.UpdateMask = fieldName
 	// call update api
 	tflog.Trace(ctx, "update serverless_cluster_resource")
@@ -526,23 +597,29 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 		)
 		return
 	}
-	refreshServerlessClusterResourceData(ctx, cluster, &state)
+	err = refreshServerlessClusterResourceData(ctx, cluster, &state)
+	if err != nil {
+		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless cluster resource data, got error: %s", err))
+		return
+	}
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
-
 }
 
-func buildCreateServerlessClusterBody(ctx context.Context, data serverlessClusterResourceData) (clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
+func (r *serverlessClusterDataSource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("cluster_id"), req, resp)
+}
+
+func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
 	displayName := data.DisplayName.ValueString()
 	regionName := data.Region.Name.ValueString()
 	rootPassword := data.RootPassword.ValueString()
 	highAvailabilityType := clusterV1beta1.ClusterHighAvailabilityType(data.HighAvailabilityType.ValueString())
-	var labels map[string]string
-	diag := data.Labels.ElementsAs(ctx, &labels, false)
-	if diag.HasError() {
-		return clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}, errors.New("unable to convert labels")
+	labels := make(map[string]string)
+	if !data.ProjectId.IsNull() {
+		labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
 	}
 	body := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{
 		DisplayName: displayName,
@@ -592,14 +669,14 @@ func buildCreateServerlessClusterBody(ctx context.Context, data serverlessCluste
 	return body, nil
 }
 
-func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, data *serverlessClusterResourceData) {
-	labels, diag := types.MapValueFrom(ctx, types.StringType, *resp.Labels)
-	if diag.HasError() {
-		return
+func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, data *serverlessClusterResourceData) error {
+	labels, diags := types.MapValueFrom(ctx, types.StringType, *resp.Labels)
+	if diags.HasError() {
+		return errors.New("unable to convert labels")
 	}
-	annotations, diag := types.MapValueFrom(ctx, types.StringType, *resp.Annotations)
-	if diag.HasError() {
-		return
+	annotations, diags := types.MapValueFrom(ctx, types.StringType, *resp.Annotations)
+	if diags.HasError() {
+		return errors.New("unable to convert annotations")
 	}
 	data.ClusterId = types.StringValue(*resp.ClusterId)
 	data.DisplayName = types.StringValue(resp.DisplayName)
@@ -626,9 +703,9 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 	e := resp.Endpoints
 	var pe privateEndpoint
 	if e.Private.Aws != nil {
-		awsAvailabilityZone, diags := types.ListValueFrom(ctx, types.StringType, e.Private.Aws.AvailabilityZone)
-		if diags.HasError() {
-			return
+		awsAvailabilityZone, diag := types.ListValueFrom(ctx, types.StringType, e.Private.Aws.AvailabilityZone)
+		if diag.HasError() {
+			return errors.New("unable to convert aws availability zone")
 		}
 		pe = privateEndpoint{
 			Host: types.StringValue(*e.Private.Host),
@@ -681,27 +758,28 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 
 	data.Labels = labels
 	data.Annotations = annotations
+	return nil
 }
 
 func WaitServerlessClusterReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string,
 	client tidbcloud.TiDBCloudServerlessClient) (*clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
-			string(serverlessClusterStatusCreating),
-			string(serverlessClusterStatusDeleting),
-			string(serverlessClusterStatusRestoring),
-			string(serverlessClusterStatusInactive),
-			string(serverlessClusterStatusUpgrading),
-			string(serverlessClusterStatusImporting),
-			string(serverlessClusterStatusModifying),
-			string(serverlessClusterStatusPausing),
-			string(serverlessClusterStatusResuming),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_CREATING),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_DELETING),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_RESTORING),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_INACTIVE),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_UPGRADING),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_IMPORTING),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_MODIFYING),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_PAUSING),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_RESUMING),
 		},
 		Target: []string{
-			string(serverlessClusterStatusActive),
-			string(serverlessClusterStatusPaused),
-			string(serverlessClusterStatusDeleted),
-			string(serverlessClusterStatusMaintenance),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_PAUSED),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_DELETED),
+			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_MAINTENANCE),
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,
