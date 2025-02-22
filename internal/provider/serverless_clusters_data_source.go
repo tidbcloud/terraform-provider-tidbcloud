@@ -264,8 +264,9 @@ func (d *serverlessClustersDataSource) Read(ctx context.Context, req datasource.
 		e := cluster.Endpoints
 		var pe privateEndpoint
 		if e.Private.Aws != nil {
-			awsAvailabilityZone, diags := types.ListValueFrom(ctx, types.StringType, e.Private.Aws.AvailabilityZone)
-			if diags.HasError() {
+			awsAvailabilityZone, diag := types.ListValueFrom(ctx, types.StringType, e.Private.Aws.AvailabilityZone)
+			if diag.HasError() {
+				diags.AddError("Read Error", "unable to convert aws availability zone")
 				return
 			}
 			pe = privateEndpoint{
