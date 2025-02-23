@@ -8,27 +8,32 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/juju/errors"
+	clusterV1beta1 "github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/serverless/cluster"
 )
 
+const DefaultPageSize = 100
+
 type serverlessClustersDataSourceData struct {
-	Clusters []serverlessClusterItem `tfsdk:"clusters"`
+	ProjectId types.String            `tfsdk:"project_id"`
+	Clusters  []serverlessClusterItem `tfsdk:"clusters"`
 }
 
 type serverlessClusterItem struct {
-	ClusterId             types.String           `tfsdk:"cluster_id"`
-	DisplayName           types.String           `tfsdk:"display_name"`
-	Region                *region                `tfsdk:"region"`
-	Endpoints             *endpoints             `tfsdk:"endpoints"`
-	EncryptionConfig      *encryptionConfig      `tfsdk:"encryption_config"`
-	HighAvailabilityType  types.String           `tfsdk:"high_availability_type"`
-	Version               types.String           `tfsdk:"version"`
-	CreatedBy             types.String           `tfsdk:"created_by"`
-	CreateTime            types.String           `tfsdk:"create_time"`
-	UpdateTime            types.String           `tfsdk:"update_time"`
-	UserPrefix            types.String           `tfsdk:"user_prefix"`
-	State                 types.String           `tfsdk:"state"`
-	Labels                types.Map              `tfsdk:"labels"`
-	Annotations           types.Map              `tfsdk:"annotations"`
+	ClusterId            types.String      `tfsdk:"cluster_id"`
+	DisplayName          types.String      `tfsdk:"display_name"`
+	Region               *region           `tfsdk:"region"`
+	Endpoints            *endpoints        `tfsdk:"endpoints"`
+	EncryptionConfig     *encryptionConfig `tfsdk:"encryption_config"`
+	HighAvailabilityType types.String      `tfsdk:"high_availability_type"`
+	Version              types.String      `tfsdk:"version"`
+	CreatedBy            types.String      `tfsdk:"created_by"`
+	CreateTime           types.String      `tfsdk:"create_time"`
+	UpdateTime           types.String      `tfsdk:"update_time"`
+	UserPrefix           types.String      `tfsdk:"user_prefix"`
+	State                types.String      `tfsdk:"state"`
+	Labels               types.Map         `tfsdk:"labels"`
+	Annotations          types.Map         `tfsdk:"annotations"`
 }
 
 var _ datasource.DataSource = &serverlessClustersDataSource{}
@@ -60,11 +65,16 @@ func (d *serverlessClustersDataSource) Schema(_ context.Context, _ datasource.Sc
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "serverless clusters data source",
 		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{
+				MarkdownDescription: "The ID of the project that the clusters belong to.",
+				Optional:            true,
+			},
 			"clusters": schema.ListNestedAttribute{
 				MarkdownDescription: "The regions.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+
 						"cluster_id": schema.StringAttribute{
 							MarkdownDescription: "The ID of the cluster.",
 							Required:            true,
@@ -222,7 +232,7 @@ func (d *serverlessClustersDataSource) Read(ctx context.Context, req datasource.
 	}
 
 	tflog.Trace(ctx, "read serverless clusters data source")
-	clusters, err := d.provider.ServerlessClient.ListClusters(ctx)
+	clusters, err := d.retrieveClusters(ctx, data.ProjectId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call ListClusters, got error: %s", err))
 		return
@@ -232,10 +242,12 @@ func (d *serverlessClustersDataSource) Read(ctx context.Context, req datasource.
 		var c serverlessClusterItem
 		labels, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Labels)
 		if diag.HasError() {
+			diags.AddError("Read Error", "unable to convert labels")
 			return
 		}
 		annotations, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Annotations)
 		if diag.HasError() {
+			diags.AddError("Read Error", "unable to convert annotations")
 			return
 		}
 		c.ClusterId = types.StringValue(*cluster.ClusterId)
@@ -252,8 +264,9 @@ func (d *serverlessClustersDataSource) Read(ctx context.Context, req datasource.
 		e := cluster.Endpoints
 		var pe privateEndpoint
 		if e.Private.Aws != nil {
-			awsAvailabilityZone, diags := types.ListValueFrom(ctx, types.StringType, e.Private.Aws.AvailabilityZone)
-			if diags.HasError() {
+			awsAvailabilityZone, diag := types.ListValueFrom(ctx, types.StringType, e.Private.Aws.AvailabilityZone)
+			if diag.HasError() {
+				diags.AddError("Read Error", "unable to convert aws availability zone")
 				return
 			}
 			pe = privateEndpoint{
@@ -306,4 +319,33 @@ func (d *serverlessClustersDataSource) Read(ctx context.Context, req datasource.
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
+}
+
+func (d *serverlessClustersDataSource) retrieveClusters(ctx context.Context, projectId string) ([]clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
+	var items []clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster
+	pageSizeInt32 := int32(DefaultPageSize)
+	var pageToken *string
+	var filter *string
+	if projectId != "" {
+		projectFilter := fmt.Sprintf("projectId=%s", projectId)
+		filter = &projectFilter
+	}
+
+	clusters, err := d.provider.ServerlessClient.ListClusters(ctx, filter, &pageSizeInt32, nil, nil, nil)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	items = append(items, clusters.Clusters...)
+	for {
+		pageToken = clusters.NextPageToken
+		if IsNilOrEmpty(pageToken) {
+			break
+		}
+		clusters, err = d.provider.ServerlessClient.ListClusters(ctx, filter, &pageSizeInt32, pageToken, nil, nil)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		items = append(items, clusters.Clusters...)
+	}
+	return items, nil
 }

@@ -43,7 +43,6 @@ resource "tidbcloud_serverless_cluster" "example" {
 ### Required
 
 - `display_name` (String) The display name of the cluster.
-- `high_availability_type` (String) The high availability type of the clusterV1beta1. ZONAL: High availability within a single zone. REGIONAL: High availability across multiple zones within a region
 - `region` (Attributes) The region of the cluster. (see [below for nested schema](#nestedatt--region))
 
 ### Optional
@@ -51,6 +50,8 @@ resource "tidbcloud_serverless_cluster" "example" {
 - `automated_backup_policy` (Attributes) The automated backup policy of the cluster. (see [below for nested schema](#nestedatt--automated_backup_policy))
 - `encryption_config` (Attributes) The encryption settings for the cluster. (see [below for nested schema](#nestedatt--encryption_config))
 - `endpoints` (Attributes) The endpoints for connecting to the cluster. (see [below for nested schema](#nestedatt--endpoints))
+- `high_availability_type` (String) The high availability type of the clusterV1beta1. ZONAL: High availability within a single zone. REGIONAL: High availability across multiple zones within a region
+- `project_id` (String) The ID of the project. When not provided, the default project will be used.
 - `root_password` (String, Sensitive) The root password of the cluster.
 - `spending_limit` (Attributes) The spending limit of the cluster. (see [below for nested schema](#nestedatt--spending_limit))
 
@@ -72,7 +73,7 @@ resource "tidbcloud_serverless_cluster" "example" {
 
 Required:
 
-- `name` (String) The unique name of the region.
+- `name` (String) The unique name of the region. The format is `regions/{region-id}`.
 
 Read-Only:
 

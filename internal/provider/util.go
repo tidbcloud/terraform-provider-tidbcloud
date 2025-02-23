@@ -50,3 +50,7 @@ type Knowable interface {
 func IsKnown(t Knowable) bool {
 	return !t.IsUnknown() && !t.IsNull()
 }
+
+func IsNilOrEmpty(s *string) bool {
+	return s == nil || *s == ""
+}

@@ -183,6 +183,7 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 
 		NewServerlessClusterDataSource,
 		NewServerlessClustersDataSource,
+		NewServerlessRegionsDataSource,
 	}
 }
 
