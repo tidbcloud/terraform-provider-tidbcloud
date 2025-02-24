@@ -13,7 +13,7 @@ import (
 )
 
 type serverlessSQLUsersDataSourceData struct {
-	ClusterId types.String        `tfsdk:"cluster_id"`
+	ClusterId types.String            `tfsdk:"cluster_id"`
 	SQLUsers  []serverlessSQLUserItem `tfsdk:"sql_users"`
 }
 
@@ -103,13 +103,11 @@ func (d *serverlessSQLUsersDataSource) Read(ctx context.Context, req datasource.
 	var items []serverlessSQLUserItem
 	for _, user := range users {
 		var u serverlessSQLUserItem
-		if user.CustomRoles != nil {
-			customRoles, diags := types.ListValueFrom(ctx, types.StringType, user.CustomRoles)
-			if diags.HasError() {
-				return
-			}
-			u.CustomRoles = customRoles
+		customRoles, diags := types.ListValueFrom(ctx, types.StringType, user.CustomRoles)
+		if diags.HasError() {
+			return
 		}
+		u.CustomRoles = customRoles
 		u.AuthMethod = types.StringValue(*user.AuthMethod)
 		u.UserName = types.StringValue(*user.UserName)
 		u.BuiltinRole = types.StringValue(*user.BuiltinRole)

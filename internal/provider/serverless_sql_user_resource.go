@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -81,6 +82,9 @@ func (r *serverlessSQLUserResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The custom roles of the user.",
 				Optional:            true,
 				ElementType:         types.StringType,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"password": schema.StringAttribute{
 				MarkdownDescription: "The password of the user.",
@@ -208,6 +212,9 @@ func (r serverlessSQLUserResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
+	state.BuiltinRole = plan.BuiltinRole
+	state.CustomRoles = plan.CustomRoles
+
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -217,8 +224,8 @@ func (r serverlessSQLUserResource) Update(ctx context.Context, req resource.Upda
 func buildCreateServerlessSQLUserBody(ctx context.Context, data serverlessSQLUserResourceData) (iam.ApiCreateSqlUserReq, error) {
 	userName := data.UserName.ValueString()
 	var authMethod string
-	if data.AuthMethod.IsUnknown() {
-		data.AuthMethod = types.StringValue(MYSQLNATIVEPASSWORD)
+	if data.AuthMethod.IsUnknown() || data.AuthMethod.IsNull() {
+		authMethod = MYSQLNATIVEPASSWORD
 	} else {
 		authMethod = data.AuthMethod.ValueString()
 	}
@@ -229,12 +236,14 @@ func buildCreateServerlessSQLUserBody(ctx context.Context, data serverlessSQLUse
 	if diag.HasError() {
 		return iam.ApiCreateSqlUserReq{}, errors.New("unable to convert custom roles")
 	}
+	autoPrefix := false
 	body := iam.ApiCreateSqlUserReq{
 		UserName:    &userName,
 		AuthMethod:  &authMethod,
 		BuiltinRole: &builtinRole,
 		CustomRoles: customRoles,
 		Password:    &password,
+		AutoPrefix:  &autoPrefix,
 	}
 
 	return body, nil

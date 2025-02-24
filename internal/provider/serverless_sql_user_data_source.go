@@ -89,13 +89,11 @@ func (d *serverlessSQLUserDataSource) Read(ctx context.Context, req datasource.R
 
 	data.AuthMethod = types.StringValue(*sqlUser.AuthMethod)
 	data.BuiltinRole = types.StringValue(*sqlUser.BuiltinRole)
-	if sqlUser.CustomRoles != nil {
-		customRoles, diags := types.ListValueFrom(ctx, types.StringType, sqlUser.CustomRoles)
-		if diags.HasError() {
-			return
-		}
-		data.CustomRoles = customRoles
+	customRoles, diags := types.ListValueFrom(ctx, types.StringType, sqlUser.CustomRoles)
+	if diags.HasError() {
+		return
 	}
+	data.CustomRoles = customRoles
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
