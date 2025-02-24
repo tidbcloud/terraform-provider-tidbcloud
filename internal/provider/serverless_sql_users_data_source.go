@@ -13,10 +13,11 @@ import (
 )
 
 type serverlessSQLUsersDataSourceData struct {
-	sqlUsers []serverlessSQLUser `tfsdk:"sql_users"`
+	ClusterId types.String        `tfsdk:"cluster_id"`
+	SQLUsers  []serverlessSQLUserItem `tfsdk:"sql_users"`
 }
 
-type serverlessSQLUser struct {
+type serverlessSQLUserItem struct {
 	AuthMethod  types.String `tfsdk:"auth_method"`
 	UserName    types.String `tfsdk:"user_name"`
 	BuiltinRole types.String `tfsdk:"builtin_role"`
@@ -52,6 +53,10 @@ func (d *serverlessSQLUsersDataSource) Schema(_ context.Context, _ datasource.Sc
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "serverless sql users data source",
 		Attributes: map[string]schema.Attribute{
+			"cluster_id": schema.StringAttribute{
+				MarkdownDescription: "The id of the cluster where the users are.",
+				Required:            true,
+			},
 			"sql_users": schema.ListNestedAttribute{
 				MarkdownDescription: "The regions.",
 				Computed:            true,
@@ -90,87 +95,27 @@ func (d *serverlessSQLUsersDataSource) Read(ctx context.Context, req datasource.
 	}
 
 	tflog.Trace(ctx, "read serverless sql users data source")
-	clusters, err := d.RetrieveSQLUsers(ctx)
+	users, err := d.RetrieveSQLUsers(ctx, data.ClusterId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call ListClusters, got error: %s", err))
 		return
 	}
-	var items []serverlessClusterItem
-	for _, cluster := range clusters {
-		var c serverlessClusterItem
-		labels, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Labels)
-		if diag.HasError() {
-			return
-		}
-		annotations, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Annotations)
-		if diag.HasError() {
-			return
-		}
-		c.ClusterId = types.StringValue(*cluster.ClusterId)
-		c.DisplayName = types.StringValue(cluster.DisplayName)
-
-		r := cluster.Region
-		c.Region = &region{
-			Name:          types.StringValue(*r.Name),
-			RegionId:      types.StringValue(*r.RegionId),
-			CloudProvider: types.StringValue(string(*r.CloudProvider)),
-			DisplayName:   types.StringValue(*r.DisplayName),
-		}
-
-		e := cluster.Endpoints
-		var pe privateEndpoint
-		if e.Private.Aws != nil {
-			awsAvailabilityZone, diags := types.ListValueFrom(ctx, types.StringType, e.Private.Aws.AvailabilityZone)
+	var items []serverlessSQLUserItem
+	for _, user := range users {
+		var u serverlessSQLUserItem
+		if user.CustomRoles != nil {
+			customRoles, diags := types.ListValueFrom(ctx, types.StringType, user.CustomRoles)
 			if diags.HasError() {
 				return
 			}
-			pe = privateEndpoint{
-				Host: types.StringValue(*e.Private.Host),
-				Port: types.Int64Value(int64(*e.Private.Port)),
-				AWSEndpoint: &awsEndpoint{
-					ServiceName:      types.StringValue(*e.Private.Aws.ServiceName),
-					AvailabilityZone: awsAvailabilityZone,
-				},
-			}
+			u.CustomRoles = customRoles
 		}
-
-		if e.Private.Gcp != nil {
-			pe = privateEndpoint{
-				Host: types.StringValue(*e.Private.Host),
-				Port: types.Int64Value(int64(*e.Private.Port)),
-				GCPEndpoint: &gcpEndpoint{
-					ServiceAttachmentName: types.StringValue(*e.Private.Gcp.ServiceAttachmentName),
-				},
-			}
-		}
-
-		c.Endpoints = &endpoints{
-			PublicEndpoint: publicEndpoint{
-				Host:     types.StringValue(*e.Public.Host),
-				Port:     types.Int64Value(int64(*e.Public.Port)),
-				Disabled: types.BoolValue(*e.Public.Disabled),
-			},
-			PrivateEndpoint: pe,
-		}
-
-		en := cluster.EncryptionConfig
-		c.EncryptionConfig = &encryptionConfig{
-			EnhancedEncryptionEnabled: types.BoolValue(*en.EnhancedEncryptionEnabled),
-		}
-
-		c.HighAvailabilityType = types.StringValue(string(*cluster.HighAvailabilityType))
-		c.Version = types.StringValue(*cluster.Version)
-		c.CreatedBy = types.StringValue(*cluster.CreatedBy)
-		c.CreateTime = types.StringValue(cluster.CreateTime.String())
-		c.UpdateTime = types.StringValue(cluster.UpdateTime.String())
-		c.UserPrefix = types.StringValue(*cluster.UserPrefix)
-		c.State = types.StringValue(string(*cluster.State))
-
-		c.Labels = labels
-		c.Annotations = annotations
-		items = append(items, c)
+		u.AuthMethod = types.StringValue(*user.AuthMethod)
+		u.UserName = types.StringValue(*user.UserName)
+		u.BuiltinRole = types.StringValue(*user.BuiltinRole)
+		items = append(items, u)
 	}
-	data.Clusters = items
+	data.SQLUsers = items
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -183,14 +128,14 @@ func (d *serverlessSQLUsersDataSource) RetrieveSQLUsers(ctx context.Context, clu
 	var pageToken *string
 	// loop to get all SQL users
 	for {
-		sqlUsers, err := d.ListSQLUsers(ctx, &pageSizeInt32, pageToken)
+		sqlUsers, err := d.provider.IAMClient.ListSQLUsers(ctx, clusterId, &pageSizeInt32, pageToken)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
 		items = append(items, sqlUsers.SqlUsers...)
 
 		pageToken = sqlUsers.NextPageToken
-		if util.IsNilOrEmpty(pageToken) {
+		if IsNilOrEmpty(pageToken) {
 			break
 		}
 	}
