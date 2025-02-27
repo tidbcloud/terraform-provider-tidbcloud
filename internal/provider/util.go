@@ -3,6 +3,7 @@ package provider
 import (
 	cryptorand "crypto/rand"
 	"math/big"
+	"os"
 )
 
 const (
@@ -53,4 +54,13 @@ func IsKnown(t Knowable) bool {
 
 func IsNilOrEmpty(s *string) bool {
 	return s == nil || *s == ""
+}
+
+func setupTestEnv() {
+	if os.Getenv(TiDBCloudPublicKey) == "" {
+		os.Setenv(TiDBCloudPublicKey, "fake")
+	}
+	if os.Getenv(TiDBCloudPrivateKey) == "" {
+		os.Setenv(TiDBCloudPrivateKey, "fake")
+	}
 }

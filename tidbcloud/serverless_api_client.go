@@ -100,7 +100,7 @@ type ServerlessClientDelegate struct {
 	ec  *export.APIClient
 }
 
-func NewServerlessClientDelegate(publicKey string, privateKey string, serverlessEndpoint string, userAgent string) (*ServerlessClientDelegate, error) {
+func NewServerlessClientDelegate(publicKey string, privateKey string, serverlessEndpoint string, userAgent string) (TiDBCloudServerlessClient, error) {
 	transport := NewTransportWithAgent(&digest.Transport{
 		Username: publicKey,
 		Password: privateKey,

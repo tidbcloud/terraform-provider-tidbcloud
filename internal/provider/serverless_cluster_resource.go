@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -141,7 +142,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project. When not provided, the default project will be used.",
 				Optional:            true,
-				Computed:            true,
 			},
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
@@ -309,7 +309,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"root_password": schema.StringAttribute{
 				MarkdownDescription: "The root password of the cluster.",
 				Optional:            true,
-				Computed:            true,
 				Sensitive:           true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -331,7 +330,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 			},
 			"high_availability_type": schema.StringAttribute{
-				MarkdownDescription: "The high availability type of the clusterV1beta1. ZONAL: High availability within a single zone. REGIONAL: High availability across multiple zones within a region",
+				MarkdownDescription: "The high availability type of the cluster. ZONAL: High availability within a single zone. REGIONAL: High availability across multiple zones within a region",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -362,6 +361,9 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"update_time": schema.StringAttribute{
 				MarkdownDescription: "The time the cluster was last updated.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_prefix": schema.StringAttribute{
 				MarkdownDescription: "The unique prefix in SQL user name.",
@@ -373,6 +375,9 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"state": schema.StringAttribute{
 				MarkdownDescription: "The state of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"usage": schema.SingleNestedAttribute{
 				MarkdownDescription: "The usage of the cluster.",
@@ -399,11 +404,17 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The labels of the cluster.",
 				Computed:            true,
 				ElementType:         types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"annotations": schema.MapAttribute{
 				MarkdownDescription: "The annotations of the cluster.",
 				Computed:            true,
 				ElementType:         types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -575,7 +586,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	if fieldName == "" {
-		resp.Diagnostics.AddError("Update Error", "No updatable field found")
+		resp.Diagnostics.AddError("Update Error", "No update field found")
 		return
 	}
 
