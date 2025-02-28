@@ -810,7 +810,7 @@ func serverlessClusterStateRefreshFunc(ctx context.Context, clusterId string,
 	client tidbcloud.TiDBCloudServerlessClient) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		tflog.Trace(ctx, "Waiting for serverless cluster ready")
-		cluster, err := client.GetCluster(ctx, clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
+		cluster, err := client.GetCluster(ctx, clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC)
 		if err != nil {
 			return nil, "", err
 		}

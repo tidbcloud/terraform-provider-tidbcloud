@@ -58,7 +58,7 @@ func TestUTServerlessClusterResource(t *testing.T) {
 	getClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName)))
 
 	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil).AnyTimes()
-	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).AnyTimes()
+	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil).AnyTimes()
 	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil).AnyTimes()
 
 	testServerlessClusterResource(t)
