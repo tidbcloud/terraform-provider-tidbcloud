@@ -44,7 +44,7 @@ func TestUTServerlessClusterDataSource(t *testing.T) {
 	displayName := "test-tf"
 
 	getClusterResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
-	getClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName)))
+	getClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName, string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
 
 	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).AnyTimes()
 

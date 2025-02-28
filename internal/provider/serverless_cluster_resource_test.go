@@ -53,13 +53,14 @@ func TestUTServerlessClusterResource(t *testing.T) {
 	displayName := "test-tf"
 
 	createClusterResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
-	createClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName)))
+	createClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName, string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_CREATING))))
 	getClusterResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
-	getClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName)))
+	getClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName, string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
 
-	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil).AnyTimes()
-	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil).AnyTimes()
-	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil).AnyTimes()
+	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil)
+	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil)
+	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil)
+	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil)
 
 	testServerlessClusterResource(t)
 }
@@ -121,7 +122,7 @@ resource "tidbcloud_serverless_cluster" "example" {
 `
 }
 
-func testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId string, regionName string, displayName string) string {
+func testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName, state string) string {
 	return fmt.Sprintf(`{
 	"name": "clusters/%s",
     "clusterId": "%s",
@@ -172,7 +173,7 @@ func testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId string, regionName
     "version": "v7.5.2",
     "createdBy": "apikey-K1R3JIC0",
     "userPrefix": "2vphu1oWpnf3apP",
-    "state": "ACTIVE",
+    "state": "%s",
     "usage": {
         "requestUnit": "0",
         "rowBasedStorage": 1.1222448348999023,
@@ -192,5 +193,5 @@ func testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId string, regionName
         "enabled": false,
         "unredacted": false
 	}
-}`, clusterId, clusterId, displayName, regionName)
+}`, clusterId, clusterId, displayName, regionName, state)
 }
