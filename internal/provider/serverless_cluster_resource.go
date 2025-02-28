@@ -598,25 +598,27 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	body.UpdateMask = fieldName
 	// call update api
 	tflog.Trace(ctx, "update serverless_cluster_resource")
-	_, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
+	cluster, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
 	if err != nil {
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
 		return
 	}
-
-	tflog.Info(ctx, "wait cluster ready")
-	cluster, err := WaitServerlessClusterReady(ctx, clusterUpdateTimeout, clusterUpdateInterval, state.ClusterId.ValueString(), r.provider.ServerlessClient)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Cluster update failed",
-			fmt.Sprintf("Cluster is not ready, get error: %s", err),
-		)
-		return
-	}
-	cluster, err = r.provider.ServerlessClient.GetCluster(ctx, *cluster.ClusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
-	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
-		return
+	// serverless cluster update should be synchronous
+	if *cluster.State != clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE {
+		tflog.Info(ctx, "wait cluster ready")
+		cluster, err = WaitServerlessClusterReady(ctx, clusterUpdateTimeout, clusterUpdateInterval, state.ClusterId.ValueString(), r.provider.ServerlessClient)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Cluster update failed",
+				fmt.Sprintf("Cluster is not ready, get error: %s", err),
+			)
+			return
+		}
+		cluster, err = r.provider.ServerlessClient.GetCluster(ctx, *cluster.ClusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
+		if err != nil {
+			tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
+			return
+		}
 	}
 	err = refreshServerlessClusterResourceData(ctx, cluster, &state)
 	if err != nil {
