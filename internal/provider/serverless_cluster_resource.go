@@ -460,6 +460,11 @@ func (r serverlessClusterResource) Create(ctx context.Context, req resource.Crea
 		)
 		return
 	}
+	cluster, err = r.provider.ServerlessClient.GetCluster(ctx, *cluster.ClusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
+	if err != nil {
+		tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
+		return
+	}
 	err = refreshServerlessClusterResourceData(ctx, cluster, &data)
 	if err != nil {
 		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless cluster resource data, got error: %s", err))
@@ -606,6 +611,11 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 			"Cluster update failed",
 			fmt.Sprintf("Cluster is not ready, get error: %s", err),
 		)
+		return
+	}
+	cluster, err = r.provider.ServerlessClient.GetCluster(ctx, *cluster.ClusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
+	if err != nil {
+		tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
 		return
 	}
 	err = refreshServerlessClusterResourceData(ctx, cluster, &state)
