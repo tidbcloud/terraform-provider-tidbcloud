@@ -599,7 +599,9 @@ func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clust
 	rootPassword := data.RootPassword.ValueString()
 	highAvailabilityType := clusterV1beta1.ClusterHighAvailabilityType(data.HighAvailabilityType.ValueString())
 	labels := make(map[string]string)
-	labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
+	if !data.ProjectId.IsUnknown() || !data.ProjectId.IsNull() {
+		labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
+	}
 	body := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{
 		DisplayName: displayName,
 		Region: clusterV1beta1.Commonv1beta1Region{
