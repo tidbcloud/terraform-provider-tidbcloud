@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -153,9 +152,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the cluster.",
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"region": schema.SingleNestedAttribute{
 				MarkdownDescription: "The region of the cluster.",
@@ -167,9 +163,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 					"name": schema.StringAttribute{
 						MarkdownDescription: "The unique name of the region. The format is `regions/{region-id}`.",
 						Required:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"region_id": schema.StringAttribute{
 						MarkdownDescription: "The ID of the region.",
@@ -265,9 +258,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 					"private_endpoint": schema.SingleNestedAttribute{
 						MarkdownDescription: "The private endpoint for connecting to the cluster.",
 						Computed:            true,
-						PlanModifiers: []planmodifier.Object{
-							objectplanmodifier.UseStateForUnknown(),
-						},
 						Attributes: map[string]schema.Attribute{
 							"host": schema.StringAttribute{
 								MarkdownDescription: "The host of the private endpoint.",
@@ -310,9 +300,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The root password of the cluster.",
 				Optional:            true,
 				Sensitive:           true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"encryption_config": schema.SingleNestedAttribute{
 				MarkdownDescription: "The encryption settings for the cluster.",
@@ -361,9 +348,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"update_time": schema.StringAttribute{
 				MarkdownDescription: "The time the cluster was last updated.",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"user_prefix": schema.StringAttribute{
 				MarkdownDescription: "The unique prefix in SQL user name.",
@@ -375,9 +359,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"state": schema.StringAttribute{
 				MarkdownDescription: "The state of the cluster.",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"usage": schema.SingleNestedAttribute{
 				MarkdownDescription: "The usage of the cluster.",
@@ -404,17 +385,11 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The labels of the cluster.",
 				Computed:            true,
 				ElementType:         types.StringType,
-				PlanModifiers: []planmodifier.Map{
-					mapplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"annotations": schema.MapAttribute{
 				MarkdownDescription: "The annotations of the cluster.",
 				Computed:            true,
 				ElementType:         types.StringType,
-				PlanModifiers: []planmodifier.Map{
-					mapplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
@@ -603,23 +578,6 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
 		return
 	}
-	// serverless cluster update should be synchronous
-	if *cluster.State != clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE {
-		tflog.Info(ctx, "wait cluster ready")
-		cluster, err = WaitServerlessClusterReady(ctx, clusterUpdateTimeout, clusterUpdateInterval, state.ClusterId.ValueString(), r.provider.ServerlessClient)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Cluster update failed",
-				fmt.Sprintf("Cluster is not ready, get error: %s", err),
-			)
-			return
-		}
-		cluster, err = r.provider.ServerlessClient.GetCluster(ctx, *cluster.ClusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
-		if err != nil {
-			tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
-			return
-		}
-	}
 	err = refreshServerlessClusterResourceData(ctx, cluster, &state)
 	if err != nil {
 		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless cluster resource data, got error: %s", err))
@@ -631,7 +589,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r *serverlessClusterDataSource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r serverlessClusterResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("cluster_id"), req, resp)
 }
 
@@ -641,9 +599,7 @@ func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clust
 	rootPassword := data.RootPassword.ValueString()
 	highAvailabilityType := clusterV1beta1.ClusterHighAvailabilityType(data.HighAvailabilityType.ValueString())
 	labels := make(map[string]string)
-	if !data.ProjectId.IsNull() {
-		labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
-	}
+	labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
 	body := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{
 		DisplayName: displayName,
 		Region: clusterV1beta1.Commonv1beta1Region{
