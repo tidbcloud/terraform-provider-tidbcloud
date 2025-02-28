@@ -57,14 +57,14 @@ func TestUTServerlessClusterResource(t *testing.T) {
 	createClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName, string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_CREATING))))
 	getClusterResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
 	getClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName, string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
-    updateClusterSuccessResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
-    updateClusterSuccessResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, "test-tf2", string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
-	
-    s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil)
+	updateClusterSuccessResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
+	updateClusterSuccessResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, "test-tf2", string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
+
+	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil)
 	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil).AnyTimes()
 	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).AnyTimes()
 	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil)
-    s.EXPECT().PartialUpdateCluster(gomock.Any(), clusterId, gomock.Any()).Return(&updateClusterSuccessResp, nil)
+	s.EXPECT().PartialUpdateCluster(gomock.Any(), clusterId, gomock.Any()).Return(&updateClusterSuccessResp, nil)
 
 	testServerlessClusterResource(t)
 }
@@ -78,7 +78,8 @@ func testServerlessClusterResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read serverless cluster resource
 			{
-				Config: testUTServerlessClusterResourceConfig(),
+				ExpectNonEmptyPlan: true,
+				Config:             testUTServerlessClusterResourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(serverlessClusterResourceName, "cluster_id"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "display_name", "test-tf"),
@@ -86,18 +87,20 @@ func testServerlessClusterResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet(serverlessClusterResourceName, "high_availability_type"),
 				),
 			},
-            // // Update correctly
-            {
-                Config: testUTServerlessClusterResourceUpdateConfig(),
-                Check: resource.ComposeAggregateTestCheckFunc(
+			// // Update correctly
+			{
+				ExpectNonEmptyPlan: true,
+				Config:             testUTServerlessClusterResourceUpdateConfig(),
+				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "display_name", "test-tf2"),
 				),
-            },
-            // Update too many fields
-            {
-                Config: testUTServerlessClusterResourceUpdateTooManyFieldsConfig(),
-                ExpectError: regexp.MustCompile(`.*Unable to change .* and .* at the same time.*`),
-            }, 
+			},
+			// Update too many fields
+			{
+				ExpectNonEmptyPlan: true,
+				Config:             testUTServerlessClusterResourceUpdateTooManyFieldsConfig(),
+				ExpectError:        regexp.MustCompile(`.*Unable to change .* and .* at the same time.*`),
+			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})
@@ -124,8 +127,9 @@ resource "tidbcloud_serverless_cluster" "test" {
    }
    endpoints = {
       public_endpoint = {
-      disabled = true
-   }
+        disabled = true
+      }
+    }
 }
 `
 }
@@ -141,7 +145,6 @@ resource "tidbcloud_serverless_cluster" "test" {
 }
 `
 }
-
 
 func testUTServerlessClusterResourceConfig() string {
 	return `
