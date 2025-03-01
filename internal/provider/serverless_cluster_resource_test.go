@@ -62,9 +62,9 @@ func TestUTServerlessClusterResource(t *testing.T) {
 
 	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil)
 	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil).AnyTimes()
-	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).AnyTimes()
+	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).Times(5)
 	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil)
-	s.EXPECT().PartialUpdateCluster(gomock.Any(), clusterId, gomock.Any()).Return(&updateClusterSuccessResp, nil)
+	s.EXPECT().PartialUpdateCluster(gomock.Any(), clusterId, gomock.Any()).Return(&updateClusterSuccessResp, nil).Times(1)
 
 	testServerlessClusterResource(t)
 }
@@ -98,8 +98,8 @@ func testServerlessClusterResource(t *testing.T) {
 			// Update too many fields
 			{
 				ExpectNonEmptyPlan: true,
-				Config:             testUTServerlessClusterResourceUpdateTooManyFieldsConfig(),
-				ExpectError:        regexp.MustCompile(`.*Unable to change .* and .* at the same time.*`),
+				Config:      testUTServerlessClusterResourceUpdateTooManyFieldsConfig(),
+				ExpectError: regexp.MustCompile(`.*Unable to change .* and .* at the same time.*`),
 			},
 			// Delete testing automatically occurs in TestCase
 		},

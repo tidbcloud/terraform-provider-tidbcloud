@@ -220,7 +220,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 					},
 					"retention_days": schema.Int64Attribute{
 						MarkdownDescription: "The number of days to retain automated backups.",
-						Optional:            true,
 						Computed:            true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.UseStateForUnknown(),
@@ -258,6 +257,9 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 					"private_endpoint": schema.SingleNestedAttribute{
 						MarkdownDescription: "The private endpoint for connecting to the cluster.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"host": schema.StringAttribute{
 								MarkdownDescription: "The host of the private endpoint.",
@@ -566,7 +568,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	if fieldName == "" {
-		resp.Diagnostics.AddError("Update Error", "No update field found")
+		resp.Diagnostics.AddError("Update Error", "No updatable field found")
 		return
 	}
 
