@@ -290,12 +290,12 @@ func (d *serverlessClustersDataSource) Read(ctx context.Context, req datasource.
 		}
 
 		c.Endpoints = &endpoints{
-			PublicEndpoint: publicEndpoint{
+			PublicEndpoint: &publicEndpoint{
 				Host:     types.StringValue(*e.Public.Host),
 				Port:     types.Int64Value(int64(*e.Public.Port)),
 				Disabled: types.BoolValue(*e.Public.Disabled),
 			},
-			PrivateEndpoint: pe,
+			PrivateEndpoint: &pe,
 		}
 
 		en := cluster.EncryptionConfig
