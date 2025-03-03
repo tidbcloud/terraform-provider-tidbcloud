@@ -57,12 +57,17 @@ func TestUTServerlessClusterResource(t *testing.T) {
 	createClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName, string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_CREATING))))
 	getClusterResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
 	getClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName, string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
+	getClusterAfterUpdateResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
+	getClusterAfterUpdateResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, "test-tf2", string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
 	updateClusterSuccessResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
 	updateClusterSuccessResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, "test-tf2", string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
 
 	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil)
-	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil).AnyTimes()
-	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).Times(5)
+    s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil).AnyTimes()
+	gomock.InOrder(
+		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).Times(3),
+		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterAfterUpdateResp, nil).Times(3),
+	)
 	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil)
 	s.EXPECT().PartialUpdateCluster(gomock.Any(), clusterId, gomock.Any()).Return(&updateClusterSuccessResp, nil).Times(1)
 
@@ -90,7 +95,7 @@ func testServerlessClusterResource(t *testing.T) {
 			// // Update correctly
 			{
 				ExpectNonEmptyPlan: true,
-				Config:             testUTServerlessClusterResourceUpdateConfig(),
+				Config: testUTServerlessClusterResourceUpdateConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "display_name", "test-tf2"),
 				),
@@ -98,8 +103,8 @@ func testServerlessClusterResource(t *testing.T) {
 			// Update too many fields
 			{
 				ExpectNonEmptyPlan: true,
-				Config:      testUTServerlessClusterResourceUpdateTooManyFieldsConfig(),
-				ExpectError: regexp.MustCompile(`.*Unable to change .* and .* at the same time.*`),
+				Config:             testUTServerlessClusterResourceUpdateTooManyFieldsConfig(),
+				ExpectError:        regexp.MustCompile(`.*Unable to change .* and .* at the same time.*`),
 			},
 			// Delete testing automatically occurs in TestCase
 		},
