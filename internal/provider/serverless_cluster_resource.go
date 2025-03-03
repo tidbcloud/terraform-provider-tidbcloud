@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
@@ -49,7 +50,6 @@ type serverlessClusterResourceData struct {
 	SpendingLimit         *spendingLimit         `tfsdk:"spending_limit"`
 	AutomatedBackupPolicy *automatedBackupPolicy `tfsdk:"automated_backup_policy"`
 	Endpoints             *endpoints             `tfsdk:"endpoints"`
-	RootPassword          types.String           `tfsdk:"root_password"`
 	EncryptionConfig      *encryptionConfig      `tfsdk:"encryption_config"`
 	HighAvailabilityType  types.String           `tfsdk:"high_availability_type"`
 	Version               types.String           `tfsdk:"version"`
@@ -179,6 +179,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 						Computed:            true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
+							stringplanmodifier.RequiresReplace(),
 						},
 					},
 					"cloud_provider": schema.StringAttribute{
@@ -308,11 +309,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 					},
 				},
 			},
-			"root_password": schema.StringAttribute{
-				MarkdownDescription: "The root password of the cluster.",
-				Optional:            true,
-				Sensitive:           true,
-			},
 			"encryption_config": schema.SingleNestedAttribute{
 				MarkdownDescription: "The encryption settings for the cluster.",
 				Optional:            true,
@@ -325,6 +321,9 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 						MarkdownDescription: "Whether enhanced encryption is enabled.",
 						Optional:            true,
 						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.RequiresReplace(),
+						},
 					},
 				},
 			},
@@ -333,6 +332,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
@@ -397,17 +397,17 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The labels of the cluster.",
 				Computed:            true,
 				ElementType:         types.StringType,
-				// PlanModifiers: []planmodifier.Map{
-				// 	mapplanmodifier.UseStateForUnknown(),
-				// },
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"annotations": schema.MapAttribute{
 				MarkdownDescription: "The annotations of the cluster.",
 				Computed:            true,
 				ElementType:         types.StringType,
-				// PlanModifiers: []planmodifier.Map{
-				// 	mapplanmodifier.UseStateForUnknown(),
-				// },
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -620,7 +620,6 @@ func (r serverlessClusterResource) ImportState(ctx context.Context, req resource
 func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
 	displayName := data.DisplayName.ValueString()
 	regionName := data.Region.Name.ValueString()
-	rootPassword := data.RootPassword.ValueString()
 	highAvailabilityType := clusterV1beta1.ClusterHighAvailabilityType(data.HighAvailabilityType.ValueString())
 	labels := make(map[string]string)
 	if !data.ProjectId.IsUnknown() && !data.ProjectId.IsNull() {
@@ -631,7 +630,6 @@ func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clust
 		Region: clusterV1beta1.Commonv1beta1Region{
 			Name: &regionName,
 		},
-		RootPassword:         &rootPassword,
 		HighAvailabilityType: &highAvailabilityType,
 		Labels:               &labels,
 	}
