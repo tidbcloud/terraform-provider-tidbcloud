@@ -75,7 +75,7 @@ func (r *serverlessSQLUserResource) Schema(_ context.Context, _ resource.SchemaR
 				Required:            true,
 			},
 			"builtin_role": schema.StringAttribute{
-				MarkdownDescription: "The builtin role of the user.",
+				MarkdownDescription: "The builtinRole of the sql user,available values [role_admin,role_readonly,role_readwrite]. The builtinRole[role_readonly,role_readwrite] must be start with serverless token.",
 				Required:            true,
 			},
 			"custom_roles": schema.ListAttribute{
