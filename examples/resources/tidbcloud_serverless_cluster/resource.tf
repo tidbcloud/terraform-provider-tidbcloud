@@ -13,4 +13,7 @@ resource "tidbcloud_serverless_cluster" "example" {
   region = {
     name = var.region_name
   }
+  lifecycle {
+    prevent_destroy = true
+  }
 }
