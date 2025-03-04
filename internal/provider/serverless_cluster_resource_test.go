@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -25,12 +26,11 @@ func TestAccServerlessClusterResource(t *testing.T) {
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "region.region_id", "us-east-1"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "endpoints.public_endpoint.port", "4000"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "endpoints.private_endpoint.port", "4000"),
-					resource.TestCheckResourceAttr(serverlessClusterResourceName, "high_availability_type.", "ZONAL"),
 				),
 			},
 			// Update testing
 			{
-				Config: testAccServerlessClusterResourceConfigUpdate(),
+				Config: testAccServerlessClusterResourceUpdateConfig(),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("tidbcloud_serverless_cluster.test", "name", "test-tf2"),
 				),
@@ -53,13 +53,22 @@ func TestUTServerlessClusterResource(t *testing.T) {
 	displayName := "test-tf"
 
 	createClusterResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
-	createClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName)))
+	createClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName, string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_CREATING))))
 	getClusterResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
-	getClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName)))
+	getClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName, string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
+	getClusterAfterUpdateResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
+	getClusterAfterUpdateResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, "test-tf2", string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
+	updateClusterSuccessResp := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}
+	updateClusterSuccessResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, "test-tf2", string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
 
-	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil).AnyTimes()
-	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).AnyTimes()
-	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil).AnyTimes()
+	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil)
+	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil).AnyTimes()
+	gomock.InOrder(
+		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).Times(3),
+		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterAfterUpdateResp, nil).Times(3),
+	)
+	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil)
+	s.EXPECT().PartialUpdateCluster(gomock.Any(), clusterId, gomock.Any()).Return(&updateClusterSuccessResp, nil).Times(1)
 
 	testServerlessClusterResource(t)
 }
@@ -73,13 +82,27 @@ func testServerlessClusterResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read serverless cluster resource
 			{
-				Config: testUTServerlessClusterResourceConfig(),
+				ExpectNonEmptyPlan: true,
+				Config:             testUTServerlessClusterResourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(serverlessClusterResourceName, "cluster_id"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "display_name", "test-tf"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "region.name", "regions/aws-us-east-1"),
-					resource.TestCheckResourceAttrSet(serverlessClusterResourceName, "high_availability_type"),
 				),
+			},
+			// // Update correctly
+			{
+				ExpectNonEmptyPlan: true,
+				Config:             testUTServerlessClusterResourceUpdateConfig(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(serverlessClusterResourceName, "display_name", "test-tf2"),
+				),
+			},
+			// Update too many fields
+			{
+				ExpectNonEmptyPlan: true,
+				Config:             testUTServerlessClusterResourceUpdateTooManyFieldsConfig(),
+				ExpectError:        regexp.MustCompile(`.*Unable to change more than one filed at the same time.*`),
 			},
 			// Delete testing automatically occurs in TestCase
 		},
@@ -93,7 +116,33 @@ resource "tidbcloud_serverless_cluster" "test" {
    region = {
       name = "regions/aws-us-east-1"
    }
-   high_availability_type = "ZONAL"
+}
+`
+}
+
+func testUTServerlessClusterResourceUpdateTooManyFieldsConfig() string {
+	return `
+resource "tidbcloud_serverless_cluster" "test" {
+   display_name = "test-tf3"
+   region = {
+      name = "regions/aws-us-east-1"
+   }
+   endpoints = {
+      public_endpoint = {
+        disabled = true
+      }
+    }
+}
+`
+}
+
+func testAccServerlessClusterResourceUpdateConfig() string {
+	return `
+resource "tidbcloud_serverless_cluster" "test" {
+   display_name = "test-tf2"
+   region = {
+      name = "regions/aws-us-east-1"
+   }
 }
 `
 }
@@ -109,19 +158,18 @@ resource "tidbcloud_serverless_cluster" "test" {
 `
 }
 
-func testAccServerlessClusterResourceConfigUpdate() string {
+func testUTServerlessClusterResourceUpdateConfig() string {
 	return `
-resource "tidbcloud_serverless_cluster" "example" {
+resource "tidbcloud_serverless_cluster" "test" {
    display_name = "test-tf2"
    region = {
       name = "regions/aws-us-east-1"
    }
-   high_availability_type = "ZONAL"
 }
 `
 }
 
-func testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId string, regionName string, displayName string) string {
+func testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displayName, state string) string {
 	return fmt.Sprintf(`{
 	"name": "clusters/%s",
     "clusterId": "%s",
@@ -170,9 +218,9 @@ func testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId string, regionName
     },
     "highAvailabilityType": "ZONAL",
     "version": "v7.5.2",
-    "createdBy": "apikey-K1R3JIC0",
-    "userPrefix": "2vphu1oWpnf3apP",
-    "state": "ACTIVE",
+    "createdBy": "apikey-xxxxxxx",
+    "userPrefix": "2vphu1xxxxxxxx",
+    "state": "%s",
     "usage": {
         "requestUnit": "0",
         "rowBasedStorage": 1.1222448348999023,
@@ -192,5 +240,5 @@ func testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId string, regionName
         "enabled": false,
         "unredacted": false
 	}
-}`, clusterId, clusterId, displayName, regionName)
+}`, clusterId, clusterId, displayName, regionName, state)
 }
