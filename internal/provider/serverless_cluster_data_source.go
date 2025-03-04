@@ -19,7 +19,6 @@ type serverlessCluster struct {
 	AutomatedBackupPolicy *automatedBackupPolicy `tfsdk:"automated_backup_policy"`
 	Endpoints             *endpoints             `tfsdk:"endpoints"`
 	EncryptionConfig      *encryptionConfig      `tfsdk:"encryption_config"`
-	HighAvailabilityType  types.String           `tfsdk:"high_availability_type"`
 	Version               types.String           `tfsdk:"version"`
 	CreatedBy             types.String           `tfsdk:"created_by"`
 	CreateTime            types.String           `tfsdk:"create_time"`
@@ -187,10 +186,6 @@ func (d *serverlessClusterDataSource) Schema(_ context.Context, _ datasource.Sch
 					},
 				},
 			},
-			"high_availability_type": schema.StringAttribute{
-				MarkdownDescription: "The high availability type of the clusterV1beta1. ZONAL: High availability within a single zone. REGIONAL: High availability across multiple zones within a region",
-				Computed:            true,
-			},
 			"version": schema.StringAttribute{
 				MarkdownDescription: "The version of the cluster.",
 				Computed:            true,
@@ -335,7 +330,6 @@ func (d *serverlessClusterDataSource) Read(ctx context.Context, req datasource.R
 		EnhancedEncryptionEnabled: types.BoolValue(*en.EnhancedEncryptionEnabled),
 	}
 
-	data.HighAvailabilityType = types.StringValue(string(*cluster.HighAvailabilityType))
 	data.Version = types.StringValue(*cluster.Version)
 	data.CreatedBy = types.StringValue(*cluster.CreatedBy)
 	data.CreateTime = types.StringValue(cluster.CreateTime.String())

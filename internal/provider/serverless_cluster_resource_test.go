@@ -26,7 +26,6 @@ func TestAccServerlessClusterResource(t *testing.T) {
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "region.region_id", "us-east-1"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "endpoints.public_endpoint.port", "4000"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "endpoints.private_endpoint.port", "4000"),
-					resource.TestCheckResourceAttr(serverlessClusterResourceName, "high_availability_type.", "ZONAL"),
 				),
 			},
 			// Update testing
@@ -89,7 +88,6 @@ func testServerlessClusterResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet(serverlessClusterResourceName, "cluster_id"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "display_name", "test-tf"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "region.name", "regions/aws-us-east-1"),
-					resource.TestCheckResourceAttrSet(serverlessClusterResourceName, "high_availability_type"),
 				),
 			},
 			// // Update correctly
@@ -118,7 +116,6 @@ resource "tidbcloud_serverless_cluster" "test" {
    region = {
       name = "regions/aws-us-east-1"
    }
-   high_availability_type = "ZONAL"
 }
 `
 }
@@ -146,7 +143,6 @@ resource "tidbcloud_serverless_cluster" "test" {
    region = {
       name = "regions/aws-us-east-1"
    }
-   high_availability_type = "ZONAL"
 }
 `
 }

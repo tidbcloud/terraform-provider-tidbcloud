@@ -51,7 +51,6 @@ type serverlessClusterResourceData struct {
 	AutomatedBackupPolicy *automatedBackupPolicy `tfsdk:"automated_backup_policy"`
 	Endpoints             *endpoints             `tfsdk:"endpoints"`
 	EncryptionConfig      *encryptionConfig      `tfsdk:"encryption_config"`
-	HighAvailabilityType  types.String           `tfsdk:"high_availability_type"`
 	Version               types.String           `tfsdk:"version"`
 	CreatedBy             types.String           `tfsdk:"created_by"`
 	CreateTime            types.String           `tfsdk:"create_time"`
@@ -325,15 +324,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 							boolplanmodifier.RequiresReplace(),
 						},
 					},
-				},
-			},
-			"high_availability_type": schema.StringAttribute{
-				MarkdownDescription: "The high availability type of the cluster. ZONAL: High availability within a single zone. REGIONAL: High availability across multiple zones within a region",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"version": schema.StringAttribute{
@@ -620,7 +610,6 @@ func (r serverlessClusterResource) ImportState(ctx context.Context, req resource
 func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
 	displayName := data.DisplayName.ValueString()
 	regionName := data.Region.Name.ValueString()
-	highAvailabilityType := clusterV1beta1.ClusterHighAvailabilityType(data.HighAvailabilityType.ValueString())
 	labels := make(map[string]string)
 	if !data.ProjectId.IsUnknown() && !data.ProjectId.IsNull() {
 		labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
@@ -630,7 +619,6 @@ func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clust
 		Region: clusterV1beta1.Commonv1beta1Region{
 			Name: &regionName,
 		},
-		HighAvailabilityType: &highAvailabilityType,
 		Labels:               &labels,
 	}
 
@@ -744,7 +732,6 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 		EnhancedEncryptionEnabled: types.BoolValue(*en.EnhancedEncryptionEnabled),
 	}
 
-	data.HighAvailabilityType = types.StringValue(string(*resp.HighAvailabilityType))
 	data.Version = types.StringValue(*resp.Version)
 	data.CreatedBy = types.StringValue(*resp.CreatedBy)
 	data.CreateTime = types.StringValue(resp.CreateTime.String())

@@ -76,7 +76,6 @@ resource "tidbcloud_serverless_cluster" "example" {
    region = {
       name = "regions/aws-us-east-1"
    }
-   high_availability_type = "ZONAL"
 }
 
 data "tidbcloud_serverless_cluster" "test" {
