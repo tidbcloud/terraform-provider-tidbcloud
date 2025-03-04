@@ -587,7 +587,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	if fieldName == "" {
-		tflog.Debug(ctx, "no field need to update")
+		tflog.Info(ctx, "no field needs to be updated")
 		return
 	}
 
