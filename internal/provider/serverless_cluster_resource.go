@@ -225,7 +225,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 				Attributes: map[string]schema.Attribute{
 					"start_time": schema.StringAttribute{
-						MarkdownDescription: "The time of day when the automated backup will start.",
+						MarkdownDescription: "The UTC time of day in HH:mm format when the automated backup will start.",
 						Optional:            true,
 						Computed:            true,
 						PlanModifiers: []planmodifier.String{
