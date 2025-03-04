@@ -79,7 +79,7 @@ Read-Only:
 
 Optional:
 
-- `start_time` (String) The time of day when the automated backup will start.
+- `start_time` (String) The UTC time of day in HH:mm format when the automated backup will start.
 
 Read-Only:
 

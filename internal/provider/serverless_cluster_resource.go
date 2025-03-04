@@ -560,7 +560,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	if plan.SpendingLimit != nil {
 		if plan.SpendingLimit.Monthly.ValueInt64() != state.SpendingLimit.Monthly.ValueInt64() {
 			if fieldName != "" {
-				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change %s and %s at the same time", fieldName, string(SpendingLimitMonthly)))
+				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change more than one filed at the same time: %s and %s is changed", fieldName, string(SpendingLimitMonthly)))
 				return
 			}
 			spendingLimit := plan.SpendingLimit.Monthly.ValueInt64()
@@ -575,7 +575,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	if plan.AutomatedBackupPolicy != nil {
 		if plan.AutomatedBackupPolicy.StartTime.ValueString() != state.AutomatedBackupPolicy.StartTime.ValueString() {
 			if fieldName != "" {
-				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change %s and %s at the same time", fieldName, string(AutomatedBackupPolicySchedule)))
+				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change more than one filed at the same time: %s and %s is changed", fieldName, string(AutomatedBackupPolicySchedule)))
 				return
 			}
 			automatedBackupPolicyStartTime := plan.AutomatedBackupPolicy.StartTime.ValueString()
