@@ -545,7 +545,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 
 	if plan.Endpoints.PublicEndpoint.Disabled.ValueBool() != state.Endpoints.PublicEndpoint.Disabled.ValueBool() {
 		if fieldName != "" {
-			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change %s and %s at the same time", fieldName, string(PublicEndpointDisabled)))
+			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change more than one filed at the same time: %s and %s is changed", fieldName, string(PublicEndpointDisabled)))
 			return
 		}
 		publicEndpointDisabled := plan.Endpoints.PublicEndpoint.Disabled.ValueBool()
