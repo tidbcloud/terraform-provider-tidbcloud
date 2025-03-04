@@ -147,7 +147,9 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project. When not provided, the default project will be used.",
 				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -172,13 +174,15 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 					"name": schema.StringAttribute{
 						MarkdownDescription: "The unique name of the region. The format is `regions/{region-id}`.",
 						Required:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
 					},
 					"region_id": schema.StringAttribute{
 						MarkdownDescription: "The ID of the region.",
 						Computed:            true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
-							stringplanmodifier.RequiresReplace(),
 						},
 					},
 					"cloud_provider": schema.StringAttribute{
@@ -253,14 +257,23 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 							"host": schema.StringAttribute{
 								MarkdownDescription: "The host of the public endpoint.",
 								Computed:            true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"port": schema.Int64Attribute{
 								MarkdownDescription: "The port of the public endpoint.",
 								Computed:            true,
+								PlanModifiers: []planmodifier.Int64{
+									int64planmodifier.UseStateForUnknown(),
+								},
 							},
 							"disabled": schema.BoolAttribute{
 								MarkdownDescription: "Whether the public endpoint is disabled.",
 								Optional:            true,
+								PlanModifiers: []planmodifier.Bool{
+									boolplanmodifier.UseStateForUnknown(),
+								},
 							},
 						},
 					},
@@ -574,7 +587,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	if fieldName == "" {
-		resp.Diagnostics.AddError("Update Error", "No updatable field found")
+		tflog.Debug(ctx, "no field need to update")
 		return
 	}
 
@@ -619,7 +632,7 @@ func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clust
 		Region: clusterV1beta1.Commonv1beta1Region{
 			Name: &regionName,
 		},
-		Labels:               &labels,
+		Labels: &labels,
 	}
 
 	if data.SpendingLimit != nil {
@@ -671,6 +684,7 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 	}
 	data.ClusterId = types.StringValue(*resp.ClusterId)
 	data.DisplayName = types.StringValue(resp.DisplayName)
+	data.ProjectId = types.StringValue((*resp.Labels)[LabelsKeyProjectId])
 
 	r := resp.Region
 	data.Region = &region{
