@@ -62,7 +62,7 @@ func TestUTServerlessClusterResource(t *testing.T) {
 	updateClusterSuccessResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, "test-tf2", string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
 
 	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil)
-    s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil).AnyTimes()
+	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil).AnyTimes()
 	gomock.InOrder(
 		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).Times(3),
 		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterAfterUpdateResp, nil).Times(3),
@@ -93,7 +93,7 @@ func testServerlessClusterResource(t *testing.T) {
 			// // Update correctly
 			{
 				ExpectNonEmptyPlan: true,
-				Config: testUTServerlessClusterResourceUpdateConfig(),
+				Config:             testUTServerlessClusterResourceUpdateConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "display_name", "test-tf2"),
 				),
@@ -102,7 +102,7 @@ func testServerlessClusterResource(t *testing.T) {
 			{
 				ExpectNonEmptyPlan: true,
 				Config:             testUTServerlessClusterResourceUpdateTooManyFieldsConfig(),
-				ExpectError:        regexp.MustCompile(`.*Unable to change .* and .* at the same time.*`),
+				ExpectError:        regexp.MustCompile(`.*Unable to change more than one filed at the same time.*`),
 			},
 			// Delete testing automatically occurs in TestCase
 		},
