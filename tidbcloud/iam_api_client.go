@@ -45,7 +45,7 @@ type IAMClientDelegate struct {
 	ic *iam.APIClient
 }
 
-func NewIAMClientDelegate(publicKey string, privateKey string, iamEndpoint string, userAgent string) (*IAMClientDelegate, error) {
+func NewIAMClientDelegate(publicKey string, privateKey string, iamEndpoint string, userAgent string) (TiDBCloudIAMClient, error) {
 	transport := NewTransportWithAgent(&digest.Transport{
 		Username: publicKey,
 		Password: privateKey,
