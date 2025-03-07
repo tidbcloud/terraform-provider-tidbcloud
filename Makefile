@@ -8,6 +8,8 @@ testacc:
 .PHONY: generate-mocks
 generate-mocks: ## Generate mock objects
 	@echo "==> Generating mock objects"
-	go install github.com/vektra/mockery/v2@v2.50.0
-	# mockery --name TiDBCloudClient --recursive --output=mock --outpkg mock --filename api_client.go
-	mockery --name TiDBCloudDedicatedClient --recursive --output=mock --outpkg mock --filename dedicated_api_client.go
+	go install github.com/golang/mock/mockgen@v1.6.0
+	# mockgen --source=./tidbcloud/api_client.go --destination=./mock/mock_client.go --package mock
+	mockgen --source=./tidbcloud/serverless_api_client.go --destination=./mock/mock_serverless_client.go --package mock
+	mockgen --source=./tidbcloud/iam_api_client.go --destination=./mock/mock_iam_client.go --package mock
+	
