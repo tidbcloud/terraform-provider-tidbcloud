@@ -52,7 +52,7 @@ resource "tidbcloud_serverless_sql_user" "example" {
 
 ### Required
 
-- `builtin_role` (String) The builtin role of the user.
+- `builtin_role` (String) The builtinRole of the sql user,available values [role_admin,role_readonly,role_readwrite]. The builtinRole[role_readonly,role_readwrite] must be start with user_prefix in the schema of serverless cluster
 - `cluster_id` (String) The ID of the cluster.
 - `password` (String, Sensitive) The password of the user.
 - `user_name` (String) The name of the user.
