@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
 func TestAccDedicatedClusterResource(t *testing.T) {
@@ -40,11 +41,15 @@ func TestAccDedicatedClusterResource(t *testing.T) {
 			{
 				Config: testAccDedicatedClusterResourceConfig_paused(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("tidbcloud_dedicated_cluster.test", "state", string(dedicatedClusterStatusPaused)),
+					resource.TestCheckResourceAttr("tidbcloud_dedicated_cluster.test", "state", string(dedicated.COMMONV1BETA1CLUSTERSTATE_PAUSED)),
 				),
 			},
 		},
 	})
+}
+
+func TestUTDedicatedClusterResource(t *testing.T) {
+
 }
 
 func testAccDedicatedClusterResourceConfig() string {

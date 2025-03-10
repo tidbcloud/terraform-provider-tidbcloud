@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -19,25 +21,9 @@ import (
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
-const (
-	dedicatedClusterStatusCreating    clusterStatus = "CREATING"
-	dedicatedClusterStatusDeleting    clusterStatus = "DELETING"
-	dedicatedClusterStatusActive      clusterStatus = "ACTIVE"
-	dedicatedClusterStatusRestoring   clusterStatus = "RESTORING"
-	dedicatedClusterStatusMaintenance clusterStatus = "MAINTENANCE"
-	dedicatedClusterStatusDeleted     clusterStatus = "DELETED"
-	dedicatedClusterStatusInactive    clusterStatus = "INACTIVE"
-	dedicatedClusterStatusUPgrading   clusterStatus = "UPGRADING"
-	dedicatedClusterStatusImporting   clusterStatus = "IMPORTING"
-	dedicatedClusterStatusModifying   clusterStatus = "MODIFYING"
-	dedicatedClusterStatusPausing     clusterStatus = "PAUSING"
-	dedicatedClusterStatusPaused      clusterStatus = "PAUSED"
-	dedicatedClusterStatusResuming    clusterStatus = "RESUMING"
-)
-
 type dedicatedClusterResourceData struct {
 	ProjectId          types.String        `tfsdk:"project_id"`
-	ClusterId          types.String        `tfsdk:"id"`
+	ClusterId          types.String        `tfsdk:"cluster_id"`
 	Name               types.String        `tfsdk:"name"`
 	CloudProvider      types.String        `tfsdk:"cloud_provider"`
 	RegionId           types.String        `tfsdk:"region_id"`
@@ -122,7 +108,7 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 				MarkdownDescription: "The ID of the project.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
+			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -136,6 +122,9 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			"cloud_provider": schema.StringAttribute{
 				MarkdownDescription: "The cloud provider on which your cluster is hosted.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				MarkdownDescription: "The region where the cluster is deployed.",
@@ -157,10 +146,17 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			"port": schema.Int64Attribute{
 				MarkdownDescription: "The port used for accessing the cluster.",
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"paused": schema.BoolAttribute{
 				MarkdownDescription: "Whether the cluster is paused.",
 				Optional:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"pause_plan": schema.SingleNestedAttribute{
 				MarkdownDescription: "Pause plan details for the cluster.",
@@ -183,14 +179,23 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			"version": schema.StringAttribute{
 				MarkdownDescription: "The version of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"created_by": schema.StringAttribute{
 				MarkdownDescription: "The creator of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				MarkdownDescription: "The creation time of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				MarkdownDescription: "The last update time of the cluster.",
@@ -199,11 +204,17 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			"region_display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the region.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"annotations": schema.MapAttribute{
 				MarkdownDescription: "A map of annotations for the cluster.",
 				Computed:            true,
 				ElementType:         types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"tidb_node_setting": schema.SingleNestedAttribute{
 				MarkdownDescription: "Settings for TiDB nodes.",
@@ -220,22 +231,37 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 					"node_group_id": schema.StringAttribute{
 						MarkdownDescription: "The ID of the default node group.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"node_group_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the default node group.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"node_spec_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the node spec.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"is_default_group": schema.BoolAttribute{
 						MarkdownDescription: "Indicates if this is the default group.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"state": schema.StringAttribute{
 						MarkdownDescription: "The state of the node group.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 				},
 			},
@@ -262,6 +288,9 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 					"node_spec_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the node spec.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 				},
 			},
@@ -620,17 +649,18 @@ func WaitDedicatedClusterReady(ctx context.Context, timeout time.Duration, inter
 	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
-			string(dedicatedClusterStatusCreating),
-			string(dedicatedClusterStatusModifying),
-			string(dedicatedClusterStatusResuming),
-			string(dedicatedClusterStatusImporting),
-			string(dedicatedClusterStatusPausing),
-			string(dedicatedClusterStatusUPgrading),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_CREATING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_MODIFYING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_RESUMING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_IMPORTING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_PAUSING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_UPGRADING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_DELETING),
 		},
 		Target: []string{
-			string(dedicatedClusterStatusActive),
-			string(dedicatedClusterStatusPaused),
-			string(dedicatedClusterStatusMaintenance),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_ACTIVE),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_PAUSED),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_MAINTENANCE),
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,
