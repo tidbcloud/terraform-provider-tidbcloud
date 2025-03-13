@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -19,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
-	clusterV1beta1 "github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/serverless/cluster"
+	branchV1beta1 "github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/serverless/branch"
 )
 
 type serverlessBranchResourceData struct {
@@ -71,14 +72,30 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"branch_id": schema.StringAttribute{
+				MarkdownDescription: "The ID of the branch.",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the cluster.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"parent_id": schema.StringAttribute{
 				MarkdownDescription: "The parent ID of the branch.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"endpoints": schema.SingleNestedAttribute{
 				MarkdownDescription: "The endpoints for connecting to the cluster.",
@@ -218,7 +235,7 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"parent_timestamp": schema.StringAttribute{
-				MarkdownDescription: "The timestamp of the parent.",
+				MarkdownDescription: "The timestamp of the parent. (RFC3339 format, e.g., 2024-01-01T00:00:00Z)",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -256,19 +273,18 @@ func (r serverlessBranchResource) Create(ctx context.Context, req resource.Creat
 	tflog.Trace(ctx, "create serverless_branch_resource")
 	body, err := buildCreateServerlessBranchBody(data)
 	if err != nil {
-		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to build CreateCluster body, got error: %s", err))
+		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to build CreateBranch body, got error: %s", err))
 		return
 	}
-	cluster, err := r.provider.ServerlessClient.CreateCluster(ctx, &body)
+	branch, err := r.provider.ServerlessClient.CreateBranch(ctx, data.ClusterId.ValueString(), &body)
 	if err != nil {
-		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call CreateCluster, got error: %s", err))
+		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call CreateBranch, got error: %s", err))
 		return
 	}
 
-	clusterId := *cluster.ClusterId
-	data.ClusterId = types.StringValue(clusterId)
-	tflog.Info(ctx, "wait serverless cluster ready")
-	cluster, err = WaitServerlessBranchReady(ctx, clusterServerlessCreateTimeout, clusterServerlessCreateInterval, clusterId, r.provider.ServerlessClient)
+	branchId := *branch.BranchId
+	tflog.Info(ctx, "wait serverless branch ready")
+	branch, err = WaitServerlessBranchReady(ctx, clusterServerlessCreateTimeout, clusterServerlessCreateInterval, data.ClusterId.ValueString(), branchId, r.provider.ServerlessClient)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Cluster creation failed",
@@ -276,12 +292,13 @@ func (r serverlessBranchResource) Create(ctx context.Context, req resource.Creat
 		)
 		return
 	}
-	cluster, err = r.provider.ServerlessClient.GetCluster(ctx, *cluster.ClusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
+	branch, err = r.provider.ServerlessClient.GetBranch(ctx, data.ClusterId.ValueString(), branchId, branchV1beta1.BRANCHSERVICEGETBRANCHVIEWPARAMETER_FULL)
 	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
+		tflog.Error(ctx, fmt.Sprintf("Unable to call GetBranch, error: %s", err))
 		return
 	}
-	err = refreshServerlessBranchResourceData(ctx, cluster, &data)
+	data.BranchId = types.StringValue(branchId)
+	err = refreshServerlessBranchResourceData(ctx, branch, &data)
 	if err != nil {
 		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless cluster resource data, got error: %s", err))
 		return
@@ -304,14 +321,14 @@ func (r serverlessBranchResource) Read(ctx context.Context, req resource.ReadReq
 
 	// call read api
 	tflog.Trace(ctx, "read serverless_branch_resource")
-	cluster, err := r.provider.ServerlessClient.GetCluster(ctx, data.ClusterId.ValueString(), clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
+	branch, err := r.provider.ServerlessClient.GetBranch(ctx, data.ClusterId.ValueString(), data.BranchId.ValueString(), branchV1beta1.BRANCHSERVICEGETBRANCHVIEWPARAMETER_FULL)
 	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
+		tflog.Error(ctx, fmt.Sprintf("Unable to call GetBranch, error: %s", err))
 		return
 	}
-	err = refreshServerlessBranchResourceData(ctx, cluster, &data)
+	err = refreshServerlessBranchResourceData(ctx, branch, &data)
 	if err != nil {
-		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless cluster resource data, got error: %s", err))
+		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless branch resource data, got error: %s", err))
 		return
 	}
 
@@ -322,208 +339,79 @@ func (r serverlessBranchResource) Read(ctx context.Context, req resource.ReadReq
 
 func (r serverlessBranchResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var clusterId string
+	var branchId string
 
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("cluster_id"), &clusterId)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("branch_id"), &branchId)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tflog.Trace(ctx, "delete serverless_branch_resource")
-	_, err := r.provider.ServerlessClient.DeleteCluster(ctx, clusterId)
+	_, err := r.provider.ServerlessClient.DeleteBranch(ctx, clusterId, branchId)
 	if err != nil {
-		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteCluster, got error: %s", err))
+		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteBranch, got error: %s", err))
 		return
 	}
 }
 
 func (r serverlessBranchResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// get plan
-	var plan serverlessBranchResourceData
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	// get state
-	var state serverlessBranchResourceData
-	diags = req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	var fieldName string
-	body := &clusterV1beta1.V1beta1ServerlessServicePartialUpdateClusterBody{
-		Cluster: &clusterV1beta1.RequiredTheClusterToBeUpdated{},
-	}
-
-	if plan.DisplayName.ValueString() != state.DisplayName.ValueString() {
-		displayName := plan.DisplayName.ValueString()
-		body.Cluster.DisplayName = &displayName
-		fieldName = string(DisplayName)
-	}
-
-	if plan.Endpoints.PublicEndpoint.Disabled.ValueBool() != state.Endpoints.PublicEndpoint.Disabled.ValueBool() {
-		if fieldName != "" {
-			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change more than one filed at the same time: %s and %s are changed", fieldName, string(PublicEndpointDisabled)))
-			return
-		}
-		publicEndpointDisabled := plan.Endpoints.PublicEndpoint.Disabled.ValueBool()
-		body.Cluster.Endpoints = &clusterV1beta1.V1beta1ClusterEndpoints{
-			Public: &clusterV1beta1.EndpointsPublic{
-				Disabled: &publicEndpointDisabled,
-			},
-		}
-		fieldName = string(PublicEndpointDisabled)
-	}
-
-	if plan.SpendingLimit != nil {
-		if plan.SpendingLimit.Monthly.ValueInt64() != state.SpendingLimit.Monthly.ValueInt64() {
-			if fieldName != "" {
-				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change more than one filed at the same time: %s and %s are changed", fieldName, string(SpendingLimitMonthly)))
-				return
-			}
-			spendingLimit := plan.SpendingLimit.Monthly.ValueInt64()
-			spendingLimitInt32 := int32(spendingLimit)
-			body.Cluster.SpendingLimit = &clusterV1beta1.ClusterSpendingLimit{
-				Monthly: &spendingLimitInt32,
-			}
-			fieldName = string(SpendingLimitMonthly)
-		}
-	}
-
-	if plan.AutomatedBackupPolicy != nil {
-		if plan.AutomatedBackupPolicy.StartTime.ValueString() != state.AutomatedBackupPolicy.StartTime.ValueString() {
-			if fieldName != "" {
-				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change more than one filed at the same time: %s and %s are changed", fieldName, string(AutomatedBackupPolicySchedule)))
-				return
-			}
-			automatedBackupPolicyStartTime := plan.AutomatedBackupPolicy.StartTime.ValueString()
-			body.Cluster.AutomatedBackupPolicy = &clusterV1beta1.V1beta1ClusterAutomatedBackupPolicy{
-				StartTime: &automatedBackupPolicyStartTime,
-			}
-			fieldName = string(AutomatedBackupPolicySchedule)
-		}
-	}
-
-	if fieldName == "" {
-		tflog.Info(ctx, "no field needs to be updated")
-		return
-	}
-
-	body.UpdateMask = fieldName
-	// call update api
-	tflog.Trace(ctx, "update serverless_branch_resource")
-	_, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
-	if err != nil {
-		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
-		return
-	}
-	// because the update api does not return the annotations, we need to call the get api
-	cluster, err := r.provider.ServerlessClient.GetCluster(ctx, state.ClusterId.ValueString(), clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
-	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
-		return
-	}
-	err = refreshServerlessBranchResourceData(ctx, cluster, &state)
-	if err != nil {
-		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless cluster resource data, got error: %s", err))
-		return
-	}
-
-	// save into the Terraform state.
-	diags = resp.State.Set(ctx, &state)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.AddWarning("Update Warning", "Update is not supported for serverless branch")
 }
 
 func (r serverlessBranchResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("cluster_id"), req, resp)
+	idParts := strings.Split(req.ID, ",")
+
+	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+		resp.Diagnostics.AddError(
+			"Unexpected Import Identifier",
+			fmt.Sprintf("Expected import identifier with format: cluster_id, branch_id. Got: %q", req.ID),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cluster_id"), idParts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("branch_id"), idParts[1])...)
 }
 
-func buildCreateServerlessBranchBody(data serverlessBranchResourceData) (clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
+func buildCreateServerlessBranchBody(data serverlessBranchResourceData) (branchV1beta1.Branch, error) {
 	displayName := data.DisplayName.ValueString()
-	regionName := data.Region.Name.ValueString()
-	labels := make(map[string]string)
-	if !data.ProjectId.IsUnknown() && !data.ProjectId.IsNull() {
-		labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
-	}
-	body := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{
-		DisplayName: displayName,
-		Region: clusterV1beta1.Commonv1beta1Region{
-			Name: &regionName,
-		},
-		Labels: &labels,
+	parentId := data.ParentId.ValueString()
+	body := branchV1beta1.Branch{
+		DisplayName:     displayName,
+		ParentId:        &parentId,
 	}
 
-	if data.SpendingLimit != nil {
-		spendingLimit := data.SpendingLimit.Monthly.ValueInt64()
-		spendingLimitInt32 := int32(spendingLimit)
-		body.SpendingLimit = &clusterV1beta1.ClusterSpendingLimit{
-			Monthly: &spendingLimitInt32,
+	if data.ParentTimestamp.ValueString() != "" {
+		parentTimestampStr := data.ParentTimestamp.ValueString()
+		parentTimestamp, err := time.Parse(time.RFC3339, parentTimestampStr)
+		if err != nil {
+			return branchV1beta1.Branch{}, err
 		}
-	}
-
-	if data.AutomatedBackupPolicy != nil {
-		automatedBackupPolicy := data.AutomatedBackupPolicy
-		automatedBackupPolicyStartTime := automatedBackupPolicy.StartTime.ValueString()
-		automatedBackupPolicyRetentionDays := automatedBackupPolicy.RetentionDays.ValueInt64()
-		automatedBackupPolicyRetentionDaysInt32 := int32(automatedBackupPolicyRetentionDays)
-		body.AutomatedBackupPolicy = &clusterV1beta1.V1beta1ClusterAutomatedBackupPolicy{
-			StartTime:     &automatedBackupPolicyStartTime,
-			RetentionDays: &automatedBackupPolicyRetentionDaysInt32,
-		}
+		body.ParentTimestamp = *branchV1beta1.NewNullableTime(&parentTimestamp)
 	}
 
 	if data.Endpoints != nil {
 		publicEndpointsDisabled := data.Endpoints.PublicEndpoint.Disabled.ValueBool()
-		body.Endpoints = &clusterV1beta1.V1beta1ClusterEndpoints{
-			Public: &clusterV1beta1.EndpointsPublic{
+		body.Endpoints = &branchV1beta1.BranchEndpoints{
+			Public: &branchV1beta1.BranchEndpointsPublic{
 				Disabled: &publicEndpointsDisabled,
 			},
 		}
 	}
 
-	if data.EncryptionConfig != nil {
-		encryptionConfig := data.EncryptionConfig
-		enhancedEncryptionEnabled := encryptionConfig.EnhancedEncryptionEnabled.ValueBool()
-		body.EncryptionConfig = &clusterV1beta1.V1beta1ClusterEncryptionConfig{
-			EnhancedEncryptionEnabled: &enhancedEncryptionEnabled,
-		}
-	}
 	return body, nil
 }
 
-func refreshServerlessBranchResourceData(ctx context.Context, resp *clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, data *serverlessBranchResourceData) error {
-	labels, diags := types.MapValueFrom(ctx, types.StringType, *resp.Labels)
-	if diags.HasError() {
-		return errors.New("unable to convert labels")
-	}
+func refreshServerlessBranchResourceData(ctx context.Context, resp *branchV1beta1.Branch, data *serverlessBranchResourceData) error {
 	annotations, diags := types.MapValueFrom(ctx, types.StringType, *resp.Annotations)
 	if diags.HasError() {
 		return errors.New("unable to convert annotations")
 	}
-	data.ClusterId = types.StringValue(*resp.ClusterId)
+
 	data.DisplayName = types.StringValue(resp.DisplayName)
-	data.ProjectId = types.StringValue((*resp.Labels)[LabelsKeyProjectId])
-
-	r := resp.Region
-	data.Region = &region{
-		Name:          types.StringValue(*r.Name),
-		RegionId:      types.StringValue(*r.RegionId),
-		CloudProvider: types.StringValue(string(*r.CloudProvider)),
-		DisplayName:   types.StringValue(*r.DisplayName),
-	}
-
-	s := resp.SpendingLimit
-	data.SpendingLimit = &spendingLimit{
-		Monthly: types.Int64Value(int64(*s.Monthly)),
-	}
-
-	a := resp.AutomatedBackupPolicy
-	data.AutomatedBackupPolicy = &automatedBackupPolicy{
-		StartTime:     types.StringValue(*a.StartTime),
-		RetentionDays: types.Int64Value(int64(*a.RetentionDays)),
-	}
+	data.ParentTimestamp = types.StringValue(resp.ParentTimestamp.Get().String())
+	data.ParentDisplayName = types.StringValue(*resp.ParentDisplayName)
 
 	e := resp.Endpoints
 	var pe privateEndpoint
@@ -561,72 +449,57 @@ func refreshServerlessBranchResourceData(ctx context.Context, resp *clusterV1bet
 		PrivateEndpoint: &pe,
 	}
 
-	en := resp.EncryptionConfig
-	data.EncryptionConfig = &encryptionConfig{
-		EnhancedEncryptionEnabled: types.BoolValue(*en.EnhancedEncryptionEnabled),
-	}
-
-	data.Version = types.StringValue(*resp.Version)
 	data.CreatedBy = types.StringValue(*resp.CreatedBy)
 	data.CreateTime = types.StringValue(resp.CreateTime.String())
 	data.UpdateTime = types.StringValue(resp.UpdateTime.String())
-	data.UserPrefix = types.StringValue(*resp.UserPrefix)
+	data.UserPrefix = types.StringValue(*resp.UserPrefix.Get())
 	data.State = types.StringValue(string(*resp.State))
 
 	u := resp.Usage
 	data.Usage = &usage{
 		RequestUnit:     types.StringValue(*u.RequestUnit),
-		RowBasedStorage: types.Int64Value(int64(*u.RowBasedStorage)),
+		RowBasedStorage: types.Int64Value(int64(*u.RowStorage)),
 		ColumnarStorage: types.Int64Value(int64(*u.ColumnarStorage)),
 	}
 
-	data.Labels = labels
 	data.Annotations = annotations
 	return nil
 }
 
-func WaitServerlessBranchReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string,
-	client tidbcloud.TiDBCloudServerlessClient) (*clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
+func WaitServerlessBranchReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string, branchId string,
+	client tidbcloud.TiDBCloudServerlessClient) (*branchV1beta1.Branch, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_CREATING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_DELETING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_RESTORING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_INACTIVE),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_UPGRADING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_IMPORTING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_MODIFYING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_PAUSING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_RESUMING),
+			string(branchV1beta1.BRANCHSTATE_CREATING),
+			string(branchV1beta1.BRANCHSTATE_RESTORING),
 		},
 		Target: []string{
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_PAUSED),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_DELETED),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_MAINTENANCE),
+			string(branchV1beta1.BRANCHSTATE_ACTIVE),
+			string(branchV1beta1.BRANCHSTATE_DELETED),
+			string(branchV1beta1.BRANCHSTATE_MAINTENANCE),
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,
 		PollInterval: interval,
-		Refresh:      serverlessBranchStateRefreshFunc(ctx, clusterId, client),
+		Refresh:      serverlessBranchStateRefreshFunc(ctx, clusterId, branchId, client),
 	}
 
 	outputRaw, err := stateConf.WaitForStateContext(ctx)
 
-	if output, ok := outputRaw.(*clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster); ok {
+	if output, ok := outputRaw.(*branchV1beta1.Branch); ok {
 		return output, err
 	}
 	return nil, err
 }
 
-func serverlessBranchStateRefreshFunc(ctx context.Context, clusterId string,
+func serverlessBranchStateRefreshFunc(ctx context.Context, clusterId string, branchId string,
 	client tidbcloud.TiDBCloudServerlessClient) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		tflog.Trace(ctx, "Waiting for serverless cluster ready")
-		cluster, err := client.GetCluster(ctx, clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC)
+		branch, err := client.GetBranch(ctx, clusterId, branchId, branchV1beta1.BRANCHSERVICEGETBRANCHVIEWPARAMETER_BASIC)
 		if err != nil {
 			return nil, "", err
 		}
-		return cluster, string(*cluster.State), nil
+		return branch, string(*branch.State), nil
 	}
 }
