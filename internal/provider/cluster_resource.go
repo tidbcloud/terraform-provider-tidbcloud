@@ -472,7 +472,12 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 			resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetCluster, got error: %s", err))
 			return
 		}
+		// when cluster is creating, the `port` is not returned by create api, so we need to set it to state
+		port := data.Config.Port.ValueInt64()
 		refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
+		if data.Config.Port.ValueInt64() == 0 {
+			data.Config.Port = types.Int64Value(port)
+		}
 	}
 
 	// save into the Terraform state.
