@@ -335,6 +335,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 						Computed:            true,
 						PlanModifiers: []planmodifier.Bool{
 							boolplanmodifier.RequiresReplace(),
+							boolplanmodifier.UseStateForUnknown(),
 						},
 					},
 				},
