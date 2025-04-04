@@ -19,6 +19,30 @@ type TiDBCloudDedicatedClient interface {
 	ListRegions(ctx context.Context, cloudProvider string, projectId string) ([]dedicated.Commonv1beta1Region, error)
 	GetRegion(ctx context.Context, regionId string) (*dedicated.Commonv1beta1Region, error)
 	ListCloudProviders(ctx context.Context, projectId string) ([]dedicated.V1beta1RegionCloudProvider, error)
+	CreateCluster(ctx context.Context, body *dedicated.TidbCloudOpenApidedicatedv1beta1Cluster) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	GetCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	UpdateCluster(ctx context.Context, clusterId string, body *dedicated.ClusterServiceUpdateClusterRequest) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	PauseCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	ResumeCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	ChangeClusterRootPassword(ctx context.Context, clusterId string, body *dedicated.ClusterServiceResetRootPasswordBody) error
+	CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	DeleteTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) error
+	UpdateTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	GetTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	ListTiDBNodeGroups(ctx context.Context, clusterId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	CreatePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.V1beta1PrivateEndpointConnection, error)
+	DeletePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) error
+	GetPrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) (*dedicated.V1beta1PrivateEndpointConnection, error)
+	ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string) ([]dedicated.V1beta1PrivateEndpointConnection, error)
+	CreateNetworkContainer(ctx context.Context, body *dedicated.V1beta1NetworkContainer) (*dedicated.V1beta1NetworkContainer, error)
+	DeleteNetworkContainer(ctx context.Context, networkContainerId string) error
+	GetNetworkContainer(ctx context.Context, networkContainerId string) (*dedicated.V1beta1NetworkContainer, error)
+	ListNetworkContainers(ctx context.Context) ([]dedicated.V1beta1NetworkContainer, error)
+	CreateVPCPeering(ctx context.Context, body *dedicated.Dedicatedv1beta1VpcPeering) (*dedicated.Dedicatedv1beta1VpcPeering, error)
+	DeleteVPCPeering(ctx context.Context, vpcPeeringId string) error
+	GetVPCPeering(ctx context.Context, vpcPeeringId string) (*dedicated.Dedicatedv1beta1VpcPeering, error)
+	ListVPCPeerings(ctx context.Context) ([]dedicated.Dedicatedv1beta1VpcPeering, error)
 }
 
 func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userAgent string) (*dedicated.APIClient, error) {
@@ -87,6 +111,158 @@ func (d *DedicatedClientDelegate) ListCloudProviders(ctx context.Context, projec
 
 	resp, h, err := req.Execute()
 	return resp.CloudProviders, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) CreateCluster(ctx context.Context, body *dedicated.TidbCloudOpenApidedicatedv1beta1Cluster) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	r := d.dc.ClusterServiceAPI.ClusterServiceCreateCluster(ctx)
+	if body != nil {
+		r = r.Cluster(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) GetCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	resp, h, err := d.dc.ClusterServiceAPI.ClusterServiceGetCluster(ctx, clusterId).Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	resp, h, err := d.dc.ClusterServiceAPI.ClusterServiceDeleteCluster(ctx, clusterId).Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) UpdateCluster(ctx context.Context, clusterId string, body *dedicated.ClusterServiceUpdateClusterRequest) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	r := d.dc.ClusterServiceAPI.ClusterServiceUpdateCluster(ctx, clusterId)
+	if body != nil {
+		r = r.Cluster(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) PauseCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	resp, h, err := d.dc.ClusterServiceAPI.ClusterServicePauseCluster(ctx, clusterId).Execute()
+	return &resp.Cluster, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) ResumeCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+	resp, h, err := d.dc.ClusterServiceAPI.ClusterServiceResumeCluster(ctx, clusterId).Execute()
+	return &resp.Cluster, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) ChangeClusterRootPassword(ctx context.Context, clusterId string, body *dedicated.ClusterServiceResetRootPasswordBody) error {
+	r := d.dc.ClusterServiceAPI.ClusterServiceResetRootPassword(ctx, clusterId)
+	if body != nil {
+		r = r.Body(*body)
+	}
+	_, h, err := r.Execute()
+	return parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+	r := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceCreateTidbNodeGroup(ctx, clusterId)
+	if body != nil {
+		r = r.TidbNodeGroup(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) DeleteTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) error {
+	_, h, err := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceDeleteTidbNodeGroup(ctx, clusterId, nodeGroupId).Execute()
+	return parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) UpdateTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+	r := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceUpdateTidbNodeGroup(ctx, clusterId, nodeGroupId)
+	if body != nil {
+		r = r.TidbNodeGroup(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) GetTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+	resp, h, err := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceGetTidbNodeGroup(ctx, clusterId, nodeGroupId).Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) ListTiDBNodeGroups(ctx context.Context, clusterId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+	resp, h, err := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceListTidbNodeGroups(ctx, clusterId).Execute()
+	return resp.TidbNodeGroups, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) CreatePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.V1beta1PrivateEndpointConnection, error) {
+	r := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceCreatePrivateEndpointConnection(ctx, clusterId, nodeGroupId)
+	if body != nil {
+		r = r.PrivateEndpointConnection(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) DeletePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) error {
+	_, h, err := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceDeletePrivateEndpointConnection(ctx, clusterId, nodeGroupId, privateEndpointConnectionId).Execute()
+	return parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) GetPrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) (*dedicated.V1beta1PrivateEndpointConnection, error) {
+	resp, h, err := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceGetPrivateEndpointConnection(ctx, clusterId, nodeGroupId, privateEndpointConnectionId).Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string) ([]dedicated.V1beta1PrivateEndpointConnection, error) {
+	resp, h, err := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceListPrivateEndpointConnections(ctx, clusterId, nodeGroupId).Execute()
+	return resp.PrivateEndpointConnections, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) CreateNetworkContainer(ctx context.Context, body *dedicated.V1beta1NetworkContainer) (*dedicated.V1beta1NetworkContainer, error) {
+	r := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceCreateNetworkContainer(ctx)
+	if body != nil {
+		r = r.NetworkContainer(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) DeleteNetworkContainer(ctx context.Context, networkContainerId string) error {
+	_, h, err := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceDeleteNetworkContainer(ctx, networkContainerId).Execute()
+	return parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) GetNetworkContainer(ctx context.Context, networkContainerId string) (*dedicated.V1beta1NetworkContainer, error) {
+	resp, h, err := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceGetNetworkContainer(ctx, networkContainerId).Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) ListNetworkContainers(ctx context.Context) ([]dedicated.V1beta1NetworkContainer, error) {
+	resp, h, err := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceListNetworkContainers(ctx).Execute()
+	return resp.NetworkContainers, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) CreateVPCPeering(ctx context.Context, body *dedicated.Dedicatedv1beta1VpcPeering) (*dedicated.Dedicatedv1beta1VpcPeering, error) {
+	r := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceCreateVpcPeering(ctx)
+	if body != nil {
+		r = r.VpcPeering(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) DeleteVPCPeering(ctx context.Context, vpcPeeringId string) error {
+	_, h, err := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceDeleteVpcPeering(ctx, vpcPeeringId).Execute()
+	return parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) GetVPCPeering(ctx context.Context, vpcPeeringId string) (*dedicated.Dedicatedv1beta1VpcPeering, error) {
+	resp, h, err := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceGetVpcPeering(ctx, vpcPeeringId).Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) ListVPCPeerings(ctx context.Context) ([]dedicated.Dedicatedv1beta1VpcPeering, error) {
+	resp, h, err := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceListVpcPeerings(ctx).Execute()
+	return resp.VpcPeerings, parseError(err, h)
 }
 
 func parseError(err error, resp *http.Response) error {
