@@ -23,7 +23,7 @@ func TestAccServerlessClusterDataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(serverlessClusterDataSourceName, "display_name", "test-tf"),
 					resource.TestCheckResourceAttr(serverlessClusterDataSourceName, "region.name", "regions/aws-us-east-1"),
-					resource.TestCheckResourceAttr(serverlessClusterDataSourceName, "endpoints.public.port", "4000"),
+					resource.TestCheckResourceAttr(serverlessClusterDataSourceName, "endpoints.public_endpoint.port", "4000"),
 				),
 			},
 		},

@@ -93,7 +93,7 @@ func (d *serverlessClusterDataSource) Schema(_ context.Context, _ datasource.Sch
 				MarkdownDescription: "The spending limit of the cluster.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"monthly": schema.Int64Attribute{
+					"monthly": schema.Int32Attribute{
 						MarkdownDescription: "Maximum monthly spending limit in USD cents.",
 						Computed:            true,
 					},
@@ -107,7 +107,7 @@ func (d *serverlessClusterDataSource) Schema(_ context.Context, _ datasource.Sch
 						MarkdownDescription: "The time of day when the automated backup will start.",
 						Computed:            true,
 					},
-					"retention_days": schema.Int64Attribute{
+					"retention_days": schema.Int32Attribute{
 						MarkdownDescription: "The number of days to retain automated backups.",
 						Computed:            true,
 					},
@@ -125,7 +125,7 @@ func (d *serverlessClusterDataSource) Schema(_ context.Context, _ datasource.Sch
 								MarkdownDescription: "The host of the public endpoint.",
 								Computed:            true,
 							},
-							"port": schema.Int64Attribute{
+							"port": schema.Int32Attribute{
 								MarkdownDescription: "The port of the public endpoint.",
 								Computed:            true,
 							},
@@ -143,7 +143,7 @@ func (d *serverlessClusterDataSource) Schema(_ context.Context, _ datasource.Sch
 								MarkdownDescription: "The host of the private endpoint.",
 								Computed:            true,
 							},
-							"port": schema.Int64Attribute{
+							"port": schema.Int32Attribute{
 								MarkdownDescription: "The port of the private endpoint.",
 								Computed:            true,
 							},
@@ -159,16 +159,6 @@ func (d *serverlessClusterDataSource) Schema(_ context.Context, _ datasource.Sch
 										MarkdownDescription: "The availability zones that the service is available in.",
 										Computed:            true,
 										ElementType:         types.StringType,
-									},
-								},
-							},
-							"gcp_endpoint": schema.SingleNestedAttribute{
-								MarkdownDescription: "Message for GCP PrivateLink information.",
-								Computed:            true,
-								Attributes: map[string]schema.Attribute{
-									"service_attachment_name": schema.StringAttribute{
-										MarkdownDescription: "The target GCP service attachment name for private access.",
-										Computed:            true,
 									},
 								},
 							},
@@ -280,13 +270,13 @@ func (d *serverlessClusterDataSource) Read(ctx context.Context, req datasource.R
 
 	s := cluster.SpendingLimit
 	data.SpendingLimit = &spendingLimit{
-		Monthly: types.Int64Value(int64(*s.Monthly)),
+		Monthly: types.Int32Value(*s.Monthly),
 	}
 
 	a := cluster.AutomatedBackupPolicy
 	data.AutomatedBackupPolicy = &automatedBackupPolicy{
 		StartTime:     types.StringValue(*a.StartTime),
-		RetentionDays: types.Int64Value(int64(*a.RetentionDays)),
+		RetentionDays: types.Int32Value(*a.RetentionDays),
 	}
 
 	e := cluster.Endpoints
@@ -298,7 +288,7 @@ func (d *serverlessClusterDataSource) Read(ctx context.Context, req datasource.R
 		}
 		pe = privateEndpoint{
 			Host: types.StringValue(*e.Private.Host),
-			Port: types.Int64Value(int64(*e.Private.Port)),
+			Port: types.Int32Value(*e.Private.Port),
 			AWSEndpoint: &awsEndpoint{
 				ServiceName:      types.StringValue(*e.Private.Aws.ServiceName),
 				AvailabilityZone: awsAvailabilityZone,
@@ -306,20 +296,10 @@ func (d *serverlessClusterDataSource) Read(ctx context.Context, req datasource.R
 		}
 	}
 
-	if e.Private.Gcp != nil {
-		pe = privateEndpoint{
-			Host: types.StringValue(*e.Private.Host),
-			Port: types.Int64Value(int64(*e.Private.Port)),
-			GCPEndpoint: &gcpEndpoint{
-				ServiceAttachmentName: types.StringValue(*e.Private.Gcp.ServiceAttachmentName),
-			},
-		}
-	}
-
 	data.Endpoints = &endpoints{
 		PublicEndpoint: &publicEndpoint{
 			Host:     types.StringValue(*e.Public.Host),
-			Port:     types.Int64Value(int64(*e.Public.Port)),
+			Port:     types.Int32Value(*e.Public.Port),
 			Disabled: types.BoolValue(*e.Public.Disabled),
 		},
 		PrivateEndpoint: &pe,

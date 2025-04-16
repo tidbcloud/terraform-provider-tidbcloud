@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -70,12 +70,12 @@ type region struct {
 }
 
 type spendingLimit struct {
-	Monthly types.Int64 `tfsdk:"monthly"`
+	Monthly types.Int32 `tfsdk:"monthly"`
 }
 
 type automatedBackupPolicy struct {
 	StartTime     types.String `tfsdk:"start_time"`
-	RetentionDays types.Int64  `tfsdk:"retention_days"`
+	RetentionDays types.Int32  `tfsdk:"retention_days"`
 }
 
 type endpoints struct {
@@ -85,24 +85,19 @@ type endpoints struct {
 
 type publicEndpoint struct {
 	Host     types.String `tfsdk:"host"`
-	Port     types.Int64  `tfsdk:"port"`
+	Port     types.Int32  `tfsdk:"port"`
 	Disabled types.Bool   `tfsdk:"disabled"`
 }
 
 type privateEndpoint struct {
 	Host        types.String `tfsdk:"host"`
-	Port        types.Int64  `tfsdk:"port"`
+	Port        types.Int32  `tfsdk:"port"`
 	AWSEndpoint *awsEndpoint `tfsdk:"aws_endpoint"`
-	GCPEndpoint *gcpEndpoint `tfsdk:"gcp_endpoint"`
 }
 
 type awsEndpoint struct {
 	ServiceName      types.String `tfsdk:"service_name"`
 	AvailabilityZone types.List   `tfsdk:"availability_zone"`
-}
-
-type gcpEndpoint struct {
-	ServiceAttachmentName types.String `tfsdk:"service_attachment_name"`
 }
 
 type encryptionConfig struct {
@@ -209,7 +204,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 					objectplanmodifier.UseStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
-					"monthly": schema.Int64Attribute{
+					"monthly": schema.Int32Attribute{
 						MarkdownDescription: "Maximum monthly spending limit in USD cents.",
 						Optional:            true,
 						Computed:            true,
@@ -232,11 +227,11 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
-					"retention_days": schema.Int64Attribute{
+					"retention_days": schema.Int32Attribute{
 						MarkdownDescription: "The number of days to retain automated backups.",
 						Computed:            true,
-						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.UseStateForUnknown(),
+						PlanModifiers: []planmodifier.Int32{
+							int32planmodifier.UseStateForUnknown(),
 						},
 					},
 				},
@@ -261,11 +256,11 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 									stringplanmodifier.UseStateForUnknown(),
 								},
 							},
-							"port": schema.Int64Attribute{
+							"port": schema.Int32Attribute{
 								MarkdownDescription: "The port of the public endpoint.",
 								Computed:            true,
-								PlanModifiers: []planmodifier.Int64{
-									int64planmodifier.UseStateForUnknown(),
+								PlanModifiers: []planmodifier.Int32{
+									int32planmodifier.UseStateForUnknown(),
 								},
 							},
 							"disabled": schema.BoolAttribute{
@@ -288,7 +283,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 								MarkdownDescription: "The host of the private endpoint.",
 								Computed:            true,
 							},
-							"port": schema.Int64Attribute{
+							"port": schema.Int32Attribute{
 								MarkdownDescription: "The port of the private endpoint.",
 								Computed:            true,
 							},
@@ -304,16 +299,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 										MarkdownDescription: "The availability zones that the service is available in.",
 										Computed:            true,
 										ElementType:         types.StringType,
-									},
-								},
-							},
-							"gcp_endpoint": schema.SingleNestedAttribute{
-								MarkdownDescription: "Message for GCP PrivateLink information.",
-								Computed:            true,
-								Attributes: map[string]schema.Attribute{
-									"service_attachment_name": schema.StringAttribute{
-										MarkdownDescription: "The target GCP service attachment name for private access.",
-										Computed:            true,
 									},
 								},
 							},
@@ -481,7 +466,7 @@ func (r serverlessClusterResource) Read(ctx context.Context, req resource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Debug(ctx, fmt.Sprintf("read serverless_cluster_resource clusterid: %s", data.ClusterId.ValueString()))
+	tflog.Debug(ctx, fmt.Sprintf("read serverless_cluster_resource cluster_id: %s", data.ClusterId.ValueString()))
 
 	// call read api
 	tflog.Trace(ctx, "read serverless_cluster_resource")
@@ -533,7 +518,6 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	var fieldName string
 	body := &clusterV1beta1.V1beta1ServerlessServicePartialUpdateClusterBody{
 		Cluster: &clusterV1beta1.RequiredTheClusterToBeUpdated{},
 	}
@@ -541,65 +525,64 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	if plan.DisplayName.ValueString() != state.DisplayName.ValueString() {
 		displayName := plan.DisplayName.ValueString()
 		body.Cluster.DisplayName = &displayName
-		fieldName = string(DisplayName)
+		body.UpdateMask = string(DisplayName)
+		tflog.Trace(ctx, fmt.Sprintf("update serverless_cluster_resource %s", DisplayName))
+		_, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
+		if err != nil {
+			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
+			return
+		}
 	}
 
 	if plan.Endpoints.PublicEndpoint.Disabled.ValueBool() != state.Endpoints.PublicEndpoint.Disabled.ValueBool() {
-		if fieldName != "" {
-			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change more than one filed at the same time: %s and %s are changed", fieldName, string(PublicEndpointDisabled)))
-			return
-		}
 		publicEndpointDisabled := plan.Endpoints.PublicEndpoint.Disabled.ValueBool()
 		body.Cluster.Endpoints = &clusterV1beta1.V1beta1ClusterEndpoints{
 			Public: &clusterV1beta1.EndpointsPublic{
 				Disabled: &publicEndpointDisabled,
 			},
 		}
-		fieldName = string(PublicEndpointDisabled)
+		body.UpdateMask = string(PublicEndpointDisabled)
+		tflog.Trace(ctx, fmt.Sprintf("update serverless_cluster_resource %s", PublicEndpointDisabled))
+		_, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
+		if err != nil {
+			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
+			return
+		}
 	}
 
 	if plan.SpendingLimit != nil {
-		if plan.SpendingLimit.Monthly.ValueInt64() != state.SpendingLimit.Monthly.ValueInt64() {
-			if fieldName != "" {
-				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change more than one filed at the same time: %s and %s are changed", fieldName, string(SpendingLimitMonthly)))
-				return
-			}
-			spendingLimit := plan.SpendingLimit.Monthly.ValueInt64()
+		if plan.SpendingLimit.Monthly.ValueInt32() != state.SpendingLimit.Monthly.ValueInt32() {
+			spendingLimit := plan.SpendingLimit.Monthly.ValueInt32()
 			spendingLimitInt32 := int32(spendingLimit)
 			body.Cluster.SpendingLimit = &clusterV1beta1.ClusterSpendingLimit{
 				Monthly: &spendingLimitInt32,
 			}
-			fieldName = string(SpendingLimitMonthly)
+			body.UpdateMask = string(SpendingLimitMonthly)
+			tflog.Trace(ctx, fmt.Sprintf("update serverless_cluster_resource %s", SpendingLimitMonthly))
+			_, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
+			if err != nil {
+				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
+				return
+			}
 		}
 	}
 
 	if plan.AutomatedBackupPolicy != nil {
 		if plan.AutomatedBackupPolicy.StartTime.ValueString() != state.AutomatedBackupPolicy.StartTime.ValueString() {
-			if fieldName != "" {
-				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to change more than one filed at the same time: %s and %s are changed", fieldName, string(AutomatedBackupPolicySchedule)))
-				return
-			}
 			automatedBackupPolicyStartTime := plan.AutomatedBackupPolicy.StartTime.ValueString()
 			body.Cluster.AutomatedBackupPolicy = &clusterV1beta1.V1beta1ClusterAutomatedBackupPolicy{
 				StartTime: &automatedBackupPolicyStartTime,
 			}
-			fieldName = string(AutomatedBackupPolicySchedule)
+			body.UpdateMask = string(AutomatedBackupPolicySchedule)
+			tflog.Trace(ctx, fmt.Sprintf("update serverless_cluster_resource %s", AutomatedBackupPolicySchedule))
+			_, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
+			if err != nil {
+				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
+				return
+			}
 		}
 	}
 
-	if fieldName == "" {
-		tflog.Info(ctx, "no field needs to be updated")
-		return
-	}
-
-	body.UpdateMask = fieldName
-	// call update api
-	tflog.Trace(ctx, "update serverless_cluster_resource")
-	_, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
-	if err != nil {
-		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
-		return
-	}
 	// because the update api does not return the annotations, we need to call the get api
 	cluster, err := r.provider.ServerlessClient.GetCluster(ctx, state.ClusterId.ValueString(), clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
 	if err != nil {
@@ -625,7 +608,7 @@ func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clust
 	displayName := data.DisplayName.ValueString()
 	regionName := data.Region.Name.ValueString()
 	labels := make(map[string]string)
-	if !data.ProjectId.IsUnknown() && !data.ProjectId.IsNull() {
+	if IsKnown(data.ProjectId) {
 		labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
 	}
 	body := clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{
@@ -637,7 +620,7 @@ func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clust
 	}
 
 	if data.SpendingLimit != nil {
-		spendingLimit := data.SpendingLimit.Monthly.ValueInt64()
+		spendingLimit := data.SpendingLimit.Monthly.ValueInt32()
 		spendingLimitInt32 := int32(spendingLimit)
 		body.SpendingLimit = &clusterV1beta1.ClusterSpendingLimit{
 			Monthly: &spendingLimitInt32,
@@ -647,7 +630,7 @@ func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clust
 	if data.AutomatedBackupPolicy != nil {
 		automatedBackupPolicy := data.AutomatedBackupPolicy
 		automatedBackupPolicyStartTime := automatedBackupPolicy.StartTime.ValueString()
-		automatedBackupPolicyRetentionDays := automatedBackupPolicy.RetentionDays.ValueInt64()
+		automatedBackupPolicyRetentionDays := automatedBackupPolicy.RetentionDays.ValueInt32()
 		automatedBackupPolicyRetentionDaysInt32 := int32(automatedBackupPolicyRetentionDays)
 		body.AutomatedBackupPolicy = &clusterV1beta1.V1beta1ClusterAutomatedBackupPolicy{
 			StartTime:     &automatedBackupPolicyStartTime,
@@ -697,13 +680,13 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 
 	s := resp.SpendingLimit
 	data.SpendingLimit = &spendingLimit{
-		Monthly: types.Int64Value(int64(*s.Monthly)),
+		Monthly: types.Int32Value(*s.Monthly),
 	}
 
 	a := resp.AutomatedBackupPolicy
 	data.AutomatedBackupPolicy = &automatedBackupPolicy{
 		StartTime:     types.StringValue(*a.StartTime),
-		RetentionDays: types.Int64Value(int64(*a.RetentionDays)),
+		RetentionDays: types.Int32Value(*a.RetentionDays),
 	}
 
 	e := resp.Endpoints
@@ -715,7 +698,7 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 		}
 		pe = privateEndpoint{
 			Host: types.StringValue(*e.Private.Host),
-			Port: types.Int64Value(int64(*e.Private.Port)),
+			Port: types.Int32Value(*e.Private.Port),
 			AWSEndpoint: &awsEndpoint{
 				ServiceName:      types.StringValue(*e.Private.Aws.ServiceName),
 				AvailabilityZone: awsAvailabilityZone,
@@ -723,20 +706,10 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 		}
 	}
 
-	if e.Private.Gcp != nil {
-		pe = privateEndpoint{
-			Host: types.StringValue(*e.Private.Host),
-			Port: types.Int64Value(int64(*e.Private.Port)),
-			GCPEndpoint: &gcpEndpoint{
-				ServiceAttachmentName: types.StringValue(*e.Private.Gcp.ServiceAttachmentName),
-			},
-		}
-	}
-
 	data.Endpoints = &endpoints{
 		PublicEndpoint: &publicEndpoint{
 			Host:     types.StringValue(*e.Public.Host),
-			Port:     types.Int64Value(int64(*e.Public.Port)),
+			Port:     types.Int32Value(*e.Public.Port),
 			Disabled: types.BoolValue(*e.Public.Disabled),
 		},
 		PrivateEndpoint: &pe,
@@ -771,20 +744,11 @@ func WaitServerlessClusterReady(ctx context.Context, timeout time.Duration, inte
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
 			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_CREATING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_DELETING),
 			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_RESTORING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_INACTIVE),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_UPGRADING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_IMPORTING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_MODIFYING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_PAUSING),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_RESUMING),
 		},
 		Target: []string{
 			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_PAUSED),
 			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_DELETED),
-			string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_MAINTENANCE),
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,
@@ -803,7 +767,7 @@ func WaitServerlessClusterReady(ctx context.Context, timeout time.Duration, inte
 func serverlessClusterStateRefreshFunc(ctx context.Context, clusterId string,
 	client tidbcloud.TiDBCloudServerlessClient) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		tflog.Trace(ctx, "Waiting for serverless cluster ready")
+		tflog.Trace(ctx, fmt.Sprintf("Waiting for serverless cluster %s ready", clusterId))
 		cluster, err := client.GetCluster(ctx, clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC)
 		if err != nil {
 			return nil, "", err

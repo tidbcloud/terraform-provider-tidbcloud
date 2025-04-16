@@ -127,7 +127,6 @@ Read-Only:
 Read-Only:
 
 - `aws_endpoint` (Attributes) Message for AWS PrivateLink information. (see [below for nested schema](#nestedatt--endpoints--private_endpoint--aws_endpoint))
-- `gcp_endpoint` (Attributes) Message for GCP PrivateLink information. (see [below for nested schema](#nestedatt--endpoints--private_endpoint--gcp_endpoint))
 - `host` (String) The host of the private endpoint.
 - `port` (Number) The port of the private endpoint.
 
@@ -138,14 +137,6 @@ Read-Only:
 
 - `availability_zone` (List of String) The availability zones that the service is available in.
 - `service_name` (String) The AWS service name for private access.
-
-
-<a id="nestedatt--endpoints--private_endpoint--gcp_endpoint"></a>
-### Nested Schema for `endpoints.private_endpoint.gcp_endpoint`
-
-Read-Only:
-
-- `service_attachment_name` (String) The target GCP service attachment name for private access.
 
 
 
