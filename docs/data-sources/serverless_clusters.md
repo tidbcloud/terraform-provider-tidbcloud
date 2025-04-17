@@ -64,20 +64,20 @@ Read-Only:
 
 Read-Only:
 
-- `private_endpoint` (Attributes) The private endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--clusters--endpoints--private_endpoint))
-- `public_endpoint` (Attributes) The public endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--clusters--endpoints--public_endpoint))
+- `private` (Attributes) The private endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--clusters--endpoints--private))
+- `public` (Attributes) The public endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--clusters--endpoints--public))
 
-<a id="nestedatt--clusters--endpoints--private_endpoint"></a>
-### Nested Schema for `clusters.endpoints.private_endpoint`
+<a id="nestedatt--clusters--endpoints--private"></a>
+### Nested Schema for `clusters.endpoints.private`
 
 Read-Only:
 
-- `aws_endpoint` (Attributes) Message for AWS PrivateLink information. (see [below for nested schema](#nestedatt--clusters--endpoints--private_endpoint--aws_endpoint))
+- `aws` (Attributes) Message for AWS PrivateLink information. (see [below for nested schema](#nestedatt--clusters--endpoints--private--aws))
 - `host` (String) The host of the private endpoint.
 - `port` (Number) The port of the private endpoint.
 
-<a id="nestedatt--clusters--endpoints--private_endpoint--aws_endpoint"></a>
-### Nested Schema for `clusters.endpoints.private_endpoint.aws_endpoint`
+<a id="nestedatt--clusters--endpoints--private--aws"></a>
+### Nested Schema for `clusters.endpoints.private.aws`
 
 Read-Only:
 
@@ -86,8 +86,8 @@ Read-Only:
 
 
 
-<a id="nestedatt--clusters--endpoints--public_endpoint"></a>
-### Nested Schema for `clusters.endpoints.public_endpoint`
+<a id="nestedatt--clusters--endpoints--public"></a>
+### Nested Schema for `clusters.endpoints.public`
 
 Read-Only:
 

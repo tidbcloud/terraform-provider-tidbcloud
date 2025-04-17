@@ -107,7 +107,7 @@ func (d *serverlessClustersDataSource) Schema(_ context.Context, _ datasource.Sc
 							MarkdownDescription: "The endpoints for connecting to the cluster.",
 							Computed:            true,
 							Attributes: map[string]schema.Attribute{
-								"public_endpoint": schema.SingleNestedAttribute{
+								"public": schema.SingleNestedAttribute{
 									MarkdownDescription: "The public endpoint for connecting to the cluster.",
 									Computed:            true,
 									Attributes: map[string]schema.Attribute{
@@ -125,7 +125,7 @@ func (d *serverlessClustersDataSource) Schema(_ context.Context, _ datasource.Sc
 										},
 									},
 								},
-								"private_endpoint": schema.SingleNestedAttribute{
+								"private": schema.SingleNestedAttribute{
 									MarkdownDescription: "The private endpoint for connecting to the cluster.",
 									Computed:            true,
 									Attributes: map[string]schema.Attribute{
@@ -137,7 +137,7 @@ func (d *serverlessClustersDataSource) Schema(_ context.Context, _ datasource.Sc
 											MarkdownDescription: "The port of the private endpoint.",
 											Computed:            true,
 										},
-										"aws_endpoint": schema.SingleNestedAttribute{
+										"aws": schema.SingleNestedAttribute{
 											MarkdownDescription: "Message for AWS PrivateLink information.",
 											Computed:            true,
 											Attributes: map[string]schema.Attribute{
@@ -246,17 +246,17 @@ func (d *serverlessClustersDataSource) Read(ctx context.Context, req datasource.
 		}
 
 		e := cluster.Endpoints
-		var pe privateEndpoint
+		var pe private
 		if e.Private.Aws != nil {
 			awsAvailabilityZone, diag := types.ListValueFrom(ctx, types.StringType, e.Private.Aws.AvailabilityZone)
 			if diag.HasError() {
 				diags.AddError("Read Error", "unable to convert aws availability zone")
 				return
 			}
-			pe = privateEndpoint{
+			pe = private{
 				Host: types.StringValue(*e.Private.Host),
 				Port: types.Int32Value(*e.Private.Port),
-				AWSEndpoint: &awsEndpoint{
+				AWS: &aws{
 					ServiceName:      types.StringValue(*e.Private.Aws.ServiceName),
 					AvailabilityZone: awsAvailabilityZone,
 				},
@@ -264,12 +264,12 @@ func (d *serverlessClustersDataSource) Read(ctx context.Context, req datasource.
 		}
 
 		c.Endpoints = &endpoints{
-			PublicEndpoint: &publicEndpoint{
+			Public: &public{
 				Host:     types.StringValue(*e.Public.Host),
 				Port:     types.Int32Value(*e.Public.Port),
 				Disabled: types.BoolValue(*e.Public.Disabled),
 			},
-			PrivateEndpoint: &pe,
+			Private: &pe,
 		}
 
 		en := cluster.EncryptionConfig

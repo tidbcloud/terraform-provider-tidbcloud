@@ -79,23 +79,23 @@ type automatedBackupPolicy struct {
 }
 
 type endpoints struct {
-	PublicEndpoint  *publicEndpoint  `tfsdk:"public_endpoint"`
-	PrivateEndpoint *privateEndpoint `tfsdk:"private_endpoint"`
+	Public  *public  `tfsdk:"public"`
+	Private *private `tfsdk:"private"`
 }
 
-type publicEndpoint struct {
+type public struct {
 	Host     types.String `tfsdk:"host"`
 	Port     types.Int32  `tfsdk:"port"`
 	Disabled types.Bool   `tfsdk:"disabled"`
 }
 
-type privateEndpoint struct {
-	Host        types.String `tfsdk:"host"`
-	Port        types.Int32  `tfsdk:"port"`
-	AWSEndpoint *awsEndpoint `tfsdk:"aws_endpoint"`
+type private struct {
+	Host types.String `tfsdk:"host"`
+	Port types.Int32  `tfsdk:"port"`
+	AWS  *aws         `tfsdk:"aws"`
 }
 
-type awsEndpoint struct {
+type aws struct {
 	ServiceName      types.String `tfsdk:"service_name"`
 	AvailabilityZone types.List   `tfsdk:"availability_zone"`
 }
@@ -244,7 +244,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 					objectplanmodifier.UseStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
-					"public_endpoint": schema.SingleNestedAttribute{
+					"public": schema.SingleNestedAttribute{
 						MarkdownDescription: "The public endpoint for connecting to the cluster.",
 						Optional:            true,
 						Computed:            true,
@@ -272,7 +272,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 							},
 						},
 					},
-					"private_endpoint": schema.SingleNestedAttribute{
+					"private": schema.SingleNestedAttribute{
 						MarkdownDescription: "The private endpoint for connecting to the cluster.",
 						Computed:            true,
 						PlanModifiers: []planmodifier.Object{
@@ -287,7 +287,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 								MarkdownDescription: "The port of the private endpoint.",
 								Computed:            true,
 							},
-							"aws_endpoint": schema.SingleNestedAttribute{
+							"aws": schema.SingleNestedAttribute{
 								MarkdownDescription: "Message for AWS PrivateLink information.",
 								Computed:            true,
 								Attributes: map[string]schema.Attribute{
@@ -534,8 +534,8 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 		}
 	}
 
-	if plan.Endpoints.PublicEndpoint.Disabled.ValueBool() != state.Endpoints.PublicEndpoint.Disabled.ValueBool() {
-		publicEndpointDisabled := plan.Endpoints.PublicEndpoint.Disabled.ValueBool()
+	if plan.Endpoints.Public.Disabled.ValueBool() != state.Endpoints.Public.Disabled.ValueBool() {
+		publicEndpointDisabled := plan.Endpoints.Public.Disabled.ValueBool()
 		body.Cluster.Endpoints = &clusterV1beta1.V1beta1ClusterEndpoints{
 			Public: &clusterV1beta1.EndpointsPublic{
 				Disabled: &publicEndpointDisabled,
@@ -639,7 +639,7 @@ func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clust
 	}
 
 	if data.Endpoints != nil {
-		publicEndpointsDisabled := data.Endpoints.PublicEndpoint.Disabled.ValueBool()
+		publicEndpointsDisabled := data.Endpoints.Public.Disabled.ValueBool()
 		body.Endpoints = &clusterV1beta1.V1beta1ClusterEndpoints{
 			Public: &clusterV1beta1.EndpointsPublic{
 				Disabled: &publicEndpointsDisabled,
@@ -690,16 +690,16 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 	}
 
 	e := resp.Endpoints
-	var pe privateEndpoint
+	var pe private
 	if e.Private.Aws != nil {
 		awsAvailabilityZone, diag := types.ListValueFrom(ctx, types.StringType, e.Private.Aws.AvailabilityZone)
 		if diag.HasError() {
 			return errors.New("unable to convert aws availability zone")
 		}
-		pe = privateEndpoint{
+		pe = private{
 			Host: types.StringValue(*e.Private.Host),
 			Port: types.Int32Value(*e.Private.Port),
-			AWSEndpoint: &awsEndpoint{
+			AWS: &aws{
 				ServiceName:      types.StringValue(*e.Private.Aws.ServiceName),
 				AvailabilityZone: awsAvailabilityZone,
 			},
@@ -707,12 +707,12 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 	}
 
 	data.Endpoints = &endpoints{
-		PublicEndpoint: &publicEndpoint{
+		Public: &public{
 			Host:     types.StringValue(*e.Public.Host),
 			Port:     types.Int32Value(*e.Public.Port),
 			Disabled: types.BoolValue(*e.Public.Disabled),
 		},
-		PrivateEndpoint: &pe,
+		Private: &pe,
 	}
 
 	en := resp.EncryptionConfig
