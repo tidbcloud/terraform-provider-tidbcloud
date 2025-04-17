@@ -17,7 +17,6 @@ func TestAccServerlessClustersDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-
 		Steps: []resource.TestStep{
 			{
 				Config: testServerlessClustersConfig,
@@ -61,7 +60,7 @@ func testUTServerlessClustersDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testServerlessClustersConfig,
+				Config: testUTServerlessClustersConfig,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(serverlessClustersDataSourceName, "serverless_clusters.#", "0"),
 				),
@@ -71,6 +70,17 @@ func testUTServerlessClustersDataSource(t *testing.T) {
 }
 
 const testServerlessClustersConfig = `
+resource "tidbcloud_serverless_cluster" "example" {
+   display_name = "test-tf"
+   region = {
+      name = "regions/aws-us-east-1"
+   }
+}
+
+data "tidbcloud_serverless_clusters" "test" {}
+`
+
+const testUTServerlessClustersConfig = `
 data "tidbcloud_serverless_clusters" "test" {}
 `
 
