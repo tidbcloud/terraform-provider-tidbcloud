@@ -36,7 +36,7 @@ output "output" {
 
 ### Read-Only
 
-- `sql_users` (Attributes List) The regions. (see [below for nested schema](#nestedatt--sql_users))
+- `sql_users` (Attributes List) The SQL users. (see [below for nested schema](#nestedatt--sql_users))
 
 <a id="nestedatt--sql_users"></a>
 ### Nested Schema for `sql_users`
