@@ -24,7 +24,7 @@ import (
 type dedicatedClusterResourceData struct {
 	ProjectId          types.String        `tfsdk:"project_id"`
 	ClusterId          types.String        `tfsdk:"cluster_id"`
-	Name               types.String        `tfsdk:"name"`
+	DisplayName        types.String        `tfsdk:"display_name"`
 	CloudProvider      types.String        `tfsdk:"cloud_provider"`
 	RegionId           types.String        `tfsdk:"region_id"`
 	Labels             types.Map           `tfsdk:"labels"`
@@ -115,7 +115,7 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"name": schema.StringAttribute{
+			"display_name": schema.StringAttribute{
 				MarkdownDescription: "The name of the cluster.",
 				Required:            true,
 			},
@@ -426,7 +426,7 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 		return
 	}
 	data.ClusterId = types.StringValue(*resp.ClusterId)
-	data.Name = types.StringValue(resp.DisplayName)
+	data.DisplayName = types.StringValue(resp.DisplayName)
 	data.CloudProvider = types.StringValue(string(*resp.CloudProvider))
 	data.RegionId = types.StringValue(resp.RegionId)
 	data.Labels = labels
@@ -494,7 +494,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 
 	// Check if paused state is changing
 	isPauseStateChanging := plan.Paused.ValueBool() != state.Paused.ValueBool()
-		
+
 	// Check if TiFlashNodeSetting is changing
 	isTiFlashNodeSettingChanging := false
 	if plan.TiFlashNodeSetting != nil && state.TiFlashNodeSetting != nil {
@@ -508,7 +508,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	// Check if any other attributes are changing
-	isOtherAttributesChanging := (plan.Name != state.Name ||
+	isOtherAttributesChanging := (plan.DisplayName != state.DisplayName ||
 		plan.TiDBNodeSetting.NodeCount != state.TiDBNodeSetting.NodeCount ||
 		plan.TiDBNodeSetting.NodeSpecKey != state.TiDBNodeSetting.NodeSpecKey ||
 
@@ -591,8 +591,8 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 			}
 		}
 
-		if plan.Name != state.Name {
-			body.DisplayName = plan.Name.ValueStringPointer()
+		if plan.DisplayName != state.DisplayName {
+			body.DisplayName = plan.DisplayName.ValueStringPointer()
 		}
 
 		var labels map[string]string
@@ -693,7 +693,7 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 		return dedicated.TidbCloudOpenApidedicatedv1beta1Cluster{}, errors.New("can not create a cluster with paused set to true")
 	}
 
-	displayName := data.Name.ValueString()
+	displayName := data.DisplayName.ValueString()
 	regionId := data.RegionId.ValueString()
 	rootPassword := data.RootPassword.ValueString()
 	version := data.Version.ValueString()

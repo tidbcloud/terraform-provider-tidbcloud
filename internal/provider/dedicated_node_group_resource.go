@@ -127,6 +127,9 @@ func (r dedicatedNodeGroupResource) Create(ctx context.Context, req resource.Cre
 	nodeGroupId := *nodeGroup.TidbNodeGroupId
 	data.NodeGroupId = types.StringValue(nodeGroupId)
 	tflog.Info(ctx, "wait dedicated node group ready")
+	// it's a workaround, tidb node group state is active at the beginning, so we need to wait for it to be modifying
+	time.Sleep(1 * time.Minute)
+
 	nodeGroup, err = WaitDedicatedNodeGroupReady(ctx, clusterCreateTimeout, clusterCreateInterval, data.ClusterId.ValueString(), nodeGroupId, r.provider.DedicatedClient)
 	if err != nil {
 		resp.Diagnostics.AddError(

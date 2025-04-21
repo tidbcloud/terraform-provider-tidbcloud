@@ -16,7 +16,7 @@ func TestAccDedicatedClusterResource(t *testing.T) {
 			{
 				Config: testAccDedicatedClusterResourceConfig(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("tidbcloud_dedicated_cluster.test", "name", "test-tf"),
+					resource.TestCheckResourceAttr("tidbcloud_dedicated_cluster.test", "display_name", "test-tf"),
 					resource.TestCheckResourceAttr("tidbcloud_dedicated_cluster.test", "region_id", "aws-us-west-2"),
 					resource.TestCheckResourceAttr("tidbcloud_dedicated_cluster.test", "port", "4000"),
 					resource.TestCheckResourceAttr("tidbcloud_dedicated_cluster.test", "root_password", "123456789"),
@@ -55,7 +55,7 @@ func TestUTDedicatedClusterResource(t *testing.T) {
 func testAccDedicatedClusterResourceConfig() string {
 	return `
 resource "tidbcloud_dedicated_cluster" "test" {
-    name = "test-tf"
+    display_name = "test-tf"
     region_id = "aws-us-west-2"
     port = 4000
     root_password = "123456789"
