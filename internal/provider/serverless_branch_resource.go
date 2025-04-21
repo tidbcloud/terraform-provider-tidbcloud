@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -92,8 +92,10 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 			},
 			"parent_id": schema.StringAttribute{
 				MarkdownDescription: "The parent ID of the branch.",
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -105,7 +107,7 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 					objectplanmodifier.UseStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
-					"public_endpoint": schema.SingleNestedAttribute{
+					"public": schema.SingleNestedAttribute{
 						MarkdownDescription: "The public endpoint for connecting to the cluster.",
 						Optional:            true,
 						Computed:            true,
@@ -117,11 +119,11 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 									stringplanmodifier.UseStateForUnknown(),
 								},
 							},
-							"port": schema.Int64Attribute{
+							"port": schema.Int32Attribute{
 								MarkdownDescription: "The port of the public endpoint.",
 								Computed:            true,
-								PlanModifiers: []planmodifier.Int64{
-									int64planmodifier.UseStateForUnknown(),
+								PlanModifiers: []planmodifier.Int32{
+									int32planmodifier.UseStateForUnknown(),
 								},
 							},
 							"disabled": schema.BoolAttribute{
@@ -133,7 +135,7 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 							},
 						},
 					},
-					"private_endpoint": schema.SingleNestedAttribute{
+					"private": schema.SingleNestedAttribute{
 						MarkdownDescription: "The private endpoint for connecting to the cluster.",
 						Computed:            true,
 						PlanModifiers: []planmodifier.Object{
@@ -144,11 +146,11 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 								MarkdownDescription: "The host of the private endpoint.",
 								Computed:            true,
 							},
-							"port": schema.Int64Attribute{
+							"port": schema.Int32Attribute{
 								MarkdownDescription: "The port of the private endpoint.",
 								Computed:            true,
 							},
-							"aws_endpoint": schema.SingleNestedAttribute{
+							"aws": schema.SingleNestedAttribute{
 								MarkdownDescription: "Message for AWS PrivateLink information.",
 								Computed:            true,
 								Attributes: map[string]schema.Attribute{
@@ -160,16 +162,6 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 										MarkdownDescription: "The availability zones that the service is available in.",
 										Computed:            true,
 										ElementType:         types.StringType,
-									},
-								},
-							},
-							"gcp_endpoint": schema.SingleNestedAttribute{
-								MarkdownDescription: "Message for GCP PrivateLink information.",
-								Computed:            true,
-								Attributes: map[string]schema.Attribute{
-									"service_attachment_name": schema.StringAttribute{
-										MarkdownDescription: "The target GCP service attachment name for private access.",
-										Computed:            true,
 									},
 								},
 							},
@@ -284,7 +276,7 @@ func (r serverlessBranchResource) Create(ctx context.Context, req resource.Creat
 
 	branchId := *branch.BranchId
 	tflog.Info(ctx, "wait serverless branch ready")
-	branch, err = WaitServerlessBranchReady(ctx, clusterServerlessCreateTimeout, clusterServerlessCreateInterval, data.ClusterId.ValueString(), branchId, r.provider.ServerlessClient)
+	_, err = WaitServerlessBranchReady(ctx, clusterServerlessCreateTimeout, clusterServerlessCreateInterval, data.ClusterId.ValueString(), branchId, r.provider.ServerlessClient)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Cluster creation failed",
@@ -357,6 +349,25 @@ func (r serverlessBranchResource) Delete(ctx context.Context, req resource.Delet
 
 func (r serverlessBranchResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	resp.Diagnostics.AddWarning("Update Warning", "Update is not supported for serverless branch")
+	// get state
+	var state serverlessBranchResourceData
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	branch, err := r.provider.ServerlessClient.GetBranch(ctx, state.ClusterId.ValueString(), state.BranchId.ValueString(), branchV1beta1.BRANCHSERVICEGETBRANCHVIEWPARAMETER_BASIC)
+	if err != nil {
+		tflog.Error(ctx, fmt.Sprintf("Unable to call GetBranch, error: %s", err))
+		return
+	}
+
+	state.State = types.StringValue(string(*branch.State))
+	state.UpdateTime = types.StringValue(branch.UpdateTime.String())
+
+	// save into the Terraform state.
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }
 
 func (r serverlessBranchResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -378,8 +389,8 @@ func buildCreateServerlessBranchBody(data serverlessBranchResourceData) (branchV
 	displayName := data.DisplayName.ValueString()
 	parentId := data.ParentId.ValueString()
 	body := branchV1beta1.Branch{
-		DisplayName:     displayName,
-		ParentId:        &parentId,
+		DisplayName: displayName,
+		ParentId:    &parentId,
 	}
 
 	if data.ParentTimestamp.ValueString() != "" {
@@ -392,7 +403,7 @@ func buildCreateServerlessBranchBody(data serverlessBranchResourceData) (branchV
 	}
 
 	if data.Endpoints != nil {
-		publicEndpointsDisabled := data.Endpoints.PublicEndpoint.Disabled.ValueBool()
+		publicEndpointsDisabled := data.Endpoints.Public.Disabled.ValueBool()
 		body.Endpoints = &branchV1beta1.BranchEndpoints{
 			Public: &branchV1beta1.BranchEndpointsPublic{
 				Disabled: &publicEndpointsDisabled,
@@ -412,41 +423,32 @@ func refreshServerlessBranchResourceData(ctx context.Context, resp *branchV1beta
 	data.DisplayName = types.StringValue(resp.DisplayName)
 	data.ParentTimestamp = types.StringValue(resp.ParentTimestamp.Get().String())
 	data.ParentDisplayName = types.StringValue(*resp.ParentDisplayName)
+	data.ParentId = types.StringValue(*resp.ParentId)
 
 	e := resp.Endpoints
-	var pe privateEndpoint
+	var pe private
 	if e.Private.Aws != nil {
 		awsAvailabilityZone, diag := types.ListValueFrom(ctx, types.StringType, e.Private.Aws.AvailabilityZone)
 		if diag.HasError() {
 			return errors.New("unable to convert aws availability zone")
 		}
-		pe = privateEndpoint{
+		pe = private{
 			Host: types.StringValue(*e.Private.Host),
-			Port: types.Int64Value(int64(*e.Private.Port)),
-			AWSEndpoint: &awsEndpoint{
+			Port: types.Int32Value(*e.Private.Port),
+			AWS: &aws{
 				ServiceName:      types.StringValue(*e.Private.Aws.ServiceName),
 				AvailabilityZone: awsAvailabilityZone,
 			},
 		}
 	}
 
-	if e.Private.Gcp != nil {
-		pe = privateEndpoint{
-			Host: types.StringValue(*e.Private.Host),
-			Port: types.Int64Value(int64(*e.Private.Port)),
-			GCPEndpoint: &gcpEndpoint{
-				ServiceAttachmentName: types.StringValue(*e.Private.Gcp.ServiceAttachmentName),
-			},
-		}
-	}
-
 	data.Endpoints = &endpoints{
-		PublicEndpoint: &publicEndpoint{
+		Public: &public{
 			Host:     types.StringValue(*e.Public.Host),
-			Port:     types.Int64Value(int64(*e.Public.Port)),
+			Port:     types.Int32Value(*e.Public.Port),
 			Disabled: types.BoolValue(*e.Public.Disabled),
 		},
-		PrivateEndpoint: &pe,
+		Private: &pe,
 	}
 
 	data.CreatedBy = types.StringValue(*resp.CreatedBy)

@@ -220,7 +220,6 @@ func (r serverlessSQLUserResource) Update(ctx context.Context, req resource.Upda
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
-
 }
 
 func (r serverlessSQLUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

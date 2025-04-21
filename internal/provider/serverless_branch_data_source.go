@@ -77,7 +77,7 @@ func (d *serverlessBranchDataSource) Schema(_ context.Context, _ datasource.Sche
 				MarkdownDescription: "The endpoints for connecting to the cluster.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
-					"public_endpoint": schema.SingleNestedAttribute{
+					"public": schema.SingleNestedAttribute{
 						MarkdownDescription: "The public endpoint for connecting to the cluster.",
 						Optional:            true,
 						Computed:            true,
@@ -86,7 +86,7 @@ func (d *serverlessBranchDataSource) Schema(_ context.Context, _ datasource.Sche
 								MarkdownDescription: "The host of the public endpoint.",
 								Computed:            true,
 							},
-							"port": schema.Int64Attribute{
+							"port": schema.Int32Attribute{
 								MarkdownDescription: "The port of the public endpoint.",
 								Computed:            true,
 							},
@@ -96,7 +96,7 @@ func (d *serverlessBranchDataSource) Schema(_ context.Context, _ datasource.Sche
 							},
 						},
 					},
-					"private_endpoint": schema.SingleNestedAttribute{
+					"private": schema.SingleNestedAttribute{
 						MarkdownDescription: "The private endpoint for connecting to the cluster.",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
@@ -104,11 +104,11 @@ func (d *serverlessBranchDataSource) Schema(_ context.Context, _ datasource.Sche
 								MarkdownDescription: "The host of the private endpoint.",
 								Computed:            true,
 							},
-							"port": schema.Int64Attribute{
+							"port": schema.Int32Attribute{
 								MarkdownDescription: "The port of the private endpoint.",
 								Computed:            true,
 							},
-							"aws_endpoint": schema.SingleNestedAttribute{
+							"aws": schema.SingleNestedAttribute{
 								MarkdownDescription: "Message for AWS PrivateLink information.",
 								Computed:            true,
 								Attributes: map[string]schema.Attribute{
@@ -120,16 +120,6 @@ func (d *serverlessBranchDataSource) Schema(_ context.Context, _ datasource.Sche
 										MarkdownDescription: "The availability zones that the service is available in.",
 										Computed:            true,
 										ElementType:         types.StringType,
-									},
-								},
-							},
-							"gcp_endpoint": schema.SingleNestedAttribute{
-								MarkdownDescription: "Message for GCP PrivateLink information.",
-								Computed:            true,
-								Attributes: map[string]schema.Attribute{
-									"service_attachment_name": schema.StringAttribute{
-										MarkdownDescription: "The target GCP service attachment name for private access.",
-										Computed:            true,
 									},
 								},
 							},
@@ -218,39 +208,29 @@ func (d *serverlessBranchDataSource) Read(ctx context.Context, req datasource.Re
 	data.ParentTimestamp = types.StringValue(branch.ParentTimestamp.Get().String())
 
 	e := branch.Endpoints
-	var pe privateEndpoint
+	var pe private
 	if e.Private.Aws != nil {
 		awsAvailabilityZone, diags := types.ListValueFrom(ctx, types.StringType, e.Private.Aws.AvailabilityZone)
 		if diags.HasError() {
 			return
 		}
-		pe = privateEndpoint{
+		pe = private{
 			Host: types.StringValue(*e.Private.Host),
-			Port: types.Int64Value(int64(*e.Private.Port)),
-			AWSEndpoint: &awsEndpoint{
+			Port: types.Int32Value(*e.Private.Port),
+			AWS: &aws{
 				ServiceName:      types.StringValue(*e.Private.Aws.ServiceName),
 				AvailabilityZone: awsAvailabilityZone,
 			},
 		}
 	}
 
-	if e.Private.Gcp != nil {
-		pe = privateEndpoint{
-			Host: types.StringValue(*e.Private.Host),
-			Port: types.Int64Value(int64(*e.Private.Port)),
-			GCPEndpoint: &gcpEndpoint{
-				ServiceAttachmentName: types.StringValue(*e.Private.Gcp.ServiceAttachmentName),
-			},
-		}
-	}
-
 	data.Endpoints = &endpoints{
-		PublicEndpoint: &publicEndpoint{
+		Public: &public{
 			Host:     types.StringValue(*e.Public.Host),
-			Port:     types.Int64Value(int64(*e.Public.Port)),
+			Port:     types.Int32Value(*e.Public.Port),
 			Disabled: types.BoolValue(*e.Public.Disabled),
 		},
-		PrivateEndpoint: &pe,
+		Private: &pe,
 	}
 
 	data.CreatedBy = types.StringValue(*branch.CreatedBy)

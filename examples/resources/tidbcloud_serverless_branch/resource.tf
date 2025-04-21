@@ -14,7 +14,7 @@ variable "parent_id" {
 }
 
 
-resource "tidbcloud_serverless_cluster" "example" {
+resource "tidbcloud_serverless_branch" "example" {
   cluster_id   = var.cluster_id
   display_name = var.display_name
   parent_id    = var.parent_id
