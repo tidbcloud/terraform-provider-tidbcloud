@@ -95,23 +95,9 @@ Read-Only:
 - `service_name` (String) The AWS service name for private access.
 
 
-<<<<<<< HEAD
-<a id="nestedatt--endpoints--private_endpoint--gcp_endpoint"></a>
-### Nested Schema for `endpoints.private_endpoint.gcp_endpoint`
-
-Read-Only:
-
-- `service_attachment_name` (String) The target GCP service attachment name for private access.
-
-
-
-<a id="nestedatt--endpoints--public_endpoint"></a>
-### Nested Schema for `endpoints.public_endpoint`
-=======
 
 <a id="nestedatt--endpoints--public"></a>
 ### Nested Schema for `endpoints.public`
->>>>>>> main
 
 Read-Only:
 

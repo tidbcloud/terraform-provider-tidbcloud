@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,11 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	exportV1beta1 "github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/serverless/export"
-)
-
-const (
-	exportServerlessCreateTimeout  = 60 * time.Minute
-	exportServerlessCreateInterval = 30 * time.Second
 )
 
 type serverlessExportResourceData struct {
@@ -491,15 +485,7 @@ func (r *serverlessExportResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	data.ExportId = types.StringValue(*export.ExportId)
-	// tflog.Info(ctx, "wait serverless export running")
-	// export, err = WaitServerlessExportReady(ctx, exportServerlessCreateTimeout, exportServerlessCreateInterval, *data.ClusterId.ValueStringPointer(), data.ExportId.ValueString(), r.provider.ServerlessClient)
-	// if err != nil {
-	// 	resp.Diagnostics.AddError(
-	// 		"Export creation failed",
-	// 		fmt.Sprintf("Export is not succeeded, get error: %s", err),
-	// 	)
-	// 	return
-	// }
+
 	refreshServerlessExportResourceData(ctx, export, &data)
 
 	// save to terraform state
@@ -773,42 +759,3 @@ func refreshServerlessExportResourceData(ctx context.Context, resp *exportV1beta
 	data.Target = &et
 	return nil
 }
-
-// func WaitServerlessExportReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string, exportId string,
-// 	client tidbcloud.TiDBCloudServerlessClient) (*exportV1beta1.Export, error) {
-// 	stateConf := &retry.StateChangeConf{
-// 		Pending: []string{
-// 			string(exportV1beta1.EXPORTSTATEENUM_RUNNING),
-// 		},
-// 		Target: []string{
-// 			string(exportV1beta1.EXPORTSTATEENUM_SUCCEEDED),
-// 			string(exportV1beta1.EXPORTSTATEENUM_FAILED),
-// 			string(exportV1beta1.EXPORTSTATEENUM_CANCELED),
-// 			string(exportV1beta1.EXPORTSTATEENUM_DELETED),
-// 			string(exportV1beta1.EXPORTSTATEENUM_EXPIRED),
-// 		},
-// 		Timeout:      timeout,
-// 		MinTimeout:   20 * time.Minute,
-// 		PollInterval: interval,
-// 		Refresh:      serverlessExportStateRefreshFunc(ctx, clusterId, exportId, client),
-// 	}
-
-// 	outputRaw, err := stateConf.WaitForStateContext(ctx)
-
-// 	if output, ok := outputRaw.(*exportV1beta1.Export); ok {
-// 		return output, err
-// 	}
-// 	return nil, err
-// }
-
-// func serverlessExportStateRefreshFunc(ctx context.Context, clusterId string, exportId string,
-// 	client tidbcloud.TiDBCloudServerlessClient) retry.StateRefreshFunc {
-// 	return func() (interface{}, string, error) {
-// 		tflog.Trace(ctx, "Waiting for serverless export ready")
-// 		export, err := client.GetExport(ctx, clusterId, exportId)
-// 		if err != nil {
-// 			return nil, "", err
-// 		}
-// 		return export, string(*export.State), nil
-// 	}
-// }
