@@ -74,21 +74,20 @@ Read-Only:
 
 Read-Only:
 
-- `private_endpoint` (Attributes) The private endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--endpoints--private_endpoint))
-- `public_endpoint` (Attributes) The public endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--endpoints--public_endpoint))
+- `private` (Attributes) The private endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--endpoints--private))
+- `public` (Attributes) The public endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--endpoints--public))
 
-<a id="nestedatt--endpoints--private_endpoint"></a>
-### Nested Schema for `endpoints.private_endpoint`
+<a id="nestedatt--endpoints--private"></a>
+### Nested Schema for `endpoints.private`
 
 Read-Only:
 
-- `aws_endpoint` (Attributes) Message for AWS PrivateLink information. (see [below for nested schema](#nestedatt--endpoints--private_endpoint--aws_endpoint))
-- `gcp_endpoint` (Attributes) Message for GCP PrivateLink information. (see [below for nested schema](#nestedatt--endpoints--private_endpoint--gcp_endpoint))
+- `aws` (Attributes) Message for AWS PrivateLink information. (see [below for nested schema](#nestedatt--endpoints--private--aws))
 - `host` (String) The host of the private endpoint.
 - `port` (Number) The port of the private endpoint.
 
-<a id="nestedatt--endpoints--private_endpoint--aws_endpoint"></a>
-### Nested Schema for `endpoints.private_endpoint.aws_endpoint`
+<a id="nestedatt--endpoints--private--aws"></a>
+### Nested Schema for `endpoints.private.aws`
 
 Read-Only:
 
@@ -96,6 +95,7 @@ Read-Only:
 - `service_name` (String) The AWS service name for private access.
 
 
+<<<<<<< HEAD
 <a id="nestedatt--endpoints--private_endpoint--gcp_endpoint"></a>
 ### Nested Schema for `endpoints.private_endpoint.gcp_endpoint`
 
@@ -107,6 +107,11 @@ Read-Only:
 
 <a id="nestedatt--endpoints--public_endpoint"></a>
 ### Nested Schema for `endpoints.public_endpoint`
+=======
+
+<a id="nestedatt--endpoints--public"></a>
+### Nested Schema for `endpoints.public`
+>>>>>>> main
 
 Read-Only:
 

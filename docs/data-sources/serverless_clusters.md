@@ -30,18 +30,15 @@ output "output" {
 
 ### Read-Only
 
-- `clusters` (Attributes List) The regions. (see [below for nested schema](#nestedatt--clusters))
+- `clusters` (Attributes List) The clusters. (see [below for nested schema](#nestedatt--clusters))
 
 <a id="nestedatt--clusters"></a>
 ### Nested Schema for `clusters`
 
-Required:
-
-- `cluster_id` (String) The ID of the cluster.
-
 Read-Only:
 
 - `annotations` (Map of String) The annotations of the cluster.
+- `cluster_id` (String) The ID of the cluster.
 - `create_time` (String) The time the cluster was created.
 - `created_by` (String) The email of the creator of the cluster.
 - `display_name` (String) The display name of the cluster.
@@ -67,21 +64,20 @@ Read-Only:
 
 Read-Only:
 
-- `private_endpoint` (Attributes) The private endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--clusters--endpoints--private_endpoint))
-- `public_endpoint` (Attributes) The public endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--clusters--endpoints--public_endpoint))
+- `private` (Attributes) The private endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--clusters--endpoints--private))
+- `public` (Attributes) The public endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--clusters--endpoints--public))
 
-<a id="nestedatt--clusters--endpoints--private_endpoint"></a>
-### Nested Schema for `clusters.endpoints.private_endpoint`
+<a id="nestedatt--clusters--endpoints--private"></a>
+### Nested Schema for `clusters.endpoints.private`
 
 Read-Only:
 
-- `aws_endpoint` (Attributes) Message for AWS PrivateLink information. (see [below for nested schema](#nestedatt--clusters--endpoints--private_endpoint--aws_endpoint))
-- `gcp_endpoint` (Attributes) Message for GCP PrivateLink information. (see [below for nested schema](#nestedatt--clusters--endpoints--private_endpoint--gcp_endpoint))
+- `aws` (Attributes) Message for AWS PrivateLink information. (see [below for nested schema](#nestedatt--clusters--endpoints--private--aws))
 - `host` (String) The host of the private endpoint.
 - `port` (Number) The port of the private endpoint.
 
-<a id="nestedatt--clusters--endpoints--private_endpoint--aws_endpoint"></a>
-### Nested Schema for `clusters.endpoints.private_endpoint.aws_endpoint`
+<a id="nestedatt--clusters--endpoints--private--aws"></a>
+### Nested Schema for `clusters.endpoints.private.aws`
 
 Read-Only:
 
@@ -89,17 +85,9 @@ Read-Only:
 - `service_name` (String) The AWS service name for private access.
 
 
-<a id="nestedatt--clusters--endpoints--private_endpoint--gcp_endpoint"></a>
-### Nested Schema for `clusters.endpoints.private_endpoint.gcp_endpoint`
 
-Read-Only:
-
-- `service_attachment_name` (String) The target GCP service attachment name for private access.
-
-
-
-<a id="nestedatt--clusters--endpoints--public_endpoint"></a>
-### Nested Schema for `clusters.endpoints.public_endpoint`
+<a id="nestedatt--clusters--endpoints--public"></a>
+### Nested Schema for `clusters.endpoints.public`
 
 Read-Only:
 
