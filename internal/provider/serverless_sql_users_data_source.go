@@ -58,7 +58,7 @@ func (d *serverlessSQLUsersDataSource) Schema(_ context.Context, _ datasource.Sc
 				Required:            true,
 			},
 			"sql_users": schema.ListNestedAttribute{
-				MarkdownDescription: "The regions.",
+				MarkdownDescription: "The SQL users.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{

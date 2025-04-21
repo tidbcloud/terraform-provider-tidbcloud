@@ -64,7 +64,7 @@ func (r *serverlessSQLUserResource) Schema(_ context.Context, _ resource.SchemaR
 				Required:            true,
 			},
 			"auth_method": schema.StringAttribute{
-				MarkdownDescription: "The authentication method of the user.",
+				MarkdownDescription: "The authentication method of the user. Only mysql_native_password is supported.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -215,6 +215,7 @@ func (r serverlessSQLUserResource) Update(ctx context.Context, req resource.Upda
 
 	state.BuiltinRole = plan.BuiltinRole
 	state.CustomRoles = plan.CustomRoles
+	state.Password = plan.Password
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)
