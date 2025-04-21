@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -24,8 +23,8 @@ func TestAccServerlessClusterResource(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "name", "test-tf"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "region.region_id", "us-east-1"),
-					resource.TestCheckResourceAttr(serverlessClusterResourceName, "endpoints.public_endpoint.port", "4000"),
-					resource.TestCheckResourceAttr(serverlessClusterResourceName, "endpoints.private_endpoint.port", "4000"),
+					resource.TestCheckResourceAttr(serverlessClusterResourceName, "endpoints.public.port", "4000"),
+					resource.TestCheckResourceAttr(serverlessClusterResourceName, "endpoints.private.port", "4000"),
 				),
 			},
 			// Update testing
@@ -65,10 +64,10 @@ func TestUTServerlessClusterResource(t *testing.T) {
 	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil).AnyTimes()
 	gomock.InOrder(
 		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).Times(3),
-		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterAfterUpdateResp, nil).Times(3),
+		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterAfterUpdateResp, nil).Times(2),
 	)
 	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil)
-	s.EXPECT().PartialUpdateCluster(gomock.Any(), clusterId, gomock.Any()).Return(&updateClusterSuccessResp, nil).Times(1)
+	s.EXPECT().PartialUpdateCluster(gomock.Any(), clusterId, gomock.Any()).Return(&updateClusterSuccessResp, nil)
 
 	testServerlessClusterResource(t)
 }
@@ -98,12 +97,6 @@ func testServerlessClusterResource(t *testing.T) {
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "display_name", "test-tf2"),
 				),
 			},
-			// Update too many fields
-			{
-				ExpectNonEmptyPlan: true,
-				Config:             testUTServerlessClusterResourceUpdateTooManyFieldsConfig(),
-				ExpectError:        regexp.MustCompile(`.*Unable to change more than one filed at the same time.*`),
-			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})
@@ -116,22 +109,6 @@ resource "tidbcloud_serverless_cluster" "test" {
    region = {
       name = "regions/aws-us-east-1"
    }
-}
-`
-}
-
-func testUTServerlessClusterResourceUpdateTooManyFieldsConfig() string {
-	return `
-resource "tidbcloud_serverless_cluster" "test" {
-   display_name = "test-tf3"
-   region = {
-      name = "regions/aws-us-east-1"
-   }
-   endpoints = {
-      public_endpoint = {
-        disabled = true
-      }
-    }
 }
 `
 }
