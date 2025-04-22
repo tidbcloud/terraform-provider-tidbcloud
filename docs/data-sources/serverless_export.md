@@ -52,7 +52,7 @@ output "output" {
 - `reason` (String) The failed reason of the export.
 - `snapshot_time` (String) Snapshot time of the export.
 - `state` (String) The state of the export.
-- `target` (Attributes) The target of the export. (see [below for nested schema](#nestedatt--target))
+- `target` (Attributes) The target type of the export. (see [below for nested schema](#nestedatt--target))
 - `update_time` (String) Timestamp when the export was updated.
 
 <a id="nestedatt--export_options"></a>
@@ -137,13 +137,13 @@ Read-Only:
 
 Read-Only:
 
-- `access_key` (Attributes) The access key of the s3. (see [below for nested schema](#nestedatt--target--s3--access_key))
-- `auth_type` (String) The auth method of the export s3.
-- `uri` (String) The URI of the s3 folder.
+- `access_key` (Attributes) The access key of the S3. (see [below for nested schema](#nestedatt--target--s3--access_key))
+- `auth_type` (String) The auth method of the export S3.
+- `uri` (String) The URI of the S3 folder.
 
 <a id="nestedatt--target--s3--access_key"></a>
 ### Nested Schema for `target.s3.access_key`
 
 Read-Only:
 
-- `id` (String) The access key id of the s3.
+- `id` (String) The access key ID of the S3.

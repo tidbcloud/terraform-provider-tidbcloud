@@ -34,8 +34,7 @@ resource "tidbcloud_serverless_export" "example" {
 
 - `display_name` (String) The display name of the export.
 - `export_options` (Attributes) The options of the export. (see [below for nested schema](#nestedatt--export_options))
-- `state` (String) The state of the export.
-- `target` (Attributes) The target of the export. (see [below for nested schema](#nestedatt--target))
+- `target` (Attributes) The target type of the export. (see [below for nested schema](#nestedatt--target))
 
 ### Read-Only
 
@@ -46,6 +45,7 @@ resource "tidbcloud_serverless_export" "example" {
 - `export_id` (String) The unique ID of the export.
 - `reason` (String) The failed reason of the export.
 - `snapshot_time` (String) Snapshot time of the export.
+- `state` (String) The state of the export.
 - `update_time` (String) Timestamp when the export was updated.
 
 <a id="nestedatt--export_options"></a>
@@ -132,15 +132,15 @@ Optional:
 
 Optional:
 
-- `access_key` (Attributes) The access key of the s3. (see [below for nested schema](#nestedatt--target--s3--access_key))
-- `auth_type` (String) The auth method of the export s3.
-- `role_arn` (String) The role arn of the s3.
-- `uri` (String) The URI of the s3 folder.
+- `access_key` (Attributes) The access key of the S3. (see [below for nested schema](#nestedatt--target--s3--access_key))
+- `auth_type` (String) The auth method of the export S3.
+- `role_arn` (String) The role arn of the S3.
+- `uri` (String) The URI of the S3 folder.
 
 <a id="nestedatt--target--s3--access_key"></a>
 ### Nested Schema for `target.s3.access_key`
 
 Optional:
 
-- `id` (String) The access key id of the s3.
-- `secret` (String, Sensitive) The secret access key of the s3.
+- `id` (String) The access key ID of the S3.
+- `secret` (String, Sensitive) The secret access key of the S3.

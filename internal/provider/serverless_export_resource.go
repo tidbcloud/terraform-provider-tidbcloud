@@ -367,6 +367,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"role_arn": schema.StringAttribute{
 								MarkdownDescription: "The role arn of the S3.",
 								Optional:            true,
+								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
@@ -376,6 +377,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 					"gcs": schema.SingleNestedAttribute{
 						MarkdownDescription: "GCS target.",
 						Optional:            true,
+						Computed:            true,
 						PlanModifiers: []planmodifier.Object{
 							objectplanmodifier.UseStateForUnknown(),
 						},
@@ -383,6 +385,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"uri": schema.StringAttribute{
 								MarkdownDescription: "The GCS URI of the export target.",
 								Optional:            true,
+								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
@@ -390,6 +393,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"auth_type": schema.StringAttribute{
 								MarkdownDescription: "The auth method of the export target.",
 								Optional:            true,
+								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
@@ -407,6 +411,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 					"azure_blob": schema.SingleNestedAttribute{
 						MarkdownDescription: "Azure Blob target.",
 						Optional:            true,
+						Computed:            true,
 						PlanModifiers: []planmodifier.Object{
 							objectplanmodifier.UseStateForUnknown(),
 						},
@@ -414,6 +419,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"uri": schema.StringAttribute{
 								MarkdownDescription: "The Azure Blob URI of the export target.",
 								Optional:            true,
+								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
@@ -421,6 +427,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"auth_type": schema.StringAttribute{
 								MarkdownDescription: "The auth method of the export target.",
 								Optional:            true,
+								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
