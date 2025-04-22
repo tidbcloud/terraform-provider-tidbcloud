@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	branchServerlessCreateTimeout  = 180 * time.Second
-	branchServerlessCreateInterval = 2 * time.Second
+	serverlessBranchCreateTimeout  = 600 * time.Second
+	serverlessBranchCreateInterval = 10 * time.Second
 )
 
 type serverlessBranchResourceData struct {
@@ -89,9 +89,9 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 			"display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the cluster.",
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
+				// PlanModifiers: []planmodifier.String{
+				// 	stringplanmodifier.RequiresReplace(),
+				// },
 			},
 			"parent_id": schema.StringAttribute{
 				MarkdownDescription: "The parent ID of the branch.",
@@ -270,7 +270,7 @@ func (r serverlessBranchResource) Create(ctx context.Context, req resource.Creat
 
 	branchId := *branch.BranchId
 	tflog.Info(ctx, "wait serverless branch ready")
-	_, err = WaitServerlessBranchReady(ctx, branchServerlessCreateTimeout, branchServerlessCreateInterval, data.ClusterId.ValueString(), branchId, r.provider.ServerlessClient)
+	_, err = WaitServerlessBranchReady(ctx, serverlessBranchCreateTimeout, serverlessBranchCreateInterval, data.ClusterId.ValueString(), branchId, r.provider.ServerlessClient)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Branch creation failed",
@@ -342,26 +342,6 @@ func (r serverlessBranchResource) Delete(ctx context.Context, req resource.Delet
 }
 
 func (r serverlessBranchResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddWarning("Update Warning", "Update is not supported for serverless branch")
-	// get state
-	var state serverlessBranchResourceData
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	branch, err := r.provider.ServerlessClient.GetBranch(ctx, state.ClusterId.ValueString(), state.BranchId.ValueString(), branchV1beta1.BRANCHSERVICEGETBRANCHVIEWPARAMETER_BASIC)
-	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("Unable to call GetBranch, error: %s", err))
-		return
-	}
-
-	state.State = types.StringValue(string(*branch.State))
-	state.UpdateTime = types.StringValue(branch.UpdateTime.String())
-
-	// save into the Terraform state.
-	diags = resp.State.Set(ctx, &state)
-	resp.Diagnostics.Append(diags...)
 }
 
 func (r serverlessBranchResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

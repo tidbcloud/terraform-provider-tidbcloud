@@ -62,6 +62,9 @@ func (r *serverlessSQLUserResource) Schema(_ context.Context, _ resource.SchemaR
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"auth_method": schema.StringAttribute{
 				MarkdownDescription: "The authentication method of the user. Only mysql_native_password is supported.",
@@ -74,6 +77,9 @@ func (r *serverlessSQLUserResource) Schema(_ context.Context, _ resource.SchemaR
 			"user_name": schema.StringAttribute{
 				MarkdownDescription: "The name of the user.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"builtin_role": schema.StringAttribute{
 				MarkdownDescription: "The built-in role of the sql user, available values [role_admin, role_readonly, role_readwrite]. The built-in role [role_readonly, role_readwrite] must start with user_prefix for serverless cluster",

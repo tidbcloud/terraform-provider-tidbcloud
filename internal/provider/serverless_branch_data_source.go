@@ -91,7 +91,7 @@ func (d *serverlessBranchDataSource) Schema(_ context.Context, _ datasource.Sche
 							},
 							"disabled": schema.BoolAttribute{
 								MarkdownDescription: "Whether the public endpoint is disabled.",
-								Optional:            true,
+								Computed:            true,
 							},
 						},
 					},
