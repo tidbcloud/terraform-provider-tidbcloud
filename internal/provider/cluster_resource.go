@@ -41,8 +41,6 @@ const (
 )
 
 const (
-	clusterServerlessCreateTimeout  = 180 * time.Second
-	clusterServerlessCreateInterval = 2 * time.Second
 	clusterCreateTimeout            = time.Hour
 	clusterCreateInterval           = 60 * time.Second
 	clusterUpdateTimeout            = time.Hour
@@ -443,7 +441,7 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 		var cluster *clusterApi.GetClusterOKBody
 		if data.ClusterType == dev {
 			tflog.Info(ctx, "wait serverless cluster ready")
-			cluster, err = WaitClusterReady(ctx, clusterServerlessCreateTimeout, clusterServerlessCreateInterval, data.ProjectId, clusterId, r.provider.client)
+			cluster, err = WaitClusterReady(ctx, serverlessClusterCreateTimeout, serverlessClusterCreateInterval, data.ProjectId, clusterId, r.provider.client)
 			if err != nil {
 				resp.Diagnostics.AddError(
 					"Cluster creation failed",
