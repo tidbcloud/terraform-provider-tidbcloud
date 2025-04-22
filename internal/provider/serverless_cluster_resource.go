@@ -22,6 +22,11 @@ import (
 	clusterV1beta1 "github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/serverless/cluster"
 )
 
+const (
+	serverlessClusterCreateTimeout  = 180 * time.Second
+	serverlessClusterCreateInterval = 2 * time.Second
+)
+
 type mutableField string
 
 const (
@@ -30,12 +35,6 @@ const (
 	PublicEndpointDisabled        mutableField = "endpoints.public.disabled"
 	SpendingLimitMonthly          mutableField = "spendingLimit.monthly"
 	AutomatedBackupPolicySchedule mutableField = "automatedBackupPolicy.schedule"
-)
-
-type updatableField string
-
-const (
-	UpdateDisplayName updatableField = "display_name"
 )
 
 const (
@@ -434,7 +433,7 @@ func (r serverlessClusterResource) Create(ctx context.Context, req resource.Crea
 	clusterId := *cluster.ClusterId
 	data.ClusterId = types.StringValue(clusterId)
 	tflog.Info(ctx, "wait serverless cluster ready")
-	cluster, err = WaitServerlessClusterReady(ctx, clusterServerlessCreateTimeout, clusterServerlessCreateInterval, clusterId, r.provider.ServerlessClient)
+	cluster, err = WaitServerlessClusterReady(ctx, serverlessClusterCreateTimeout, serverlessClusterCreateInterval, clusterId, r.provider.ServerlessClient)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Cluster creation failed",
@@ -722,8 +721,8 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 
 	data.Version = types.StringValue(*resp.Version)
 	data.CreatedBy = types.StringValue(*resp.CreatedBy)
-	data.CreateTime = types.StringValue(resp.CreateTime.String())
-	data.UpdateTime = types.StringValue(resp.UpdateTime.String())
+	data.CreateTime = types.StringValue(resp.CreateTime.Format(time.RFC3339))
+	data.UpdateTime = types.StringValue(resp.UpdateTime.Format(time.RFC3339))
 	data.UserPrefix = types.StringValue(*resp.UserPrefix)
 	data.State = types.StringValue(string(*resp.State))
 

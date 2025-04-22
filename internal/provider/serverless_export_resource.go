@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -687,22 +688,22 @@ func buildCreateServerlessExportBody(ctx context.Context, data serverlessExportR
 func refreshServerlessExportResourceData(ctx context.Context, resp *exportV1beta1.Export, data *serverlessExportResourceData) error {
 	data.DisplayName = types.StringValue(*resp.DisplayName)
 	data.State = types.StringValue(string(*resp.State))
-	data.CreateTime = types.StringValue(resp.CreateTime.String())
+	data.CreateTime = types.StringValue(resp.CreateTime.Format(time.RFC3339))
 	data.CreatedBy = types.StringValue(*resp.CreatedBy)
 	if resp.Reason.IsSet() {
 		data.Reason = types.StringValue(*resp.Reason.Get())
 	}
 	if resp.UpdateTime.IsSet() {
-		data.UpdateTime = types.StringValue(resp.UpdateTime.Get().String())
+		data.UpdateTime = types.StringValue(resp.UpdateTime.Get().Format(time.RFC3339))
 	}
 	if resp.CompleteTime.IsSet() {
-		data.CompleteTime = types.StringValue(resp.CompleteTime.Get().String())
+		data.CompleteTime = types.StringValue(resp.CompleteTime.Get().Format(time.RFC3339))
 	}
 	if resp.SnapshotTime.IsSet() {
-		data.SnapshotTime = types.StringValue(resp.SnapshotTime.Get().String())
+		data.SnapshotTime = types.StringValue(resp.SnapshotTime.Get().Format(time.RFC3339))
 	}
 	if resp.ExpireTime.IsSet() {
-		data.ExpireTime = types.StringValue(resp.ExpireTime.Get().String())
+		data.ExpireTime = types.StringValue(resp.ExpireTime.Get().Format(time.RFC3339))
 	}
 
 	exportOptionsFileType := *resp.ExportOptions.FileType

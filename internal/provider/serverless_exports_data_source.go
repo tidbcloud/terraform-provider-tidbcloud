@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -269,22 +270,22 @@ func (d *serverlessExportsDataSource) Read(ctx context.Context, req datasource.R
 		var e serverlessExportItem
 		e.DisplayName = types.StringValue(*export.DisplayName)
 		e.State = types.StringValue(string(*export.State))
-		e.CreateTime = types.StringValue(export.CreateTime.String())
+		e.CreateTime = types.StringValue(export.CreateTime.Format(time.RFC3339))
 		e.CreatedBy = types.StringValue(*export.CreatedBy)
 		if export.Reason.IsSet() {
 			e.Reason = types.StringValue(*export.Reason.Get())
 		}
 		if export.UpdateTime.IsSet() {
-			e.UpdateTime = types.StringValue(export.UpdateTime.Get().String())
+			e.UpdateTime = types.StringValue(export.UpdateTime.Get().Format(time.RFC3339))
 		}
 		if export.CompleteTime.IsSet() {
-			e.CompleteTime = types.StringValue(export.CompleteTime.Get().String())
+			e.CompleteTime = types.StringValue(export.CompleteTime.Get().Format(time.RFC3339))
 		}
 		if export.SnapshotTime.IsSet() {
-			e.SnapshotTime = types.StringValue(export.SnapshotTime.Get().String())
+			e.SnapshotTime = types.StringValue(export.SnapshotTime.Get().Format(time.RFC3339))
 		}
 		if export.ExpireTime.IsSet() {
-			e.ExpireTime = types.StringValue(export.ExpireTime.Get().String())
+			e.ExpireTime = types.StringValue(export.ExpireTime.Get().Format(time.RFC3339))
 		}
 
 		exportOptionsFileType := *export.ExportOptions.FileType
