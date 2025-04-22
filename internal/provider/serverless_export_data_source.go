@@ -169,7 +169,7 @@ func (d *serverlessExportDataSource) Schema(_ context.Context, _ datasource.Sche
 				},
 			},
 			"target": schema.SingleNestedAttribute{
-				MarkdownDescription: "The target of the export.",
+				MarkdownDescription: "The target type of the export.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
@@ -181,19 +181,19 @@ func (d *serverlessExportDataSource) Schema(_ context.Context, _ datasource.Sche
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"uri": schema.StringAttribute{
-								MarkdownDescription: "The URI of the s3 folder.",
+								MarkdownDescription: "The URI of the S3 folder.",
 								Computed:            true,
 							},
 							"auth_type": schema.StringAttribute{
-								MarkdownDescription: "The auth method of the export s3.",
+								MarkdownDescription: "The auth method of the export S3.",
 								Computed:            true,
 							},
 							"access_key": schema.SingleNestedAttribute{
-								MarkdownDescription: "The access key of the s3.",
+								MarkdownDescription: "The access key of the S3.",
 								Computed:            true,
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
-										MarkdownDescription: "The access key id of the s3.",
+										MarkdownDescription: "The access key ID of the S3.",
 										Computed:            true,
 									},
 								},

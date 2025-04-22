@@ -142,7 +142,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 			"state": schema.StringAttribute{
 				MarkdownDescription: "The state of the export.",
 				Computed:            true,
-				Optional:            true,
 			},
 			"create_time": schema.StringAttribute{
 				MarkdownDescription: "Timestamp when the export was created.",
@@ -300,7 +299,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"target": schema.SingleNestedAttribute{
-				MarkdownDescription: "The target of the export.",
+				MarkdownDescription: "The target type of the export.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Object{
@@ -324,7 +323,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 						},
 						Attributes: map[string]schema.Attribute{
 							"uri": schema.StringAttribute{
-								MarkdownDescription: "The URI of the s3 folder.",
+								MarkdownDescription: "The URI of the S3 folder.",
 								Optional:            true,
 								Computed:            true,
 								PlanModifiers: []planmodifier.String{
@@ -332,7 +331,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 								},
 							},
 							"auth_type": schema.StringAttribute{
-								MarkdownDescription: "The auth method of the export s3.",
+								MarkdownDescription: "The auth method of the export S3.",
 								Optional:            true,
 								Computed:            true,
 								PlanModifiers: []planmodifier.String{
@@ -340,7 +339,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 								},
 							},
 							"access_key": schema.SingleNestedAttribute{
-								MarkdownDescription: "The access key of the s3.",
+								MarkdownDescription: "The access key of the S3.",
 								Optional:            true,
 								Computed:            true,
 								PlanModifiers: []planmodifier.Object{
@@ -348,7 +347,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 								},
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
-										MarkdownDescription: "The access key id of the s3.",
+										MarkdownDescription: "The access key ID of the S3.",
 										Optional:            true,
 										Computed:            true,
 										PlanModifiers: []planmodifier.String{
@@ -356,7 +355,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 										},
 									},
 									"secret": schema.StringAttribute{
-										MarkdownDescription: "The secret access key of the s3.",
+										MarkdownDescription: "The secret access key of the S3.",
 										Optional:            true,
 										Sensitive:           true,
 										PlanModifiers: []planmodifier.String{
@@ -366,7 +365,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 								},
 							},
 							"role_arn": schema.StringAttribute{
-								MarkdownDescription: "The role arn of the s3.",
+								MarkdownDescription: "The role arn of the S3.",
 								Optional:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
