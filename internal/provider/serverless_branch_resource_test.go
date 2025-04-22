@@ -63,7 +63,6 @@ func testServerlessBranchResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read serverless branch resource
 			{
-				ExpectNonEmptyPlan: true,
 				Config:             testUTServerlessBranchResourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(serverlessBranchResourceName, "display_name", "test"),
