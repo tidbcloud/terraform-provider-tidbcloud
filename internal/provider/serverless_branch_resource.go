@@ -89,6 +89,9 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 			"display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the cluster.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"parent_id": schema.StringAttribute{
 				MarkdownDescription: "The parent ID of the branch.",
