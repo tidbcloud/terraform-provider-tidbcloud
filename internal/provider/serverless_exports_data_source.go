@@ -182,7 +182,7 @@ func (d *serverlessExportsDataSource) Schema(_ context.Context, _ datasource.Sch
 							Computed:            true,
 							Attributes: map[string]schema.Attribute{
 								"type": schema.StringAttribute{
-									MarkdownDescription: "The exported file type.",
+									MarkdownDescription: "The exported target type.",
 									Computed:            true,
 								},
 								"s3": schema.SingleNestedAttribute{

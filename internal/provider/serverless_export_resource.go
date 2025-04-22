@@ -154,14 +154,14 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 				MarkdownDescription: "Timestamp when the export was created.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"created_by": schema.StringAttribute{
 				MarkdownDescription: "The user who created the export.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"update_time": schema.StringAttribute{
@@ -172,21 +172,21 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 				MarkdownDescription: "Timestamp when the export was completed.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"snapshot_time": schema.StringAttribute{
 				MarkdownDescription: "Snapshot time of the export.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"expire_time": schema.StringAttribute{
 				MarkdownDescription: "Expire time of the export.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"export_options": schema.SingleNestedAttribute{
@@ -329,7 +329,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						MarkdownDescription: "The exported file type.",
+						MarkdownDescription: "The exported target type.",
 						Optional:            true,
 						Computed:            true,
 						PlanModifiers: []planmodifier.String{
@@ -339,7 +339,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 					"s3": schema.SingleNestedAttribute{
 						MarkdownDescription: "S3 target.",
 						Optional:            true,
-						Computed:            true,
 						PlanModifiers: []planmodifier.Object{
 							objectplanmodifier.UseStateForUnknown(),
 						},
@@ -394,7 +393,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 					"gcs": schema.SingleNestedAttribute{
 						MarkdownDescription: "GCS target.",
 						Optional:            true,
-						Computed:            true,
 						PlanModifiers: []planmodifier.Object{
 							objectplanmodifier.UseStateForUnknown(),
 						},
@@ -426,7 +424,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 					"azure_blob": schema.SingleNestedAttribute{
 						MarkdownDescription: "Azure Blob target.",
 						Optional:            true,
-						Computed:            true,
 						PlanModifiers: []planmodifier.Object{
 							objectplanmodifier.UseStateForUnknown(),
 						},

@@ -173,7 +173,7 @@ func (d *serverlessExportDataSource) Schema(_ context.Context, _ datasource.Sche
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
-						MarkdownDescription: "The exported file type.",
+						MarkdownDescription: "The exported target type.",
 						Computed:            true,
 					},
 					"s3": schema.SingleNestedAttribute{
@@ -294,7 +294,7 @@ func refreshServerlessExportDataSourceData(ctx context.Context, resp *exportV1be
 				Sql: types.StringValue(*resp.ExportOptions.Filter.Sql),
 			}
 		} else {
-			patterns, diag := types.ListValueFrom(ctx, types.StringType, data.ExportOptions.Filter.Table.Patterns)
+			patterns, diag := types.ListValueFrom(ctx, types.StringType, resp.ExportOptions.Filter.Table.Patterns)
 			if diag.HasError() {
 				return errors.New("unable to convert export options filter table patterns")
 			}

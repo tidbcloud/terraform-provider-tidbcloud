@@ -113,7 +113,7 @@ Read-Only:
 - `azure_blob` (Attributes) Azure Blob target. (see [below for nested schema](#nestedatt--exports--target--azure_blob))
 - `gcs` (Attributes) GCS target. (see [below for nested schema](#nestedatt--exports--target--gcs))
 - `s3` (Attributes) S3 target. (see [below for nested schema](#nestedatt--exports--target--s3))
-- `type` (String) The exported file type.
+- `type` (String) The exported target type.
 
 <a id="nestedatt--exports--target--azure_blob"></a>
 ### Nested Schema for `exports.target.azure_blob`
