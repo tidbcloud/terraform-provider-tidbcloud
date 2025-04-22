@@ -86,12 +86,9 @@ Read-Only:
 <a id="nestedatt--endpoints--public"></a>
 ### Nested Schema for `endpoints.public`
 
-Optional:
-
-- `disabled` (Boolean) Whether the public endpoint is disabled.
-
 Read-Only:
 
+- `disabled` (Boolean) Whether the public endpoint is disabled.
 - `host` (String) The host of the public endpoint.
 - `port` (Number) The port of the public endpoint.
 
