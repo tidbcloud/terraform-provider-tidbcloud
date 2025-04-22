@@ -126,10 +126,16 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 			"export_id": schema.StringAttribute{
 				MarkdownDescription: "The unique ID of the export.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the export.",
@@ -137,6 +143,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"state": schema.StringAttribute{
@@ -146,10 +153,16 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 			"create_time": schema.StringAttribute{
 				MarkdownDescription: "Timestamp when the export was created.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"created_by": schema.StringAttribute{
 				MarkdownDescription: "The user who created the export.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				MarkdownDescription: "Timestamp when the export was updated.",
@@ -158,14 +171,23 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 			"complete_time": schema.StringAttribute{
 				MarkdownDescription: "Timestamp when the export was completed.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"snapshot_time": schema.StringAttribute{
 				MarkdownDescription: "Snapshot time of the export.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"expire_time": schema.StringAttribute{
 				MarkdownDescription: "Expire time of the export.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"export_options": schema.SingleNestedAttribute{
 				MarkdownDescription: "The options of the export.",
@@ -325,7 +347,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"uri": schema.StringAttribute{
 								MarkdownDescription: "The URI of the S3 folder.",
 								Optional:            true,
-								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
@@ -333,7 +354,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"auth_type": schema.StringAttribute{
 								MarkdownDescription: "The auth method of the export S3.",
 								Optional:            true,
-								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
@@ -341,7 +361,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"access_key": schema.SingleNestedAttribute{
 								MarkdownDescription: "The access key of the S3.",
 								Optional:            true,
-								Computed:            true,
 								PlanModifiers: []planmodifier.Object{
 									objectplanmodifier.UseStateForUnknown(),
 								},
@@ -349,7 +368,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 									"id": schema.StringAttribute{
 										MarkdownDescription: "The access key ID of the S3.",
 										Optional:            true,
-										Computed:            true,
 										PlanModifiers: []planmodifier.String{
 											stringplanmodifier.UseStateForUnknown(),
 										},
@@ -367,7 +385,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"role_arn": schema.StringAttribute{
 								MarkdownDescription: "The role arn of the S3.",
 								Optional:            true,
-								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
@@ -385,7 +402,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"uri": schema.StringAttribute{
 								MarkdownDescription: "The GCS URI of the export target.",
 								Optional:            true,
-								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
@@ -393,7 +409,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"auth_type": schema.StringAttribute{
 								MarkdownDescription: "The auth method of the export target.",
 								Optional:            true,
-								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
@@ -419,7 +434,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"uri": schema.StringAttribute{
 								MarkdownDescription: "The Azure Blob URI of the export target.",
 								Optional:            true,
-								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
@@ -427,7 +441,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"auth_type": schema.StringAttribute{
 								MarkdownDescription: "The auth method of the export target.",
 								Optional:            true,
-								Computed:            true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.UseStateForUnknown(),
 								},
