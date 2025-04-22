@@ -43,11 +43,11 @@ output "output" {
 
 ### Read-Only
 
-- `annotations` (Map of String) The annotations of the cluster.
-- `create_time` (String) The time the cluster was created.
-- `created_by` (String) The email of the creator of the cluster.
-- `display_name` (String) The display name of the cluster.
-- `endpoints` (Attributes) The endpoints for connecting to the cluster. (see [below for nested schema](#nestedatt--endpoints))
+- `annotations` (Map of String) The annotations of the branch.
+- `create_time` (String) The time the branch was created.
+- `created_by` (String) The email of the creator of the branch.
+- `display_name` (String) The display name of the branch.
+- `endpoints` (Attributes) The endpoints for connecting to the branch. (see [below for nested schema](#nestedatt--endpoints))
 - `parent_display_name` (String) The display name of the parent.
 - `parent_id` (String) The parent ID of the branch.
 - `parent_timestamp` (String) The timestamp of the parent. (RFC3339 format, e.g., 2024-01-01T00:00:00Z)
@@ -59,26 +59,10 @@ output "output" {
 <a id="nestedatt--endpoints"></a>
 ### Nested Schema for `endpoints`
 
-Optional:
-
-- `public` (Attributes) The public endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--endpoints--public))
-
 Read-Only:
 
-- `private` (Attributes) The private endpoint for connecting to the cluster. (see [below for nested schema](#nestedatt--endpoints--private))
-
-<a id="nestedatt--endpoints--public"></a>
-### Nested Schema for `endpoints.public`
-
-Optional:
-
-- `disabled` (Boolean) Whether the public endpoint is disabled.
-
-Read-Only:
-
-- `host` (String) The host of the public endpoint.
-- `port` (Number) The port of the public endpoint.
-
+- `private` (Attributes) The private endpoint for connecting to the branch. (see [below for nested schema](#nestedatt--endpoints--private))
+- `public` (Attributes) The public endpoint for connecting to the branch. (see [below for nested schema](#nestedatt--endpoints--public))
 
 <a id="nestedatt--endpoints--private"></a>
 ### Nested Schema for `endpoints.private`
@@ -99,12 +83,25 @@ Read-Only:
 
 
 
+<a id="nestedatt--endpoints--public"></a>
+### Nested Schema for `endpoints.public`
+
+Optional:
+
+- `disabled` (Boolean) Whether the public endpoint is disabled.
+
+Read-Only:
+
+- `host` (String) The host of the public endpoint.
+- `port` (Number) The port of the public endpoint.
+
+
 
 <a id="nestedatt--usage"></a>
 ### Nested Schema for `usage`
 
 Read-Only:
 
-- `columnar_storage` (Number) The columnar storage of the cluster.
-- `request_unit` (String) The request unit of the cluster.
-- `row_based_storage` (Number) The row-based storage of the cluster.
+- `columnar_storage` (Number) The columnar storage of the branch.
+- `request_unit` (String) The request unit of the branch.
+- `row_based_storage` (Number) The row-based storage of the branch.

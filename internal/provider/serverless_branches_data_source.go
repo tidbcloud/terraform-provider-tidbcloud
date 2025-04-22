@@ -75,7 +75,7 @@ func (d *serverlessBranchesDataSource) Schema(_ context.Context, _ datasource.Sc
 							Computed:            true,
 						},
 						"display_name": schema.StringAttribute{
-							MarkdownDescription: "The display name of the cluster.",
+							MarkdownDescription: "The display name of the branch.",
 							Computed:            true,
 						},
 						"parent_id": schema.StringAttribute{
@@ -83,12 +83,11 @@ func (d *serverlessBranchesDataSource) Schema(_ context.Context, _ datasource.Sc
 							Computed:            true,
 						},
 						"endpoints": schema.SingleNestedAttribute{
-							MarkdownDescription: "The endpoints for connecting to the cluster.",
+							MarkdownDescription: "The endpoints for connecting to the branch.",
 							Computed:            true,
 							Attributes: map[string]schema.Attribute{
 								"public": schema.SingleNestedAttribute{
-									MarkdownDescription: "The public endpoint for connecting to the cluster.",
-									Optional:            true,
+									MarkdownDescription: "The public endpoint for connecting to the branch.",
 									Computed:            true,
 									Attributes: map[string]schema.Attribute{
 										"host": schema.StringAttribute{
@@ -106,7 +105,7 @@ func (d *serverlessBranchesDataSource) Schema(_ context.Context, _ datasource.Sc
 									},
 								},
 								"private": schema.SingleNestedAttribute{
-									MarkdownDescription: "The private endpoint for connecting to the cluster.",
+									MarkdownDescription: "The private endpoint for connecting to the branch.",
 									Computed:            true,
 									Attributes: map[string]schema.Attribute{
 										"host": schema.StringAttribute{
@@ -137,11 +136,11 @@ func (d *serverlessBranchesDataSource) Schema(_ context.Context, _ datasource.Sc
 							},
 						},
 						"created_by": schema.StringAttribute{
-							MarkdownDescription: "The email of the creator of the cluster.",
+							MarkdownDescription: "The email of the creator of the branch.",
 							Computed:            true,
 						},
 						"create_time": schema.StringAttribute{
-							MarkdownDescription: "The time the cluster was created.",
+							MarkdownDescription: "The time the branch was created.",
 							Computed:            true,
 						},
 						"update_time": schema.StringAttribute{
@@ -165,7 +164,7 @@ func (d *serverlessBranchesDataSource) Schema(_ context.Context, _ datasource.Sc
 							Computed:            true,
 						},
 						"annotations": schema.MapAttribute{
-							MarkdownDescription: "The annotations of the cluster.",
+							MarkdownDescription: "The annotations of the branch.",
 							Computed:            true,
 							ElementType:         types.StringType,
 						},

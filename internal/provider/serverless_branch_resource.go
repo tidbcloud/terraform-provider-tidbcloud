@@ -10,8 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -21,6 +19,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 	branchV1beta1 "github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/serverless/branch"
+)
+
+const (
+	branchServerlessCreateTimeout  = 180 * time.Second
+	branchServerlessCreateInterval = 2 * time.Second
 )
 
 type serverlessBranchResourceData struct {
@@ -100,43 +103,32 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"endpoints": schema.SingleNestedAttribute{
-				MarkdownDescription: "The endpoints for connecting to the cluster.",
-				Optional:            true,
+				MarkdownDescription: "The endpoints for connecting to the branch.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"public": schema.SingleNestedAttribute{
-						MarkdownDescription: "The public endpoint for connecting to the cluster.",
-						Optional:            true,
+						MarkdownDescription: "The public endpoint for connecting to the branch.",
 						Computed:            true,
 						Attributes: map[string]schema.Attribute{
 							"host": schema.StringAttribute{
 								MarkdownDescription: "The host of the public endpoint.",
 								Computed:            true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 							"port": schema.Int32Attribute{
 								MarkdownDescription: "The port of the public endpoint.",
 								Computed:            true,
-								PlanModifiers: []planmodifier.Int32{
-									int32planmodifier.UseStateForUnknown(),
-								},
 							},
 							"disabled": schema.BoolAttribute{
 								MarkdownDescription: "Whether the public endpoint is disabled.",
-								Optional:            true,
-								PlanModifiers: []planmodifier.Bool{
-									boolplanmodifier.UseStateForUnknown(),
-								},
+								Computed:            true,
 							},
 						},
 					},
 					"private": schema.SingleNestedAttribute{
-						MarkdownDescription: "The private endpoint for connecting to the cluster.",
+						MarkdownDescription: "The private endpoint for connecting to the branch.",
 						Computed:            true,
 						PlanModifiers: []planmodifier.Object{
 							objectplanmodifier.UseStateForUnknown(),
@@ -170,14 +162,14 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"created_by": schema.StringAttribute{
-				MarkdownDescription: "The email of the creator of the cluster.",
+				MarkdownDescription: "The email of the creator of the branch.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"create_time": schema.StringAttribute{
-				MarkdownDescription: "The time the cluster was created.",
+				MarkdownDescription: "The time the branch was created.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -206,15 +198,15 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 				Attributes: map[string]schema.Attribute{
 					"request_unit": schema.StringAttribute{
-						MarkdownDescription: "The request unit of the cluster.",
+						MarkdownDescription: "The request unit of the branch.",
 						Computed:            true,
 					},
 					"row_based_storage": schema.Int64Attribute{
-						MarkdownDescription: "The row-based storage of the cluster.",
+						MarkdownDescription: "The row-based storage of the branch.",
 						Computed:            true,
 					},
 					"columnar_storage": schema.Int64Attribute{
-						MarkdownDescription: "The columnar storage of the cluster.",
+						MarkdownDescription: "The columnar storage of the branch.",
 						Computed:            true,
 					},
 				},
@@ -229,12 +221,14 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 			"parent_timestamp": schema.StringAttribute{
 				MarkdownDescription: "The timestamp of the parent. (RFC3339 format, e.g., 2024-01-01T00:00:00Z)",
 				Computed:            true,
+				Optional:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"annotations": schema.MapAttribute{
-				MarkdownDescription: "The annotations of the cluster.",
+				MarkdownDescription: "The annotations of the branch.",
 				Computed:            true,
 				ElementType:         types.StringType,
 				PlanModifiers: []planmodifier.Map{
@@ -276,11 +270,11 @@ func (r serverlessBranchResource) Create(ctx context.Context, req resource.Creat
 
 	branchId := *branch.BranchId
 	tflog.Info(ctx, "wait serverless branch ready")
-	_, err = WaitServerlessBranchReady(ctx, clusterServerlessCreateTimeout, clusterServerlessCreateInterval, data.ClusterId.ValueString(), branchId, r.provider.ServerlessClient)
+	_, err = WaitServerlessBranchReady(ctx, branchServerlessCreateTimeout, branchServerlessCreateInterval, data.ClusterId.ValueString(), branchId, r.provider.ServerlessClient)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Cluster creation failed",
-			fmt.Sprintf("Cluster is not ready, get error: %s", err),
+			"Branch creation failed",
+			fmt.Sprintf("Branch is not ready, get error: %s", err),
 		)
 		return
 	}
@@ -400,15 +394,6 @@ func buildCreateServerlessBranchBody(data serverlessBranchResourceData) (branchV
 			return branchV1beta1.Branch{}, err
 		}
 		body.ParentTimestamp = *branchV1beta1.NewNullableTime(&parentTimestamp)
-	}
-
-	if data.Endpoints != nil {
-		publicEndpointsDisabled := data.Endpoints.Public.Disabled.ValueBool()
-		body.Endpoints = &branchV1beta1.BranchEndpoints{
-			Public: &branchV1beta1.BranchEndpointsPublic{
-				Disabled: &publicEndpointsDisabled,
-			},
-		}
 	}
 
 	return body, nil
