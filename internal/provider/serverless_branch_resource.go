@@ -386,7 +386,7 @@ func refreshServerlessBranchResourceData(ctx context.Context, resp *branchV1beta
 	}
 
 	data.DisplayName = types.StringValue(resp.DisplayName)
-	data.ParentTimestamp = types.StringValue(resp.ParentTimestamp.Get().String())
+	data.ParentTimestamp = types.StringValue(resp.ParentTimestamp.Get().Format(time.RFC3339))
 	data.ParentDisplayName = types.StringValue(*resp.ParentDisplayName)
 	data.ParentId = types.StringValue(*resp.ParentId)
 

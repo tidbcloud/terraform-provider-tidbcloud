@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -204,7 +205,7 @@ func (d *serverlessBranchDataSource) Read(ctx context.Context, req datasource.Re
 	data.DisplayName = types.StringValue(branch.DisplayName)
 	data.ParentId = types.StringValue(*branch.ParentId)
 	data.ParentDisplayName = types.StringValue(*branch.ParentDisplayName)
-	data.ParentTimestamp = types.StringValue(branch.ParentTimestamp.Get().String())
+	data.ParentTimestamp = types.StringValue(branch.ParentTimestamp.Get().Format(time.RFC3339))
 
 	e := branch.Endpoints
 	var pe private
