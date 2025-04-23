@@ -110,37 +110,46 @@ Optional:
 <a id="nestedatt--target--azure_blob"></a>
 ### Nested Schema for `target.azure_blob`
 
-Optional:
+Required:
 
 - `auth_type` (String) The auth method of the export target.
-- `sas_token` (String, Sensitive) The sas token.
 - `uri` (String) The Azure Blob URI of the export target.
+
+Optional:
+
+- `sas_token` (String, Sensitive) The sas token.
 
 
 <a id="nestedatt--target--gcs"></a>
 ### Nested Schema for `target.gcs`
 
-Optional:
+Required:
 
 - `auth_type` (String) The auth method of the export target.
-- `service_account_key` (String, Sensitive) The service account key.
 - `uri` (String) The GCS URI of the export target.
+
+Optional:
+
+- `service_account_key` (String, Sensitive) The service account key.
 
 
 <a id="nestedatt--target--s3"></a>
 ### Nested Schema for `target.s3`
 
+Required:
+
+- `auth_type` (String) The auth method of the export S3.
+- `uri` (String) The URI of the S3 folder.
+
 Optional:
 
 - `access_key` (Attributes) The access key of the S3. (see [below for nested schema](#nestedatt--target--s3--access_key))
-- `auth_type` (String) The auth method of the export S3.
 - `role_arn` (String) The role arn of the S3.
-- `uri` (String) The URI of the S3 folder.
 
 <a id="nestedatt--target--s3--access_key"></a>
 ### Nested Schema for `target.s3.access_key`
 
-Optional:
+Required:
 
 - `id` (String) The access key ID of the S3.
 - `secret` (String, Sensitive) The secret access key of the S3.
