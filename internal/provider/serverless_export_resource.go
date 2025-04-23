@@ -196,6 +196,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 				Computed:            true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
+					objectplanmodifier.RequiresReplace(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"file_type": schema.StringAttribute{
@@ -327,6 +328,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 				Computed:            true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
+					objectplanmodifier.RequiresReplace(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
@@ -711,7 +713,7 @@ func refreshServerlessExportResourceData(ctx context.Context, resp *exportV1beta
 				Sql: types.StringValue(*resp.ExportOptions.Filter.Sql),
 			}
 		} else {
-			patterns, diag := types.ListValueFrom(ctx, types.StringType, data.ExportOptions.Filter.Table.Patterns)
+			patterns, diag := types.ListValueFrom(ctx, types.StringType, resp.ExportOptions.Filter.Table.Patterns)
 			if diag.HasError() {
 				return errors.New("unable to convert export options filter table patterns")
 			}
