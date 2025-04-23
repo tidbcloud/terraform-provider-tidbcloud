@@ -529,37 +529,40 @@ func (r *serverlessExportResource) ImportState(ctx context.Context, req resource
 }
 
 func buildCreateServerlessExportBody(ctx context.Context, data serverlessExportResourceData) (exportV1beta1.ExportServiceCreateExportBody, error) {
-	displayName := data.DisplayName.ValueString()
+	body := exportV1beta1.ExportServiceCreateExportBody{}
 
-	body := exportV1beta1.ExportServiceCreateExportBody{
-		DisplayName: &displayName,
+	if IsKnown(data.DisplayName) {
+		displayName := data.DisplayName.ValueString()
+		body.DisplayName = &displayName
 	}
-
 	if data.ExportOptions != nil {
-		fileType := exportV1beta1.ExportFileTypeEnum(data.ExportOptions.FileType.ValueString())
-		compression := exportV1beta1.ExportCompressionTypeEnum(data.ExportOptions.Compression.ValueString())
-		body.ExportOptions = &exportV1beta1.ExportOptions{
-			FileType:    &fileType,
-			Compression: &compression,
+		body.ExportOptions = &exportV1beta1.ExportOptions{}
+		if IsKnown(data.ExportOptions.FileType) {
+			fileType := exportV1beta1.ExportFileTypeEnum(data.ExportOptions.FileType.ValueString())
+			body.ExportOptions.FileType = &fileType
 		}
-
+		if IsKnown(data.ExportOptions.Compression) {
+			compression := exportV1beta1.ExportCompressionTypeEnum(data.ExportOptions.Compression.ValueString())
+			body.ExportOptions.Compression = &compression
+		}
 		if data.ExportOptions.Filter != nil {
 			body.ExportOptions.Filter = &exportV1beta1.ExportOptionsFilter{}
 			if IsKnown(data.ExportOptions.Filter.Sql) {
 				sql := data.ExportOptions.Filter.Sql.ValueString()
 				body.ExportOptions.Filter.Sql = &sql
 			}
-
 			if data.ExportOptions.Filter.Table != nil {
-				var patterns []string
-				diag := data.ExportOptions.Filter.Table.Patterns.ElementsAs(ctx, &patterns, false)
-				if diag.HasError() {
-					return exportV1beta1.ExportServiceCreateExportBody{}, errors.New("unable to get patterns")
+				if IsKnown(data.ExportOptions.Filter.Table.Patterns) {
+					var patterns []string
+					diag := data.ExportOptions.Filter.Table.Patterns.ElementsAs(ctx, &patterns, false)
+					if diag.HasError() {
+						return exportV1beta1.ExportServiceCreateExportBody{}, errors.New("unable to get patterns")
+					}
+					body.ExportOptions.Filter.Table = &exportV1beta1.ExportOptionsFilterTable{
+						Patterns: patterns,
+					}
 				}
-				body.ExportOptions.Filter.Table = &exportV1beta1.ExportOptionsFilterTable{
-					Patterns: patterns,
-				}
-				if !data.ExportOptions.Filter.Table.Where.IsUnknown() {
+				if IsKnown(data.ExportOptions.Filter.Table.Where) {
 					where := data.ExportOptions.Filter.Table.Where.ValueString()
 					body.ExportOptions.Filter.Table.Where = &where
 				}
@@ -568,19 +571,19 @@ func buildCreateServerlessExportBody(ctx context.Context, data serverlessExportR
 
 		if data.ExportOptions.CsvFormat != nil {
 			csvFormat := exportV1beta1.ExportOptionsCSVFormat{}
-			if !data.ExportOptions.CsvFormat.Separator.IsUnknown() {
+			if IsKnown(data.ExportOptions.CsvFormat.Separator) {
 				separator := data.ExportOptions.CsvFormat.Separator.ValueString()
 				csvFormat.Separator = &separator
 			}
-			if !data.ExportOptions.CsvFormat.Delimiter.IsUnknown() {
+			if IsKnown(data.ExportOptions.CsvFormat.Delimiter) {
 				delimiter := data.ExportOptions.CsvFormat.Delimiter.ValueString()
 				csvFormat.Delimiter = *exportV1beta1.NewNullableString(&delimiter)
 			}
-			if !data.ExportOptions.CsvFormat.NullValue.IsUnknown() {
+			if IsKnown(data.ExportOptions.CsvFormat.NullValue) {
 				nullValue := data.ExportOptions.CsvFormat.NullValue.ValueString()
 				csvFormat.NullValue = *exportV1beta1.NewNullableString(&nullValue)
 			}
-			if !data.ExportOptions.CsvFormat.SkipHeader.IsUnknown() {
+			if IsKnown(data.ExportOptions.CsvFormat.SkipHeader) {
 				skipHeader := data.ExportOptions.CsvFormat.SkipHeader.ValueBool()
 				csvFormat.SkipHeader = &skipHeader
 			}
@@ -594,13 +597,11 @@ func buildCreateServerlessExportBody(ctx context.Context, data serverlessExportR
 			}
 		}
 	}
-
 	if data.Target != nil {
 		targetType := exportV1beta1.ExportTargetTypeEnum(data.Target.Type.ValueString())
 		body.Target = &exportV1beta1.ExportTarget{
 			Type: &targetType,
 		}
-
 		if data.Target.S3 != nil {
 			uri := data.Target.S3.Uri.ValueString()
 			authType := exportV1beta1.ExportS3AuthTypeEnum(data.Target.S3.AuthType.ValueString())
@@ -608,35 +609,39 @@ func buildCreateServerlessExportBody(ctx context.Context, data serverlessExportR
 				Uri:      &uri,
 				AuthType: authType,
 			}
-
 			if data.Target.S3.AccessKey != nil {
 				body.Target.S3.AccessKey = &exportV1beta1.S3TargetAccessKey{
 					Id:     data.Target.S3.AccessKey.Id.ValueString(),
 					Secret: data.Target.S3.AccessKey.Secret.ValueString(),
 				}
 			}
-
-			roleArn := data.Target.S3.RoleArn.ValueString()
-			body.Target.S3.RoleArn = &roleArn
+			if IsKnown(data.Target.S3.RoleArn) {
+				roleArn := data.Target.S3.RoleArn.ValueString()
+				body.Target.S3.RoleArn = &roleArn
+			}
 		}
 
 		if data.Target.Gcs != nil {
 			authType := exportV1beta1.ExportGcsAuthTypeEnum(data.Target.Gcs.AuthType.ValueString())
-			serviceAccountKey := data.Target.Gcs.ServiceAccountKey.ValueString()
 			body.Target.Gcs = &exportV1beta1.GCSTarget{
-				Uri:               data.Target.Gcs.Uri.ValueString(),
-				AuthType:          authType,
-				ServiceAccountKey: &serviceAccountKey,
+				Uri:      data.Target.Gcs.Uri.ValueString(),
+				AuthType: authType,
+			}
+			if IsKnown(data.Target.Gcs.ServiceAccountKey) {
+				serviceAccountKey := data.Target.Gcs.ServiceAccountKey.ValueString()
+				body.Target.Gcs.ServiceAccountKey = &serviceAccountKey
 			}
 		}
 
 		if data.Target.AzureBlob != nil {
 			authType := exportV1beta1.ExportAzureBlobAuthTypeEnum(data.Target.AzureBlob.AuthType.ValueString())
-			sasToken := data.Target.AzureBlob.SasToken.ValueString()
 			body.Target.AzureBlob = &exportV1beta1.AzureBlobTarget{
 				Uri:      data.Target.AzureBlob.Uri.ValueString(),
 				AuthType: authType,
-				SasToken: &sasToken,
+			}
+			if IsKnown(data.Target.AzureBlob.SasToken) {
+				sasToken := data.Target.AzureBlob.SasToken.ValueString()
+				body.Target.AzureBlob.SasToken = &sasToken
 			}
 		}
 	}
