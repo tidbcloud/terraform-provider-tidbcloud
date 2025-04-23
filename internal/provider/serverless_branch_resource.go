@@ -417,8 +417,8 @@ func refreshServerlessBranchResourceData(ctx context.Context, resp *branchV1beta
 	}
 
 	data.CreatedBy = types.StringValue(*resp.CreatedBy)
-	data.CreateTime = types.StringValue(resp.CreateTime.String())
-	data.UpdateTime = types.StringValue(resp.UpdateTime.String())
+	data.CreateTime = types.StringValue(resp.CreateTime.Format(time.RFC3339))
+	data.UpdateTime = types.StringValue(resp.UpdateTime.Format(time.RFC3339))
 	data.UserPrefix = types.StringValue(*resp.UserPrefix.Get())
 	data.State = types.StringValue(string(*resp.State))
 

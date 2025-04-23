@@ -232,8 +232,8 @@ func (d *serverlessBranchesDataSource) Read(ctx context.Context, req datasource.
 		b.ParentDisplayName = types.StringValue(*branch.ParentDisplayName)
 		b.ParentTimestamp = types.StringValue(branch.ParentTimestamp.Get().Format(time.RFC3339))
 		b.CreatedBy = types.StringValue(*branch.CreatedBy)
-		b.CreateTime = types.StringValue(branch.CreateTime.String())
-		b.UpdateTime = types.StringValue(branch.UpdateTime.String())
+		b.CreateTime = types.StringValue(branch.CreateTime.Format(time.RFC3339))
+		b.UpdateTime = types.StringValue(branch.UpdateTime.Format(time.RFC3339))
 		b.UserPrefix = types.StringValue(*branch.UserPrefix.Get())
 		b.State = types.StringValue(string(*branch.State))
 

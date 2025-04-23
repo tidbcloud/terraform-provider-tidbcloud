@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -312,8 +313,8 @@ func (d *serverlessClusterDataSource) Read(ctx context.Context, req datasource.R
 
 	data.Version = types.StringValue(*cluster.Version)
 	data.CreatedBy = types.StringValue(*cluster.CreatedBy)
-	data.CreateTime = types.StringValue(cluster.CreateTime.String())
-	data.UpdateTime = types.StringValue(cluster.UpdateTime.String())
+	data.CreateTime = types.StringValue(cluster.CreateTime.Format(time.RFC3339))
+	data.UpdateTime = types.StringValue(cluster.UpdateTime.Format(time.RFC3339))
 	data.UserPrefix = types.StringValue(*cluster.UserPrefix)
 	data.State = types.StringValue(string(*cluster.State))
 

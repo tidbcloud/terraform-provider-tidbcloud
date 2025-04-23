@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -20,19 +21,19 @@ type serverlessClustersDataSourceData struct {
 }
 
 type serverlessClusterItem struct {
-	ClusterId            types.String      `tfsdk:"cluster_id"`
-	DisplayName          types.String      `tfsdk:"display_name"`
-	Region               *region           `tfsdk:"region"`
-	Endpoints            *endpoints        `tfsdk:"endpoints"`
-	EncryptionConfig     *encryptionConfig `tfsdk:"encryption_config"`
-	Version              types.String      `tfsdk:"version"`
-	CreatedBy            types.String      `tfsdk:"created_by"`
-	CreateTime           types.String      `tfsdk:"create_time"`
-	UpdateTime           types.String      `tfsdk:"update_time"`
-	UserPrefix           types.String      `tfsdk:"user_prefix"`
-	State                types.String      `tfsdk:"state"`
-	Labels               types.Map         `tfsdk:"labels"`
-	Annotations          types.Map         `tfsdk:"annotations"`
+	ClusterId        types.String      `tfsdk:"cluster_id"`
+	DisplayName      types.String      `tfsdk:"display_name"`
+	Region           *region           `tfsdk:"region"`
+	Endpoints        *endpoints        `tfsdk:"endpoints"`
+	EncryptionConfig *encryptionConfig `tfsdk:"encryption_config"`
+	Version          types.String      `tfsdk:"version"`
+	CreatedBy        types.String      `tfsdk:"created_by"`
+	CreateTime       types.String      `tfsdk:"create_time"`
+	UpdateTime       types.String      `tfsdk:"update_time"`
+	UserPrefix       types.String      `tfsdk:"user_prefix"`
+	State            types.String      `tfsdk:"state"`
+	Labels           types.Map         `tfsdk:"labels"`
+	Annotations      types.Map         `tfsdk:"annotations"`
 }
 
 var _ datasource.DataSource = &serverlessClustersDataSource{}
@@ -279,8 +280,8 @@ func (d *serverlessClustersDataSource) Read(ctx context.Context, req datasource.
 
 		c.Version = types.StringValue(*cluster.Version)
 		c.CreatedBy = types.StringValue(*cluster.CreatedBy)
-		c.CreateTime = types.StringValue(cluster.CreateTime.String())
-		c.UpdateTime = types.StringValue(cluster.UpdateTime.String())
+		c.CreateTime = types.StringValue(cluster.CreateTime.Format(time.RFC3339))
+		c.UpdateTime = types.StringValue(cluster.UpdateTime.Format(time.RFC3339))
 		c.UserPrefix = types.StringValue(*cluster.UserPrefix)
 		c.State = types.StringValue(string(*cluster.State))
 

@@ -234,8 +234,8 @@ func (d *serverlessBranchDataSource) Read(ctx context.Context, req datasource.Re
 	}
 
 	data.CreatedBy = types.StringValue(*branch.CreatedBy)
-	data.CreateTime = types.StringValue(branch.CreateTime.String())
-	data.UpdateTime = types.StringValue(branch.UpdateTime.String())
+	data.CreateTime = types.StringValue(branch.CreateTime.Format(time.RFC3339))
+	data.UpdateTime = types.StringValue(branch.UpdateTime.Format(time.RFC3339))
 	data.UserPrefix = types.StringValue(*branch.UserPrefix.Get())
 	data.State = types.StringValue(string(*branch.State))
 
