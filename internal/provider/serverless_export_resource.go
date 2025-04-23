@@ -483,11 +483,6 @@ func (r *serverlessExportResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	if data.State.ValueString() != "" {
-		resp.Diagnostics.AddError("Invalid State", "State must be empty when creating a new export")
-		return
-	}
-
 	tflog.Trace(ctx, "create serverless_export_resource")
 	body, err := buildCreateServerlessExportBody(ctx, data)
 	if err != nil {
