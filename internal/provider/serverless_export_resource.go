@@ -251,7 +251,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 									"where": schema.StringAttribute{
 										MarkdownDescription: "Export only selected records.",
 										Optional:            true,
-										Computed:            true,
 										PlanModifiers: []planmodifier.String{
 											stringplanmodifier.UseStateForUnknown(),
 										},
@@ -593,9 +592,11 @@ func buildCreateServerlessExportBody(ctx context.Context, data serverlessExportR
 		}
 
 		if data.ExportOptions.Filter != nil {
-			sql := data.ExportOptions.Filter.Sql.ValueString()
-			body.ExportOptions.Filter = &exportV1beta1.ExportOptionsFilter{
-				Sql: &sql,
+			if IsKnown(data.ExportOptions.Filter.Sql) {
+				sql := data.ExportOptions.Filter.Sql.ValueString()
+				body.ExportOptions.Filter = &exportV1beta1.ExportOptionsFilter{
+					Sql: &sql,
+				}
 			}
 
 			if data.ExportOptions.Filter.Table != nil {
@@ -604,25 +605,35 @@ func buildCreateServerlessExportBody(ctx context.Context, data serverlessExportR
 				if diag.HasError() {
 					return exportV1beta1.ExportServiceCreateExportBody{}, errors.New("unable to get patterns")
 				}
-				where := data.ExportOptions.Filter.Table.Where.ValueString()
 				body.ExportOptions.Filter.Table = &exportV1beta1.ExportOptionsFilterTable{
 					Patterns: patterns,
-					Where:    &where,
+				}
+				if !data.ExportOptions.Filter.Table.Where.IsUnknown() {
+					where := data.ExportOptions.Filter.Table.Where.ValueString()
+					body.ExportOptions.Filter.Table.Where = &where
 				}
 			}
 		}
 
 		if data.ExportOptions.CsvFormat != nil {
-			separator := data.ExportOptions.CsvFormat.Separator.ValueString()
-			delimiter := data.ExportOptions.CsvFormat.Delimiter.ValueString()
-			nullValue := data.ExportOptions.CsvFormat.NullValue.ValueString()
-			skipHeader := data.ExportOptions.CsvFormat.SkipHeader.ValueBool()
-			body.ExportOptions.CsvFormat = &exportV1beta1.ExportOptionsCSVFormat{
-				Separator:  &separator,
-				Delimiter:  *exportV1beta1.NewNullableString(&delimiter),
-				NullValue:  *exportV1beta1.NewNullableString(&nullValue),
-				SkipHeader: &skipHeader,
+			csvFormat :=exportV1beta1.ExportOptionsCSVFormat{}
+			if !data.ExportOptions.CsvFormat.Separator.IsUnknown() {
+				separator := data.ExportOptions.CsvFormat.Separator.ValueString()
+				csvFormat.Separator = &separator
 			}
+			if !data.ExportOptions.CsvFormat.Delimiter.IsUnknown() {
+				delimiter := data.ExportOptions.CsvFormat.Delimiter.ValueString()
+				csvFormat.Delimiter = *exportV1beta1.NewNullableString(&delimiter)
+			}
+			if !data.ExportOptions.CsvFormat.NullValue.IsUnknown() {
+				nullValue := data.ExportOptions.CsvFormat.NullValue.ValueString()
+				csvFormat.NullValue = *exportV1beta1.NewNullableString(&nullValue)
+			}
+			if !data.ExportOptions.CsvFormat.SkipHeader.IsUnknown() {
+				skipHeader := data.ExportOptions.CsvFormat.SkipHeader.ValueBool()
+				csvFormat.SkipHeader = &skipHeader
+			}
+			body.ExportOptions.CsvFormat = &csvFormat
 		}
 
 		if data.ExportOptions.ParquetFormat != nil {
