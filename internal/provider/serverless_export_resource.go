@@ -341,116 +341,71 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 					"s3": schema.SingleNestedAttribute{
 						MarkdownDescription: "S3 target.",
 						Optional:            true,
-						PlanModifiers: []planmodifier.Object{
-							objectplanmodifier.UseStateForUnknown(),
-						},
 						Attributes: map[string]schema.Attribute{
 							"uri": schema.StringAttribute{
 								MarkdownDescription: "The URI of the S3 folder.",
 								Optional:            true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 							"auth_type": schema.StringAttribute{
 								MarkdownDescription: "The auth method of the export S3.",
 								Optional:            true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 							"access_key": schema.SingleNestedAttribute{
 								MarkdownDescription: "The access key of the S3.",
 								Optional:            true,
-								PlanModifiers: []planmodifier.Object{
-									objectplanmodifier.UseStateForUnknown(),
-								},
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
 										MarkdownDescription: "The access key ID of the S3.",
 										Optional:            true,
-										PlanModifiers: []planmodifier.String{
-											stringplanmodifier.UseStateForUnknown(),
-										},
 									},
 									"secret": schema.StringAttribute{
 										MarkdownDescription: "The secret access key of the S3.",
 										Optional:            true,
 										Sensitive:           true,
-										PlanModifiers: []planmodifier.String{
-											stringplanmodifier.UseStateForUnknown(),
-										},
 									},
 								},
 							},
 							"role_arn": schema.StringAttribute{
 								MarkdownDescription: "The role arn of the S3.",
 								Optional:            true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 						},
 					},
 					"gcs": schema.SingleNestedAttribute{
 						MarkdownDescription: "GCS target.",
 						Optional:            true,
-						PlanModifiers: []planmodifier.Object{
-							objectplanmodifier.UseStateForUnknown(),
-						},
 						Attributes: map[string]schema.Attribute{
 							"uri": schema.StringAttribute{
 								MarkdownDescription: "The GCS URI of the export target.",
 								Optional:            true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 							"auth_type": schema.StringAttribute{
 								MarkdownDescription: "The auth method of the export target.",
 								Optional:            true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 							"service_account_key": schema.StringAttribute{
 								MarkdownDescription: "The service account key.",
 								Optional:            true,
 								Sensitive:           true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 						},
 					},
 					"azure_blob": schema.SingleNestedAttribute{
 						MarkdownDescription: "Azure Blob target.",
 						Optional:            true,
-						PlanModifiers: []planmodifier.Object{
-							objectplanmodifier.UseStateForUnknown(),
-						},
 						Attributes: map[string]schema.Attribute{
 							"uri": schema.StringAttribute{
 								MarkdownDescription: "The Azure Blob URI of the export target.",
 								Optional:            true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 							"auth_type": schema.StringAttribute{
 								MarkdownDescription: "The auth method of the export target.",
 								Optional:            true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 							"sas_token": schema.StringAttribute{
 								MarkdownDescription: "The sas token.",
 								Optional:            true,
 								Sensitive:           true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 						},
 					},
