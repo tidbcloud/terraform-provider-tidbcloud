@@ -592,11 +592,10 @@ func buildCreateServerlessExportBody(ctx context.Context, data serverlessExportR
 		}
 
 		if data.ExportOptions.Filter != nil {
+			body.ExportOptions.Filter = &exportV1beta1.ExportOptionsFilter{}
 			if IsKnown(data.ExportOptions.Filter.Sql) {
 				sql := data.ExportOptions.Filter.Sql.ValueString()
-				body.ExportOptions.Filter = &exportV1beta1.ExportOptionsFilter{
-					Sql: &sql,
-				}
+				body.ExportOptions.Filter.Sql = &sql
 			}
 
 			if data.ExportOptions.Filter.Table != nil {
@@ -616,7 +615,7 @@ func buildCreateServerlessExportBody(ctx context.Context, data serverlessExportR
 		}
 
 		if data.ExportOptions.CsvFormat != nil {
-			csvFormat :=exportV1beta1.ExportOptionsCSVFormat{}
+			csvFormat := exportV1beta1.ExportOptionsCSVFormat{}
 			if !data.ExportOptions.CsvFormat.Separator.IsUnknown() {
 				separator := data.ExportOptions.CsvFormat.Separator.ValueString()
 				csvFormat.Separator = &separator
