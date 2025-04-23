@@ -226,10 +226,6 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 							"sql": schema.StringAttribute{
 								MarkdownDescription: "Use SQL to filter the export.",
 								Optional:            true,
-								Computed:            true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.UseStateForUnknown(),
-								},
 							},
 							"table": schema.SingleNestedAttribute{
 								MarkdownDescription: "Use table-filter to filter the export.",
@@ -251,6 +247,7 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 									"where": schema.StringAttribute{
 										MarkdownDescription: "Export only selected records.",
 										Optional:            true,
+										Computed:            true,
 										PlanModifiers: []planmodifier.String{
 											stringplanmodifier.UseStateForUnknown(),
 										},
@@ -344,11 +341,11 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 						Attributes: map[string]schema.Attribute{
 							"uri": schema.StringAttribute{
 								MarkdownDescription: "The URI of the S3 folder.",
-								Optional:            true,
+								Required:            true,
 							},
 							"auth_type": schema.StringAttribute{
 								MarkdownDescription: "The auth method of the export S3.",
-								Optional:            true,
+								Required:            true,
 							},
 							"access_key": schema.SingleNestedAttribute{
 								MarkdownDescription: "The access key of the S3.",
@@ -356,11 +353,11 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
 										MarkdownDescription: "The access key ID of the S3.",
-										Optional:            true,
+										Required:            true,
 									},
 									"secret": schema.StringAttribute{
 										MarkdownDescription: "The secret access key of the S3.",
-										Optional:            true,
+										Required:            true,
 										Sensitive:           true,
 									},
 								},
@@ -377,11 +374,11 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 						Attributes: map[string]schema.Attribute{
 							"uri": schema.StringAttribute{
 								MarkdownDescription: "The GCS URI of the export target.",
-								Optional:            true,
+								Required:            true,
 							},
 							"auth_type": schema.StringAttribute{
 								MarkdownDescription: "The auth method of the export target.",
-								Optional:            true,
+								Required:            true,
 							},
 							"service_account_key": schema.StringAttribute{
 								MarkdownDescription: "The service account key.",
@@ -396,11 +393,11 @@ func (r *serverlessExportResource) Schema(_ context.Context, _ resource.SchemaRe
 						Attributes: map[string]schema.Attribute{
 							"uri": schema.StringAttribute{
 								MarkdownDescription: "The Azure Blob URI of the export target.",
-								Optional:            true,
+								Required:            true,
 							},
 							"auth_type": schema.StringAttribute{
 								MarkdownDescription: "The auth method of the export target.",
-								Optional:            true,
+								Required:            true,
 							},
 							"sas_token": schema.StringAttribute{
 								MarkdownDescription: "The sas token.",
