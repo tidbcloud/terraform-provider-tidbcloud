@@ -552,15 +552,14 @@ func buildCreateServerlessExportBody(ctx context.Context, data serverlessExportR
 				body.ExportOptions.Filter.Sql = &sql
 			}
 			if data.ExportOptions.Filter.Table != nil {
+				body.ExportOptions.Filter.Table = &exportV1beta1.ExportOptionsFilterTable{}
 				if IsKnown(data.ExportOptions.Filter.Table.Patterns) {
 					var patterns []string
 					diag := data.ExportOptions.Filter.Table.Patterns.ElementsAs(ctx, &patterns, false)
 					if diag.HasError() {
 						return exportV1beta1.ExportServiceCreateExportBody{}, errors.New("unable to get patterns")
 					}
-					body.ExportOptions.Filter.Table = &exportV1beta1.ExportOptionsFilterTable{
-						Patterns: patterns,
-					}
+					body.ExportOptions.Filter.Table.Patterns = patterns
 				}
 				if IsKnown(data.ExportOptions.Filter.Table.Where) {
 					where := data.ExportOptions.Filter.Table.Where.ValueString()
