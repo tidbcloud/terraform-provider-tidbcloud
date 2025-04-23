@@ -488,10 +488,10 @@ func (r *serverlessExportResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	tflog.Trace(ctx, "create serverless_cluster_resource")
+	tflog.Trace(ctx, "create serverless_export_resource")
 	body, err := buildCreateServerlessExportBody(ctx, data)
 	if err != nil {
-		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to build CreateCluster body, got error: %s", err))
+		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to build CreateExport body, got error: %s", err))
 		return
 	}
 
