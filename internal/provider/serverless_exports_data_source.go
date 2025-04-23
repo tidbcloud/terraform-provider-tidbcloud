@@ -298,7 +298,7 @@ func (d *serverlessExportsDataSource) Read(ctx context.Context, req datasource.R
 					Sql: types.StringValue(*export.ExportOptions.Filter.Sql),
 				}
 			} else {
-				patterns, diag := types.ListValueFrom(ctx, types.StringType, e.ExportOptions.Filter.Table.Patterns)
+				patterns, diag := types.ListValueFrom(ctx, types.StringType, export.ExportOptions.Filter.Table.Patterns)
 				if diag.HasError() {
 					resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to convert patterns to list, got error: %s", diag))
 					return
