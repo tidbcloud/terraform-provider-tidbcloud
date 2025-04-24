@@ -21,6 +21,10 @@ var NewClient = tidbcloud.NewClientDelegate
 
 var NewDedicatedClient = tidbcloud.NewDedicatedClientDelegate
 
+var NewServerlessClient = tidbcloud.NewServerlessClientDelegate
+
+var NewIAMClient = tidbcloud.NewIAMClientDelegate
+
 // provider satisfies the tfsdk.Provider interface and usually is included
 // with all Resource and DataSource implementations.
 type tidbcloudProvider struct {
@@ -30,6 +34,10 @@ type tidbcloudProvider struct {
 	client tidbcloud.TiDBCloudClient
 
 	DedicatedClient tidbcloud.TiDBCloudDedicatedClient
+
+	ServerlessClient tidbcloud.TiDBCloudServerlessClient
+
+	IAMClient tidbcloud.TiDBCloudIAMClient
 
 	// configured is set to true at the end of the Configure method.
 	// This can be used in Resource and DataSource implementations to verify
@@ -121,10 +129,30 @@ func (p *tidbcloudProvider) Configure(ctx context.Context, req provider.Configur
 		)
 		return
 	}
+
+	// Create a new serverless client and set it to the provider serverless client
+	sc, err := NewServerlessClient(publicKey, privateKey, os.Getenv(TiDBCloudServerlessEndpoint), fmt.Sprintf("%s/%s", UserAgent, p.version))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to create client",
+			"Unable to create TiDB Cloud Serverless client:\n\n"+err.Error(),
+		)
+		return
+	}
+
+	ic, err := NewIAMClient(publicKey, privateKey, os.Getenv(TiDBCloudIAMEndpoint), fmt.Sprintf("%s/%s", UserAgent, p.version))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to create client",
+			"Unable to create TiDB Cloud IAM client:\n\n"+err.Error(),
+		)
+	}
 	// sync
 	p.sync = data.Sync.ValueBool()
 	p.client = c
 	p.DedicatedClient = dc
+	p.ServerlessClient = sc
+	p.IAMClient = ic
 	p.configured = true
 	resp.ResourceData = p
 	resp.DataSourceData = p
@@ -138,6 +166,11 @@ func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Res
 		NewImportResource,
 		NewDedicatedClusterResource,
 		NewDedicatedNodeGroupResource,
+
+		NewServerlessClusterResource,
+		NewServerlessExportResource,
+		NewServerlessSQLUserResource,
+		NewServerlessBranchResource,
 	}
 }
 
@@ -154,6 +187,16 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 		NewDedicatedCloudProvidersDataSource,
 		NewDedicatedNodeGroupDataSource,
 		NewDedicatedNodeGroupsDataSource,
+
+		NewServerlessClusterDataSource,
+		NewServerlessClustersDataSource,
+		NewServerlessRegionsDataSource,
+		NewServerlessExportDataSource,
+		NewServerlessExportsDataSource,
+		NewServerlessSQLUsersDataSource,
+		NewServerlessSQLUserDataSource,
+		NewServerlessBranchDataSource,
+		NewServerlessBranchesDataSource,
 	}
 }
 

@@ -1,13 +1,15 @@
 module github.com/tidbcloud/terraform-provider-tidbcloud
 
-go 1.23
+go 1.23.0
+
+toolchain go1.23.1
 
 require (
 	github.com/c4pt0r/go-tidbcloud-sdk-v1 v0.0.0-20240415110020-a27efb454da5
-	github.com/go-openapi/errors v0.22.0
+	github.com/go-openapi/errors v0.22.1
 	github.com/go-openapi/runtime v0.28.0
 	github.com/go-openapi/strfmt v0.23.0
-	github.com/go-openapi/swag v0.23.0
+	github.com/go-openapi/swag v0.23.1
 	github.com/go-openapi/validate v0.24.0
 	github.com/golang/mock v1.6.0
 	github.com/hashicorp/terraform-plugin-docs v0.21.0
@@ -15,8 +17,9 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.26.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.36.1
-	github.com/hashicorp/terraform-plugin-testing v1.11.0
+	github.com/hashicorp/terraform-plugin-testing v1.12.0
 	github.com/icholy/digest v1.1.0
+	github.com/juju/errors v1.0.0
 	github.com/stretchr/testify v1.10.0
 	github.com/tidbcloud/tidbcloud-cli/pkg v0.0.0-20241125120734-8e2a11bc41c5
 )
@@ -45,13 +48,13 @@ require (
 	github.com/go-openapi/loads v0.22.0 // indirect
 	github.com/go-openapi/spec v0.21.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/cli v1.1.7 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320 // indirect
+	github.com/hashicorp/go-cty v1.5.0 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-plugin v1.6.2 // indirect
@@ -69,7 +72,7 @@ require (
 	github.com/huandu/xstrings v1.3.3 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
@@ -97,13 +100,13 @@ require (
 	go.opentelemetry.io/otel v1.31.0 // indirect
 	go.opentelemetry.io/otel/metric v1.31.0 // indirect
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
 	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sync v0.11.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect

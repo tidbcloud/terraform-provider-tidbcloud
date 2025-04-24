@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/icholy/digest"
+	"github.com/juju/errors"
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
@@ -42,7 +43,7 @@ func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userA
 	if dedicatedEndpoint == "" {
 		dedicatedEndpoint = DefaultDedicatedEndpoint
 	}
-	dedicatedURL, err := url.ParseRequestURI(dedicatedEndpoint)
+	dedicatedURL, err := validateApiUrl(dedicatedEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -206,4 +207,12 @@ func parseError(err error, resp *http.Response) error {
 		traceId = resp.Header.Get("X-Debug-Trace-Id")
 	}
 	return fmt.Errorf("%s[%s][%s] %s", path, err.Error(), traceId, body)
+}
+
+func validateApiUrl(value string) (*url.URL, error) {
+	u, err := url.ParseRequestURI(value)
+	if err != nil {
+		return nil, errors.Annotate(err, "api url should format as <schema>://<host>")
+	}
+	return u, nil
 }
