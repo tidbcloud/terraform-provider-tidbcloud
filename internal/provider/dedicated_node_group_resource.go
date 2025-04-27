@@ -8,6 +8,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -26,7 +29,7 @@ const (
 type dedicatedNodeGroupResourceData struct {
 	ClusterId           types.String `tfsdk:"cluster_id"`
 	NodeSpecKey         types.String `tfsdk:"node_spec_key"`
-	NodeCount           types.Int64  `tfsdk:"node_count"`
+	NodeCount           types.Int32  `tfsdk:"node_count"`
 	NodeGroupId         types.String `tfsdk:"node_group_id"`
 	DisplayName         types.String `tfsdk:"display_name"`
 	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
@@ -71,13 +74,16 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 				MarkdownDescription: "The key of the node spec.",
 				Computed:            true,
 			},
-			"node_count": schema.Int64Attribute{
+			"node_count": schema.Int32Attribute{
 				MarkdownDescription: "The count of the nodes in the group.",
 				Required:            true,
 			},
 			"node_group_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the node group.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the node group.",
@@ -90,6 +96,9 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 			"is_default_group": schema.BoolAttribute{
 				MarkdownDescription: "Whether the node group is the default group.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"state": schema.StringAttribute{
 				MarkdownDescription: "The state of the node group.",
@@ -153,7 +162,7 @@ func (r dedicatedNodeGroupResource) Read(ctx context.Context, req resource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Debug(ctx, fmt.Sprintf("read dedicated_node_group_resource clusterid: %s", data.NodeGroupId.ValueString()))
+	tflog.Debug(ctx, fmt.Sprintf("read dedicated_node_group_resource cluster_id: %s", data.NodeGroupId.ValueString()))
 
 	// call read api
 	tflog.Trace(ctx, "read dedicated_node_group_resource")
@@ -173,7 +182,7 @@ func (r dedicatedNodeGroupResource) Delete(ctx context.Context, req resource.Del
 	var clusterId string
 	var nodeGroupId string
 
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("id"), &clusterId)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("cluster_id"), &clusterId)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("node_group_id"), &nodeGroupId)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -204,7 +213,7 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	newDisplayName := plan.DisplayName.ValueString()
-	newNodeCount := int32(plan.NodeCount.ValueInt64())
+	newNodeCount := int32(plan.NodeCount.ValueInt32())
 	body := dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest{
 		DisplayName: &newDisplayName,
 		NodeCount:   *dedicated.NewNullableInt32(&newNodeCount),
@@ -234,11 +243,15 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 
 }
 
-func buildCreateDedicatedNodeGroupBody(data dedicatedNodeGroupResourceData) dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest {
-	displayName := data.DisplayName.ValueString()
-	nodeCount := int32(data.NodeCount.ValueInt64())
+func (r dedicatedClusterResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("cluster_id"), req, resp)
+}
 
-	return dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest{
+func buildCreateDedicatedNodeGroupBody(data dedicatedNodeGroupResourceData) dedicated.Required {
+	displayName := data.DisplayName.ValueString()
+	nodeCount := int32(data.NodeCount.ValueInt32())
+
+	return dedicated.Required{
 		DisplayName: &displayName,
 		NodeCount:   nodeCount,
 	}
@@ -249,17 +262,19 @@ func refreshDedicatedNodeGroupResourceData(ctx context.Context, resp *dedicated.
 	data.NodeSpecDisplayName = types.StringValue(*resp.NodeSpecDisplayName)
 	data.IsDefaultGroup = types.BoolValue(*resp.IsDefaultGroup)
 	data.State = types.StringValue(string(*resp.State))
+	data.NodeCount = types.Int32Value(resp.NodeCount)
+	data.NodeSpecKey = types.StringValue(*resp.NodeSpecKey)
 }
 
 func WaitDedicatedNodeGroupReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string, nodeGroupId string,
 	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
-			string(dedicatedNodeGroupStatusModifying),
+			string(dedicated.DEDICATEDV1BETA1TIDBNODEGROUPSTATE_MODIFYING),
 		},
 		Target: []string{
-			string(dedicatedNodeGroupStatusActive),
-			string(dedicatedNodeGroupStatusPaused),
+			string(dedicated.DEDICATEDV1BETA1TIDBNODEGROUPSTATE_ACTIVE),
+			string(dedicated.DEDICATEDV1BETA1TIDBNODEGROUPSTATE_PAUSED),
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,

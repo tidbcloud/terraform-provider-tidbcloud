@@ -21,7 +21,7 @@ require (
 	github.com/icholy/digest v1.1.0
 	github.com/juju/errors v1.0.0
 	github.com/stretchr/testify v1.10.0
-	github.com/tidbcloud/tidbcloud-cli/pkg v0.0.0-20241125120734-8e2a11bc41c5
+	github.com/tidbcloud/tidbcloud-cli/pkg v0.0.0-20250424085041-3614e4e397a8
 )
 
 require (
