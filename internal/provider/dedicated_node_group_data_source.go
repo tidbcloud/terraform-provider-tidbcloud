@@ -19,6 +19,7 @@ type dedicatedNodeGroupDataSourceData struct {
 	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
 	IsDefaultGroup      types.Bool   `tfsdk:"is_default_group"`
 	State               types.String `tfsdk:"state"`
+	Endpoints           []endpoint   `tfsdk:"endpoints"`
 }
 
 var _ datasource.DataSource = &dedicatedNodeGroupDataSource{}
@@ -82,6 +83,26 @@ func (d *dedicatedNodeGroupDataSource) Schema(_ context.Context, _ datasource.Sc
 				MarkdownDescription: "The state of the node group.",
 				Computed:            true,
 			},
+			"endpoints": schema.ListNestedAttribute{
+				MarkdownDescription: "The endpoints of the node group.",
+				Computed:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"host": schema.StringAttribute{
+							MarkdownDescription: "The host of the endpoint.",
+							Computed:            true,
+						},
+						"port": schema.Int32Attribute{
+							MarkdownDescription: "The port of the endpoint.",
+							Computed:            true,
+						},
+						"connection_type": schema.StringAttribute{
+							MarkdownDescription: "The connection type of the endpoint.",
+							Computed:            true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -107,6 +128,15 @@ func (d *dedicatedNodeGroupDataSource) Read(ctx context.Context, req datasource.
 	data.NodeSpecDisplayName = types.StringValue(string(*nodeGroup.NodeSpecDisplayName))
 	data.IsDefaultGroup = types.BoolValue(bool(*nodeGroup.IsDefaultGroup))
 	data.State = types.StringValue(string(*nodeGroup.State))
+	var endpoints []endpoint
+	for _, e := range nodeGroup.Endpoints {
+		endpoints = append(endpoints, endpoint{
+			Host:           types.StringValue(*e.Host),
+			Port:           types.Int32Value(*e.Port),
+			ConnectionType: types.StringValue(string(*e.ConnectionType)),
+		})
+	}
+	data.Endpoints = endpoints
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

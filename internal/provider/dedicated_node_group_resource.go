@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -36,6 +38,7 @@ type dedicatedNodeGroupResourceData struct {
 	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
 	IsDefaultGroup      types.Bool   `tfsdk:"is_default_group"`
 	State               types.String `tfsdk:"state"`
+	Endpoints           []endpoint   `tfsdk:"endpoints"`
 }
 
 type dedicatedNodeGroupResource struct {
@@ -105,6 +108,38 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 				MarkdownDescription: "The state of the node group.",
 				Computed:            true,
 			},
+			"endpoints": schema.ListNestedAttribute{
+				MarkdownDescription: "The endpoints of the node group.",
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"host": schema.StringAttribute{
+							MarkdownDescription: "The host of the endpoint.",
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
+						"port": schema.Int32Attribute{
+							MarkdownDescription: "The port of the endpoint.",
+							Computed:            true,
+							PlanModifiers: []planmodifier.Int32{
+								int32planmodifier.UseStateForUnknown(),
+							},
+						},
+						"connection_type": schema.StringAttribute{
+							MarkdownDescription: "The connection type of the endpoint.",
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -148,7 +183,7 @@ func (r dedicatedNodeGroupResource) Create(ctx context.Context, req resource.Cre
 		)
 		return
 	}
-	refreshDedicatedNodeGroupResourceData(ctx, nodeGroup, &data)
+	refreshDedicatedNodeGroupResourceData(nodeGroup, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -172,7 +207,7 @@ func (r dedicatedNodeGroupResource) Read(ctx context.Context, req resource.ReadR
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetTiDBNodeGroup, error: %s", err))
 		return
 	}
-	refreshDedicatedNodeGroupResourceData(ctx, nodeGroup, &data)
+	refreshDedicatedNodeGroupResourceData(nodeGroup, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -236,7 +271,7 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 		)
 		return
 	}
-	refreshDedicatedNodeGroupResourceData(ctx, nodeGroup, &state)
+	refreshDedicatedNodeGroupResourceData(nodeGroup, &state)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)
@@ -269,13 +304,22 @@ func buildCreateDedicatedNodeGroupBody(data dedicatedNodeGroupResourceData) dedi
 	}
 }
 
-func refreshDedicatedNodeGroupResourceData(ctx context.Context, resp *dedicated.Dedicatedv1beta1TidbNodeGroup, data *dedicatedNodeGroupResourceData) {
+func refreshDedicatedNodeGroupResourceData(resp *dedicated.Dedicatedv1beta1TidbNodeGroup, data *dedicatedNodeGroupResourceData) {
 	data.DisplayName = types.StringValue(*resp.DisplayName)
 	data.NodeSpecDisplayName = types.StringValue(*resp.NodeSpecDisplayName)
 	data.IsDefaultGroup = types.BoolValue(*resp.IsDefaultGroup)
 	data.State = types.StringValue(string(*resp.State))
 	data.NodeCount = types.Int32Value(resp.NodeCount)
 	data.NodeSpecKey = types.StringValue(*resp.NodeSpecKey)
+	var endpoints []endpoint
+	for _, e := range resp.Endpoints {
+		endpoints = append(endpoints, endpoint{
+			Host:           types.StringValue(*e.Host),
+			Port:           types.Int32Value(*e.Port),
+			ConnectionType: types.StringValue(string(*e.ConnectionType)),
+		})
+	}
+	data.Endpoints = endpoints
 }
 
 func WaitDedicatedNodeGroupReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string, nodeGroupId string,

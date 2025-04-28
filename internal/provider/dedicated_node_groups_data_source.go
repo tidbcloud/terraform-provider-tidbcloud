@@ -17,12 +17,13 @@ type dedicatedNodeGroupsDataSourceData struct {
 }
 
 type nodeGroupItems struct {
-	NodeCount           types.Int64  `tfsdk:"node_count"`
+	NodeCount           types.Int32  `tfsdk:"node_count"`
 	NodeGroupId         types.String `tfsdk:"node_group_id"`
 	DisplayName         types.String `tfsdk:"display_name"`
 	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
 	IsDefaultGroup      types.Bool   `tfsdk:"is_default_group"`
 	State               types.String `tfsdk:"state"`
+	Endpoints           []endpoint   `tfsdk:"endpoints"`
 }
 
 var _ datasource.DataSource = &dedicatedNodeGroupsDataSource{}
@@ -71,7 +72,7 @@ func (d *dedicatedNodeGroupsDataSource) Schema(_ context.Context, _ datasource.S
 							MarkdownDescription: "The ID of the node group.",
 							Computed:            true,
 						},
-						"node_count": schema.Int64Attribute{
+						"node_count": schema.Int32Attribute{
 							MarkdownDescription: "The number of nodes in the node group.",
 							Computed:            true,
 						},
@@ -90,6 +91,26 @@ func (d *dedicatedNodeGroupsDataSource) Schema(_ context.Context, _ datasource.S
 						"state": schema.StringAttribute{
 							MarkdownDescription: "The state of the node group.",
 							Computed:            true,
+						},
+						"endpoints": schema.ListNestedAttribute{
+							MarkdownDescription: "The endpoints of the node group.",
+							Computed:            true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"host": schema.StringAttribute{
+										MarkdownDescription: "The host of the endpoint.",
+										Computed:            true,
+									},
+									"port": schema.Int32Attribute{
+										MarkdownDescription: "The port of the endpoint.",
+										Computed:            true,
+									},
+									"connection_type": schema.StringAttribute{
+										MarkdownDescription: "The connection type of the endpoint.",
+										Computed:            true,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -118,13 +139,24 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 		if *nodeGroup.IsDefaultGroup {
 			data.NodeSpecKey = types.StringValue(*nodeGroup.NodeSpecKey)
 		}
+
+		var endpoints []endpoint
+		for _, e := range nodeGroup.Endpoints {
+			tflog.Debug(ctx, fmt.Sprintf("\n\n\n\n\n\n\n\n\n\nendpoint: %v", e))
+			endpoints = append(endpoints, endpoint{
+				Host:           types.StringValue(*e.Host),
+				Port:           types.Int32Value(*e.Port),
+				ConnectionType: types.StringValue(string(*e.ConnectionType)),
+			})
+		}
 		items = append(items, nodeGroupItems{
-			NodeCount:           types.Int64Value(int64(nodeGroup.NodeCount)),
+			NodeCount:           types.Int32Value(nodeGroup.NodeCount),
 			NodeGroupId:         types.StringValue(*nodeGroup.TidbNodeGroupId),
 			DisplayName:         types.StringValue(*nodeGroup.DisplayName),
 			NodeSpecDisplayName: types.StringValue(*nodeGroup.NodeSpecDisplayName),
 			IsDefaultGroup:      types.BoolValue(*nodeGroup.IsDefaultGroup),
 			State:               types.StringValue(string(*nodeGroup.State)),
+			Endpoints:           endpoints,
 		})
 	}
 	data.NodeGroups = items

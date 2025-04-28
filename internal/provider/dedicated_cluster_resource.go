@@ -10,7 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -29,7 +30,7 @@ type dedicatedClusterResourceData struct {
 	RegionId           types.String        `tfsdk:"region_id"`
 	Labels             types.Map           `tfsdk:"labels"`
 	RootPassword       types.String        `tfsdk:"root_password"`
-	Port               types.Int64         `tfsdk:"port"`
+	Port               types.Int32         `tfsdk:"port"`
 	Paused             types.Bool          `tfsdk:"paused"`
 	PausePlan          *pausePlan          `tfsdk:"pause_plan"`
 	State              types.String        `tfsdk:"state"`
@@ -51,26 +52,33 @@ type pausePlan struct {
 
 type tidbNodeSetting struct {
 	NodeSpecKey          types.String `tfsdk:"node_spec_key"`
-	NodeCount            types.Int64  `tfsdk:"node_count"`
+	NodeCount            types.Int32  `tfsdk:"node_count"`
 	NodeGroupId          types.String `tfsdk:"node_group_id"`
 	NodeGroupDisplayName types.String `tfsdk:"node_group_display_name"`
 	NodeSpecDisplayName  types.String `tfsdk:"node_spec_display_name"`
 	IsDefaultGroup       types.Bool   `tfsdk:"is_default_group"`
 	State                types.String `tfsdk:"state"`
+	Endpoints            []endpoint   `tfsdk:"endpoints"`
+}
+
+type endpoint struct {
+	Host           types.String `tfsdk:"host"`
+	Port           types.Int32  `tfsdk:"port"`
+	ConnectionType types.String `tfsdk:"connection_type"`
 }
 
 type tikvNodeSetting struct {
 	NodeSpecKey         types.String `tfsdk:"node_spec_key"`
-	NodeCount           types.Int64  `tfsdk:"node_count"`
-	StorageSizeGi       types.Int64  `tfsdk:"storage_size_gi"`
+	NodeCount           types.Int32  `tfsdk:"node_count"`
+	StorageSizeGi       types.Int32  `tfsdk:"storage_size_gi"`
 	StorageType         types.String `tfsdk:"storage_type"`
 	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
 }
 
 type tiflashNodeSetting struct {
 	NodeSpecKey         types.String `tfsdk:"node_spec_key"`
-	NodeCount           types.Int64  `tfsdk:"node_count"`
-	StorageSizeGi       types.Int64  `tfsdk:"storage_size_gi"`
+	NodeCount           types.Int32  `tfsdk:"node_count"`
+	StorageSizeGi       types.Int32  `tfsdk:"storage_size_gi"`
 	StorageType         types.String `tfsdk:"storage_type"`
 	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
 }
@@ -144,12 +152,12 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:            true,
 				Sensitive:           true,
 			},
-			"port": schema.Int64Attribute{
+			"port": schema.Int32Attribute{
 				MarkdownDescription: "The port used for accessing the cluster.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
 			},
 			"paused": schema.BoolAttribute{
@@ -222,7 +230,7 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The key of the node spec.",
 						Required:            true,
 					},
-					"node_count": schema.Int64Attribute{
+					"node_count": schema.Int32Attribute{
 						MarkdownDescription: "The number of nodes in the default node group.",
 						Required:            true,
 					},
@@ -255,6 +263,38 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The state of the node group.",
 						Computed:            true,
 					},
+					"endpoints": schema.ListNestedAttribute{
+						MarkdownDescription: "The endpoints of the node group.",
+						Computed:            true,
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"host": schema.StringAttribute{
+									MarkdownDescription: "The host of the endpoint.",
+									Computed:            true,
+									PlanModifiers: []planmodifier.String{
+										stringplanmodifier.UseStateForUnknown(),
+									},
+								},
+								"port": schema.Int32Attribute{
+									MarkdownDescription: "The port of the endpoint.",
+									Computed:            true,
+									PlanModifiers: []planmodifier.Int32{
+										int32planmodifier.UseStateForUnknown(),
+									},
+								},
+								"connection_type": schema.StringAttribute{
+									MarkdownDescription: "The connection type of the endpoint.",
+									Computed:            true,
+									PlanModifiers: []planmodifier.String{
+										stringplanmodifier.UseStateForUnknown(),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 			"tikv_node_setting": schema.SingleNestedAttribute{
@@ -265,11 +305,11 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The node specification key.",
 						Required:            true,
 					},
-					"node_count": schema.Int64Attribute{
+					"node_count": schema.Int32Attribute{
 						MarkdownDescription: "The number of nodes in the cluster.",
 						Required:            true,
 					},
-					"storage_size_gi": schema.Int64Attribute{
+					"storage_size_gi": schema.Int32Attribute{
 						MarkdownDescription: "The storage size in GiB.",
 						Required:            true,
 					},
@@ -291,11 +331,11 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The node specification key.",
 						Required:            true,
 					},
-					"node_count": schema.Int64Attribute{
+					"node_count": schema.Int32Attribute{
 						MarkdownDescription: "The number of nodes in the cluster.",
 						Required:            true,
 					},
-					"storage_size_gi": schema.Int64Attribute{
+					"storage_size_gi": schema.Int32Attribute{
 						MarkdownDescription: "The storage size in GiB.",
 						Required:            true,
 					},
@@ -410,7 +450,7 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	data.CloudProvider = types.StringValue(string(*resp.CloudProvider))
 	data.RegionId = types.StringValue(resp.RegionId)
 	data.Labels = labels
-	data.Port = types.Int64Value(int64(resp.Port))
+	data.Port = types.Int32Value(resp.Port)
 	data.State = types.StringValue(string(*resp.State))
 	data.Version = types.StringValue(*resp.Version)
 	data.CreatedBy = types.StringValue(*resp.CreatedBy)
@@ -422,22 +462,31 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	// tidb node setting
 	for _, group := range resp.TidbNodeSetting.TidbNodeGroups {
 		if *group.IsDefaultGroup {
+			var endpoints []endpoint
+			for _, e := range group.Endpoints {
+				endpoints = append(endpoints, endpoint{
+					Host:           types.StringValue(*e.Host),
+					Port:           types.Int32Value(*e.Port),
+					ConnectionType: types.StringValue(string(*e.ConnectionType)),
+				})
+			}
 			data.TiDBNodeSetting = tidbNodeSetting{
 				NodeSpecKey:          types.StringValue(*group.NodeSpecKey),
-				NodeCount:            types.Int64Value(int64(group.NodeCount)),
+				NodeCount:            types.Int32Value(group.NodeCount),
 				NodeGroupId:          types.StringValue(*group.TidbNodeGroupId),
 				NodeGroupDisplayName: types.StringValue(*group.DisplayName),
 				NodeSpecDisplayName:  types.StringValue(*group.NodeSpecDisplayName),
 				IsDefaultGroup:       types.BoolValue(*group.IsDefaultGroup),
 				State:                types.StringValue(string(*group.State)),
+				Endpoints:            endpoints,
 			}
 		}
 	}
 
 	data.TiKVNodeSetting = tikvNodeSetting{
 		NodeSpecKey:         types.StringValue(resp.TikvNodeSetting.NodeSpecKey),
-		NodeCount:           types.Int64Value(int64(resp.TikvNodeSetting.NodeCount)),
-		StorageSizeGi:       types.Int64Value(int64(resp.TikvNodeSetting.StorageSizeGi)),
+		NodeCount:           types.Int32Value(resp.TikvNodeSetting.NodeCount),
+		StorageSizeGi:       types.Int32Value(resp.TikvNodeSetting.StorageSizeGi),
 		StorageType:         types.StringValue(string(*resp.TikvNodeSetting.StorageType)),
 		NodeSpecDisplayName: types.StringValue(*resp.TikvNodeSetting.NodeSpecDisplayName),
 	}
@@ -447,8 +496,8 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	if resp.TiflashNodeSetting != nil {
 		data.TiFlashNodeSetting = &tiflashNodeSetting{
 			NodeSpecKey:         types.StringValue(resp.TiflashNodeSetting.NodeSpecKey),
-			NodeCount:           types.Int64Value(int64(resp.TiflashNodeSetting.NodeCount)),
-			StorageSizeGi:       types.Int64Value(int64(resp.TiflashNodeSetting.StorageSizeGi)),
+			NodeCount:           types.Int32Value(resp.TiflashNodeSetting.NodeCount),
+			StorageSizeGi:       types.Int32Value(resp.TiflashNodeSetting.StorageSizeGi),
 			StorageType:         types.StringValue(string(*resp.TiflashNodeSetting.StorageType)),
 			NodeSpecDisplayName: types.StringValue(*resp.TiflashNodeSetting.NodeSpecDisplayName),
 		}
@@ -539,7 +588,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		body := &dedicated.ClusterServiceUpdateClusterRequest{}
 		// components change
 		// tidb
-		nodeCountInt32 := int32(plan.TiDBNodeSetting.NodeCount.ValueInt64())
+		nodeCountInt32 := int32(plan.TiDBNodeSetting.NodeCount.ValueInt32())
 		body.TidbNodeSetting = &dedicated.V1beta1UpdateClusterRequestTidbNodeSetting{
 			NodeSpecKey: plan.TiDBNodeSetting.NodeSpecKey.ValueStringPointer(),
 			TidbNodeGroups: []dedicated.UpdateClusterRequestTidbNodeSettingTidbNodeGroup{
@@ -551,8 +600,8 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 
 		// tikv
 		if plan.TiKVNodeSetting != state.TiKVNodeSetting {
-			nodeCountInt32 := int32(plan.TiKVNodeSetting.NodeCount.ValueInt64())
-			storageSizeGiInt32 := int32(plan.TiKVNodeSetting.StorageSizeGi.ValueInt64())
+			nodeCountInt32 := int32(plan.TiKVNodeSetting.NodeCount.ValueInt32())
+			storageSizeGiInt32 := int32(plan.TiKVNodeSetting.StorageSizeGi.ValueInt32())
 			body.TikvNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
 				NodeSpecKey:   plan.TiKVNodeSetting.NodeSpecKey.ValueStringPointer(),
 				NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
@@ -562,8 +611,8 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 
 		// tiflash
 		if plan.TiFlashNodeSetting != nil {
-			nodeCountInt32 := int32(plan.TiFlashNodeSetting.NodeCount.ValueInt64())
-			storageSizeGiInt32 := int32(plan.TiFlashNodeSetting.StorageSizeGi.ValueInt64())
+			nodeCountInt32 := int32(plan.TiFlashNodeSetting.NodeCount.ValueInt32())
+			storageSizeGiInt32 := int32(plan.TiFlashNodeSetting.StorageSizeGi.ValueInt32())
 			body.TiflashNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
 				NodeSpecKey:   plan.TiFlashNodeSetting.NodeSpecKey.ValueStringPointer(),
 				NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
@@ -685,7 +734,7 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 	// tidb node groups
 	var nodeGroups []dedicated.Dedicatedv1beta1TidbNodeGroup
 	nodeGroups = append(nodeGroups, dedicated.Dedicatedv1beta1TidbNodeGroup{
-		NodeCount: int32(data.TiDBNodeSetting.NodeCount.ValueInt64()),
+		NodeCount: int32(data.TiDBNodeSetting.NodeCount.ValueInt32()),
 	})
 
 	// tidb node setting
@@ -697,8 +746,8 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 
 	// tikv node setting
 	tikvNodeSpeckKey := data.TiKVNodeSetting.NodeSpecKey.ValueString()
-	tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt64())
-	tikvStorageSizeGi := int32(data.TiKVNodeSetting.StorageSizeGi.ValueInt64())
+	tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt32())
+	tikvStorageSizeGi := int32(data.TiKVNodeSetting.StorageSizeGi.ValueInt32())
 	tikvStorageType := dedicated.StorageNodeSettingStorageType(data.TiKVNodeSetting.StorageType.ValueString())
 	tikvNodeSetting := dedicated.V1beta1ClusterStorageNodeSetting{
 		NodeSpecKey:   tikvNodeSpeckKey,
@@ -711,8 +760,8 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 	// tiflash node setting
 	if data.TiFlashNodeSetting != nil {
 		tiflashNodeSpeckKey := data.TiFlashNodeSetting.NodeSpecKey.ValueString()
-		tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt64())
-		tiflashStorageSizeGi := int32(data.TiFlashNodeSetting.StorageSizeGi.ValueInt64())
+		tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt32())
+		tiflashStorageSizeGi := int32(data.TiFlashNodeSetting.StorageSizeGi.ValueInt32())
 		tiflashStorageType := dedicated.StorageNodeSettingStorageType(data.TiFlashNodeSetting.StorageType.ValueString())
 		tiflashNodeSetting = &dedicated.V1beta1ClusterStorageNodeSetting{
 			NodeSpecKey:   tiflashNodeSpeckKey,
@@ -735,7 +784,7 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 		TidbNodeSetting:    tidbNodeSetting,
 		TikvNodeSetting:    tikvNodeSetting,
 		TiflashNodeSetting: tiflashNodeSetting,
-		Port:               int32(data.Port.ValueInt64()),
+		Port:               data.Port.ValueInt32(),
 		RootPassword:       &rootPassword,
 		Version:            &version,
 	}, nil

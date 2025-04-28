@@ -21,8 +21,42 @@ func TestAccDedicatedNodeGroupsDataSource_basic(t *testing.T) {
 			},
 		},
 	})
-
 }
+
+// func TestUTDedicatedClustersDataSource(t *testing.T) {
+// 	setupTestEnv()
+
+// 	ctrl := gomock.NewController(t)
+// 	s := mockClient.NewMockTiDBCloudDedicatedClient(ctrl)
+// 	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+// 		return s, nil
+// 	})()
+
+// 	resp := clusterV1beta1.TidbCloudOpenApidedicatedv1beta1ListClustersResponse{}
+// 	resp.UnmarshalJSON([]byte(testUTTidbCloudOpenApidedicatedv1beta1ListClustersResponse))
+
+// 	s.EXPECT().ListClusters(gomock.Any(), gomock.Any(), gomock.Any(), nil, nil, nil).
+// 		Return(&resp, nil).AnyTimes()
+
+// 	testUTDedicatedClustersDataSource(t)
+// }
+
+// func testUTDedicatedClustersDataSource(t *testing.T) {
+// 	dedicatedClustersDataSourceName := "data.tidbcloud_dedicated_clusters.test"
+// 	resource.Test(t, resource.TestCase{
+// 		IsUnitTest:               true,
+// 		PreCheck:                 func() { testAccPreCheck(t) },
+// 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config: testUTDedicatedClustersConfig,
+// 				Check: resource.ComposeTestCheckFunc(
+// 					resource.TestCheckResourceAttr(dedicatedClustersDataSourceName, "dedicated_clusters.#", "0"),
+// 				),
+// 			},
+// 		},
+// 	})
+// }
 
 func testAccDedicatedNodeGroupsDataSourceConfig() string {
 	return `
