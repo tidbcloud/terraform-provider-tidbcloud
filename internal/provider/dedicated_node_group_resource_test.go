@@ -59,10 +59,11 @@ func TestUTDedicatedNodeGroupResource(t *testing.T) {
 	updateNodeGroupSuccessResp := dedicated.Dedicatedv1beta1TidbNodeGroup{}
 	updateNodeGroupSuccessResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApidedicatedv1beta1NodeGroup(clusterId, "test_group2", string(dedicated.COMMONV1BETA1CLUSTERSTATE_MODIFYING), 2)))
 
-	s.EXPECT().CreateTiDBNodeGroup(gomock.Any(), gomock.Any(), gomock.Any()).Return(&createNodeGroupResp, nil)
+	s.EXPECT().CreateTiDBNodeGroup(gomock.Any(), clusterId, gomock.Any()).Return(&createNodeGroupResp, nil)
+
 	gomock.InOrder(
 		s.EXPECT().GetTiDBNodeGroup(gomock.Any(), clusterId, nodeGroupId).Return(&getNodeGroupResp, nil).Times(3),
-		s.EXPECT().GetTiDBNodeGroup(gomock.Any(), clusterId, nodeGroupId).Return(&getNodeGroupAfterUpdateResp, nil).Times(3),
+		s.EXPECT().GetTiDBNodeGroup(gomock.Any(), clusterId, nodeGroupId).Return(&getNodeGroupAfterUpdateResp, nil).Times(2),
 	)
 	s.EXPECT().UpdateTiDBNodeGroup(gomock.Any(), clusterId, nodeGroupId, gomock.Any()).Return(&updateNodeGroupSuccessResp, nil)
 	s.EXPECT().DeleteTiDBNodeGroup(gomock.Any(), clusterId, gomock.Any()).Return(nil)
