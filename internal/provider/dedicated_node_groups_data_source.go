@@ -133,7 +133,6 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetTiDBNodeGroup, got error: %s", err))
 		return
 	}
-	tflog.Debug(ctx, fmt.Sprintf("nodeGroups: %v", nodeGroups))
 	var items []nodeGroupItems
 	for _, nodeGroup := range nodeGroups {
 		if *nodeGroup.IsDefaultGroup {
@@ -142,7 +141,6 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 
 		var endpoints []endpoint
 		for _, e := range nodeGroup.Endpoints {
-			tflog.Debug(ctx, fmt.Sprintf("\n\n\n\n\n\n\n\n\n\nendpoint: %v", e))
 			endpoints = append(endpoints, endpoint{
 				Host:           types.StringValue(*e.Host),
 				Port:           types.Int32Value(*e.Port),
