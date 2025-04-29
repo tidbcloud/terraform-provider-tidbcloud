@@ -1,8 +1,6 @@
 package provider
 
 import (
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -39,13 +37,10 @@ func TestUTDedicatedNodeGroupsDataSource(t *testing.T) {
 		return s, nil
 	})()
 
-	var resp []dedicated.Dedicatedv1beta1TidbNodeGroup
-	err := json.Unmarshal([]byte(testUTListDedicatedv1beta1TidbNodeGroupResp), &resp)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to unmarshal response: %v", err))
-	}
+	var resp dedicated.Dedicatedv1beta1ListTidbNodeGroupsResponse
+	resp.UnmarshalJSON([]byte(testUTListDedicatedv1beta1TidbNodeGroupResp))
 
-	s.EXPECT().ListTiDBNodeGroups(gomock.Any(), gomock.Any()).Return(resp, nil).Times(1)
+	s.EXPECT().ListTiDBNodeGroups(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(&resp, nil).AnyTimes()
 
 	testUTDedicatedNodeGroupsDataSource(t)
 }
@@ -107,62 +102,64 @@ data "tidbcloud_dedicated_node_groups" "test" {
 }
 
 const testUTListDedicatedv1beta1TidbNodeGroupResp = `
-[
-    {
-        "name": "tidbNodeGroups/191",
-        "tidbNodeGroupId": "191",
-        "clusterId": "cluster_id",
-        "displayName": "DefaultGroup",
-        "nodeCount": 3,
-        "endpoints": [
-            {
-                "host": "tidb.qbnars1qhfxo.clusters.dev.tidb-cloud.com",
-                "port": 4000,
-                "connectionType": "PUBLIC"
-            },
-            {
-                "host": "private-tidb.qbnars1qhfxo.clusters.dev.tidb-cloud.com",
-                "port": 4000,
-                "connectionType": "VPC_PEERING"
-            },
-            {
-                "host": "privatelink-191.qbnars1qhfxo.clusters.dev.tidb-cloud.com",
-                "port": 4000,
-                "connectionType": "PRIVATE_ENDPOINT"
-            }
-        ],
-        "nodeSpecKey": "8C16G",
-        "nodeSpecDisplayName": "8 vCPU, 16 GiB",
-        "isDefaultGroup": true,
-        "state": "ACTIVE"
-    },
-    {
-        "name": "tidbNodeGroups/192",
-        "tidbNodeGroupId": "192",
-        "clusterId": "cluster_id",
-        "displayName": "test-node-group2",
-        "nodeCount": 2,
-        "endpoints": [
-            {
-                "host": "",
-                "port": 0,
-                "connectionType": "PUBLIC"
-            },
-            {
-                "host": "private-tidb.dzwx5w.clusters.dev.tidb-cloud.com",
-                "port": 4000,
-                "connectionType": "VPC_PEERING"
-            },
-            {
-                "host": "privatelink-19169089.dzw5w.clusters.dev.tidb-cloud.com",
-                "port": 4000,
-                "connectionType": "PRIVATE_ENDPOINT"
-            }
-        ],
-        "nodeSpecKey": "8C16G",
-        "nodeSpecDisplayName": "8 vCPU, 16 GiB",
-        "isDefaultGroup": false,
-        "state": "ACTIVE"
-    }
-]
+{
+    "tidbNodeGroups": [
+        {
+            "name": "tidbNodeGroups/191",
+            "tidbNodeGroupId": "191",
+            "clusterId": "cluster_id",
+            "displayName": "DefaultGroup",
+            "nodeCount": 3,
+            "endpoints": [
+                {
+                    "host": "tidb.xxx.clusters.dev.tidb-cloud.com",
+                    "port": 4000,
+                    "connectionType": "PUBLIC"
+                },
+                {
+                    "host": "private-tidb.xxx.clusters.dev.tidb-cloud.com",
+                    "port": 4000,
+                    "connectionType": "VPC_PEERING"
+                },
+                {
+                    "host": "privatelink-191.xxx.clusters.dev.tidb-cloud.com",
+                    "port": 4000,
+                    "connectionType": "PRIVATE_ENDPOINT"
+                }
+            ],
+            "nodeSpecKey": "8C16G",
+            "nodeSpecDisplayName": "8 vCPU, 16 GiB",
+            "isDefaultGroup": true,
+            "state": "ACTIVE"
+        },
+        {
+            "name": "tidbNodeGroups/192",
+            "tidbNodeGroupId": "192",
+            "clusterId": "cluster_id",
+            "displayName": "test-node-group2",
+            "nodeCount": 2,
+            "endpoints": [
+                {
+                    "host": "",
+                    "port": 0,
+                    "connectionType": "PUBLIC"
+                },
+                {
+                    "host": "private-tidb.dzwx5w.clusters.dev.tidb-cloud.com",
+                    "port": 4000,
+                    "connectionType": "VPC_PEERING"
+                },
+                {
+                    "host": "privatelink-191.dzw5w.clusters.dev.tidb-cloud.com",
+                    "port": 4000,
+                    "connectionType": "PRIVATE_ENDPOINT"
+                }
+            ],
+            "nodeSpecKey": "8C16G",
+            "nodeSpecDisplayName": "8 vCPU, 16 GiB",
+            "isDefaultGroup": false,
+            "state": "ACTIVE"
+        }
+    ]
+}
 `

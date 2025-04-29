@@ -81,9 +81,10 @@ func TestUTDedicatedClusterResource(t *testing.T) {
 	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil)
 	gomock.InOrder(
 		s.EXPECT().GetCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil).Times(3),
-		s.EXPECT().GetCluster(gomock.Any(), clusterId).Return(&getClusterAfterUpdateResp, nil).Times(3),
+		s.EXPECT().GetCluster(gomock.Any(), clusterId).Return(&getClusterAfterUpdateResp, nil).AnyTimes(),
 	)
 	s.EXPECT().UpdateCluster(gomock.Any(), gomock.Any(), gomock.Any()).Return(&updateClusterSuccessResp, nil)
+
 	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil)
 
 	testDedicatedClusterResource(t)
@@ -130,7 +131,7 @@ resource "tidbcloud_dedicated_cluster" "test" {
     display_name = "test-tf3"
     region_id = "aws-us-west-2"
     port = 4000
-	paused = true
+	  paused = true
     tidb_node_setting = {
       node_spec_key = "2C8G"
       node_count = 1
@@ -268,7 +269,23 @@ func testUTTidbCloudOpenApidedicatedv1beta1Cluster(clusterId, displayName, state
                 "clusterId": "%s",
                 "displayName": "",
                 "nodeCount": 1,
-                "endpoints": [],
+                "endpoints": [
+                  {
+                    "host": "tidb.xxx.clusters.dev.tidb-cloud.com",
+                    "port": 4000,
+                    "connectionType": "PUBLIC"
+                  },
+                  {
+                    "host": "private-tidb.xxx.clusters.dev.tidb-cloud.com",
+                    "port": 4000,
+                    "connectionType": "VPC_PEERING"
+                  },
+                  {
+                    "host": "privatelink-191.xxx.clusters.dev.tidb-cloud.com",
+                    "port": 4000,
+                    "connectionType": "PRIVATE_ENDPOINT"
+                  }
+                ],
                 "nodeSpecKey": "%s",
                 "nodeSpecDisplayName": "%s",
                 "isDefaultGroup": true,

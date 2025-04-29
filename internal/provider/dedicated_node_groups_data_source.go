@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/juju/errors"
+	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
 type dedicatedNodeGroupsDataSourceData struct {
@@ -128,7 +130,7 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 	}
 
 	tflog.Trace(ctx, "read node group data source")
-	nodeGroups, err := d.provider.DedicatedClient.ListTiDBNodeGroups(ctx, data.ClusterId.ValueString())
+	nodeGroups, err := d.retrieveTiDBNodeGroups(ctx, data.ClusterId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetTiDBNodeGroup, got error: %s", err))
 		return
@@ -161,4 +163,28 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
+}
+
+func (d *dedicatedNodeGroupsDataSource) retrieveTiDBNodeGroups(ctx context.Context, projectId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+	var items []dedicated.Dedicatedv1beta1TidbNodeGroup
+	pageSizeInt32 := int32(DefaultPageSize)
+	var pageToken *string
+
+	nodeGroups, err := d.provider.DedicatedClient.ListTiDBNodeGroups(ctx, projectId, &pageSizeInt32, nil)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	items = append(items, nodeGroups.TidbNodeGroups...)
+	for {
+		pageToken = nodeGroups.NextPageToken
+		if IsNilOrEmpty(pageToken) {
+			break
+		}
+		nodeGroups, err = d.provider.DedicatedClient.ListTiDBNodeGroups(ctx, projectId, &pageSizeInt32, pageToken)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		items = append(items, nodeGroups.TidbNodeGroups...)
+	}
+	return items, nil
 }

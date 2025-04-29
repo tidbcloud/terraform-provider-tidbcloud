@@ -168,6 +168,21 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListCloudProviders(ctx, proj
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCloudProviders", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListCloudProviders), ctx, projectId)
 }
 
+// ListClusters mocks base method.
+func (m *MockTiDBCloudDedicatedClient) ListClusters(ctx context.Context, projectId string, pageSize *int32, pageToken *string) (*dedicated.TidbCloudOpenApidedicatedv1beta1ListClustersResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListClusters", ctx, projectId, pageSize, pageToken)
+	ret0, _ := ret[0].(*dedicated.TidbCloudOpenApidedicatedv1beta1ListClustersResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListClusters indicates an expected call of ListClusters.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListClusters(ctx, projectId, pageSize, pageToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListClusters", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListClusters), ctx, projectId, pageSize, pageToken)
+}
+
 // ListRegions mocks base method.
 func (m *MockTiDBCloudDedicatedClient) ListRegions(ctx context.Context, cloudProvider, projectId string) ([]dedicated.Commonv1beta1Region, error) {
 	m.ctrl.T.Helper()
@@ -184,18 +199,18 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListRegions(ctx, cloudProvid
 }
 
 // ListTiDBNodeGroups mocks base method.
-func (m *MockTiDBCloudDedicatedClient) ListTiDBNodeGroups(ctx context.Context, clusterId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+func (m *MockTiDBCloudDedicatedClient) ListTiDBNodeGroups(ctx context.Context, clusterId string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListTidbNodeGroupsResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListTiDBNodeGroups", ctx, clusterId)
-	ret0, _ := ret[0].([]dedicated.Dedicatedv1beta1TidbNodeGroup)
+	ret := m.ctrl.Call(m, "ListTiDBNodeGroups", ctx, clusterId, pageSize, pageToken)
+	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1ListTidbNodeGroupsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListTiDBNodeGroups indicates an expected call of ListTiDBNodeGroups.
-func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListTiDBNodeGroups(ctx, clusterId interface{}) *gomock.Call {
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListTiDBNodeGroups(ctx, clusterId, pageSize, pageToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTiDBNodeGroups", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListTiDBNodeGroups), ctx, clusterId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTiDBNodeGroups", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListTiDBNodeGroups), ctx, clusterId, pageSize, pageToken)
 }
 
 // PauseCluster mocks base method.

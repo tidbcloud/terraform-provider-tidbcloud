@@ -458,6 +458,7 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	data.UpdateTime = types.StringValue(resp.UpdateTime.String())
 	data.RegionDisplayName = types.StringValue(*resp.RegionDisplayName)
 	data.Annotations = annotations
+	data.ProjectId = types.StringValue((*resp.Labels)[LabelsKeyProjectId])
 
 	// tidb node setting
 	for _, group := range resp.TidbNodeSetting.TidbNodeGroups {

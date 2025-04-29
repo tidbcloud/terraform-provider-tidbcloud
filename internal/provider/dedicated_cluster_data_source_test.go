@@ -10,23 +10,23 @@ import (
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
-func TestAccDedicatedNodeGroupDataSource(t *testing.T) {
-	dedicatedNodeGroupDataSourceName := "data.tidbcloud_dedicated_node_group.test"
+func TestAccDedicatedClusterDataSource(t *testing.T) {
+	dedicatedClusterDataSourceName := "data.tidbcloud_dedicated_cluster.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testDedicatedNodeGroupDataSourceConfig,
+				Config: testDedicatedClusterDataSourceConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(dedicatedNodeGroupDataSourceName, "display_name", "test_group"),
+					resource.TestCheckResourceAttr(dedicatedClusterDataSourceName, "display_name", "test-tf"),
 				),
 			},
 		},
 	})
 }
 
-func TestUTDedicatedNodeGroupDataSource(t *testing.T) {
+func TestUTDedicatedClusterDataSource(t *testing.T) {
 	setupTestEnv()
 
 	ctrl := gomock.NewController(t)
@@ -35,34 +35,37 @@ func TestUTDedicatedNodeGroupDataSource(t *testing.T) {
 		return s, nil
 	})()
 
-	nodeGroupId := "node_group_id"
+	clusterId := "cluster_id"
+	displayName := "test-tf"
+	nodeSpec := "2C4G"
+	nodeSpecDisplayName := "2 vCPU, 4 GiB beta"
 
-	getNodeGroupResp := dedicated.Dedicatedv1beta1TidbNodeGroup{}
-	getNodeGroupResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApidedicatedv1beta1NodeGroup("cluster_id", "test_group", string(dedicated.DEDICATEDV1BETA1TIDBNODEGROUPSTATE_ACTIVE), 1)))
+	getClusterResp := dedicated.TidbCloudOpenApidedicatedv1beta1Cluster{}
+	getClusterResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApidedicatedv1beta1Cluster(clusterId, displayName, string(dedicated.COMMONV1BETA1CLUSTERSTATE_ACTIVE), nodeSpec, nodeSpecDisplayName)))
 
-	s.EXPECT().GetTiDBNodeGroup(gomock.Any(), gomock.Any(), nodeGroupId).Return(&getNodeGroupResp, nil).AnyTimes()
+	s.EXPECT().GetCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil).AnyTimes()
 
-	testUTDedicatedNodeGroupDataSource(t)
+	testUTDedicatedClusterDataSource(t)
 }
 
-func testUTDedicatedNodeGroupDataSource(t *testing.T) {
-	dedicatedNodeGroupDataSourceName := "data.tidbcloud_dedicated_node_group.test"
+func testUTDedicatedClusterDataSource(t *testing.T) {
+	dedicatedClusterDataSourceName := "data.tidbcloud_dedicated_cluster.test"
 	resource.Test(t, resource.TestCase{
 		IsUnitTest:               true,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testUTDedicatedNodeGroupDataSourceConfig(),
+				Config: testUTDedicatedClusterDataSourceConfig(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dedicatedNodeGroupDataSourceName, "display_name", "test_group"),
+					resource.TestCheckResourceAttr(dedicatedClusterDataSourceName, "display_name", "test-tf"),
 				),
 			},
 		},
 	})
 }
 
-const testDedicatedNodeGroupDataSourceConfig = `
+const testDedicatedClusterDataSourceConfig = `
 resource "tidbcloud_dedicated_cluster" "test" {
     name = "test-tf"
     region_id = "aws-us-west-2"
@@ -80,23 +83,16 @@ resource "tidbcloud_dedicated_cluster" "test" {
     }
 }
 
-resource "tidbcloud_dedicated_node_group" "test_group" {
-    cluster_id = tidbcloud_dedicated_cluster.test.id
-    node_count = 1
-    display_name = "test_group"
-}
 
-data "tidbcloud_dedicated_node_group" "test" {
+data "tidbcloud_dedicated_cluster" "test" {
   cluster_id = tidbcloud_dedicated_cluster.test.id
-  node_group_id = tidbcloud_dedicated_node_group.test_group.id
 }
 `
 
-func testUTDedicatedNodeGroupDataSourceConfig() string {
+func testUTDedicatedClusterDataSourceConfig() string {
 	return `
-data "tidbcloud_dedicated_node_group" "test" {
+data "tidbcloud_dedicated_cluster" "test" {
 	cluster_id = "cluster_id"
-	node_group_id = "node_group_id" 
 }
 `
 }

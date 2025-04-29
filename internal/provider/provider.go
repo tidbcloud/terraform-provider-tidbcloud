@@ -185,6 +185,8 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 		NewDedicatedRegionsDataSource,
 		NewDedicatedRegionDataSource,
 		NewDedicatedCloudProvidersDataSource,
+		NewDedicatedClusterDataSource,
+		NewDedicatedClustersDataSource,
 		NewDedicatedNodeGroupDataSource,
 		NewDedicatedNodeGroupsDataSource,
 
