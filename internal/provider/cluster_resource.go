@@ -41,8 +41,6 @@ const (
 )
 
 const (
-	clusterServerlessCreateTimeout  = 180 * time.Second
-	clusterServerlessCreateInterval = 2 * time.Second
 	clusterCreateTimeout            = time.Hour
 	clusterCreateInterval           = 60 * time.Second
 	clusterUpdateTimeout            = time.Hour
@@ -443,7 +441,7 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 		var cluster *clusterApi.GetClusterOKBody
 		if data.ClusterType == dev {
 			tflog.Info(ctx, "wait serverless cluster ready")
-			cluster, err = WaitClusterReady(ctx, clusterServerlessCreateTimeout, clusterServerlessCreateInterval, data.ProjectId, clusterId, r.provider.client)
+			cluster, err = WaitClusterReady(ctx, serverlessClusterCreateTimeout, serverlessClusterCreateInterval, data.ProjectId, clusterId, r.provider.client)
 			if err != nil {
 				resp.Diagnostics.AddError(
 					"Cluster creation failed",
@@ -472,7 +470,12 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 			resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call GetCluster, got error: %s", err))
 			return
 		}
+		// when cluster is creating, the `port` is not returned by create api, so we need to set it to state
+		port := data.Config.Port.ValueInt64()
 		refreshClusterResourceData(ctx, getClusterResp.Payload, &data)
+		if data.Config.Port.ValueInt64() == 0 {
+			data.Config.Port = types.Int64Value(port)
+		}
 	}
 
 	// save into the Terraform state.
