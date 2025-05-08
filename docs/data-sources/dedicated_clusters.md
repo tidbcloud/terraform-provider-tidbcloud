@@ -35,14 +35,11 @@ output "output" {
 <a id="nestedatt--clusters"></a>
 ### Nested Schema for `clusters`
 
-Required:
-
-- `cluster_id` (String) The ID of the cluster.
-
 Read-Only:
 
 - `annotations` (Map of String) A map of annotations for the cluster.
 - `cloud_provider` (String) The cloud provider on which your cluster is hosted.
+- `cluster_id` (String) The ID of the cluster.
 - `create_time` (String) The creation time of the cluster.
 - `created_by` (String) The creator of the cluster.
 - `display_name` (String) The name of the cluster.

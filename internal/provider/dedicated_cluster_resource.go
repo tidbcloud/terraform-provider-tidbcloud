@@ -422,10 +422,7 @@ func (r dedicatedClusterResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	// refresh data with read result
 	var data dedicatedClusterResourceData
-	// root_password, ip_access_list and pause will not return by read api, so we just use state's value even it changed on console!
-
 	var rootPassword types.String
 	var paused types.Bool
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("root_password"), &rootPassword)...)
@@ -440,7 +437,6 @@ func (r dedicatedClusterResource) Read(ctx context.Context, req resource.ReadReq
 }
 
 func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, data *dedicatedClusterResourceData) {
-	// must return
 	labels, diag := types.MapValueFrom(ctx, types.StringType, *resp.Labels)
 	if diag.HasError() {
 		return
@@ -488,6 +484,7 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 		}
 	}
 
+	// tikv node setting
 	data.TiKVNodeSetting = tikvNodeSetting{
 		NodeSpecKey:         types.StringValue(resp.TikvNodeSetting.NodeSpecKey),
 		NodeCount:           types.Int32Value(resp.TikvNodeSetting.NodeCount),
@@ -496,7 +493,6 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 		NodeSpecDisplayName: types.StringValue(*resp.TikvNodeSetting.NodeSpecDisplayName),
 	}
 
-	// may return
 	// tiflash node setting
 	if resp.TiflashNodeSetting != nil {
 		data.TiFlashNodeSetting = &tiflashNodeSetting{

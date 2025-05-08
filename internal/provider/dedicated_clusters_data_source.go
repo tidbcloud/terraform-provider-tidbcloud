@@ -61,7 +61,7 @@ func (d *dedicatedClustersDataSource) Schema(_ context.Context, _ datasource.Sch
 						},
 						"cluster_id": schema.StringAttribute{
 							MarkdownDescription: "The ID of the cluster.",
-							Required:            true,
+							Computed:            true,
 						},
 						"display_name": schema.StringAttribute{
 							MarkdownDescription: "The name of the cluster.",
@@ -313,7 +313,6 @@ func (d *dedicatedClustersDataSource) Read(ctx context.Context, req datasource.R
 			NodeSpecDisplayName: types.StringValue(*cluster.TikvNodeSetting.NodeSpecDisplayName),
 		}
 
-		// may return
 		// tiflash node setting
 		if cluster.TiflashNodeSetting != nil {
 			c.TiFlashNodeSetting = &tiflashNodeSetting{

@@ -313,7 +313,6 @@ func (d *dedicatedClusterDataSource) Read(ctx context.Context, req datasource.Re
 		NodeSpecDisplayName: types.StringValue(*cluster.TikvNodeSetting.NodeSpecDisplayName),
 	}
 
-	// may return
 	// tiflash node setting
 	if cluster.TiflashNodeSetting != nil {
 		data.TiFlashNodeSetting = &tiflashNodeSetting{
