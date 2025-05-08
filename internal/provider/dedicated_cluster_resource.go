@@ -173,11 +173,11 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 				Attributes: map[string]schema.Attribute{
 					"pause_type": schema.StringAttribute{
 						MarkdownDescription: "The type of pause.",
-						Optional:            true,
+						Computed:            true,
 					},
 					"scheduled_resume_time": schema.StringAttribute{
 						MarkdownDescription: "The scheduled time for resuming the cluster.",
-						Optional:            true,
+						Computed:            true,
 					},
 				},
 			},
@@ -188,9 +188,6 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			"version": schema.StringAttribute{
 				MarkdownDescription: "The version of the cluster.",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"created_by": schema.StringAttribute{
 				MarkdownDescription: "The creator of the cluster.",
@@ -314,8 +311,12 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						Required:            true,
 					},
 					"storage_type": schema.StringAttribute{
-						MarkdownDescription: "The storage type.",
-						Required:            true,
+						MarkdownDescription: "The storage type.\n" +
+							"- Basic: Data disk: gp3; Raft log disk: none.\n" +
+							"- Standard: Data disk: gp3; Raft log disk: gp3.\n" +
+							"- Performance: Data disk: gp3; Raft log disk: io2.\n" +
+							"- Plus: Data disk: io2; Raft log disk: none.\n",
+						Required: true,
 					},
 					"node_spec_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the node spec.",
@@ -340,8 +341,12 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						Required:            true,
 					},
 					"storage_type": schema.StringAttribute{
-						MarkdownDescription: "The storage type.",
-						Required:            true,
+						MarkdownDescription: "The storage type.\n" +
+							"- Basic: Data disk: gp3; Raft log disk: none.\n" +
+							"- Standard: Data disk: gp3; Raft log disk: gp3.\n" +
+							"- Performance: Data disk: gp3; Raft log disk: io2.\n" +
+							"- Plus: Data disk: io2; Raft log disk: none.\n",
+						Required: true,
 					},
 					"node_spec_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the node spec.",
@@ -503,6 +508,15 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 			NodeSpecDisplayName: types.StringValue(*resp.TiflashNodeSetting.NodeSpecDisplayName),
 		}
 	}
+
+	if resp.PausePlan != nil {
+		data.PausePlan = &pausePlan{
+			PauseType:           types.StringValue(string(resp.PausePlan.PauseType)),
+			scheduledResumeTime: types.StringValue(resp.PausePlan.ScheduledResumeTime.String()),
+		}
+	} else {
+		data.PausePlan = nil
+	}
 }
 
 func (r dedicatedClusterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -625,13 +639,6 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 			body.DisplayName = plan.DisplayName.ValueStringPointer()
 		}
 
-		var labels map[string]string
-		diag := plan.Labels.ElementsAs(ctx, &labels, false)
-		if diag.HasError() {
-			return
-		}
-		body.Labels = &labels
-
 		// call update api
 		tflog.Trace(ctx, "update dedicated_cluster_resource")
 		_, err := r.provider.DedicatedClient.UpdateCluster(ctx, state.ClusterId.ValueString(), body)
@@ -653,6 +660,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 
 	refreshDedicatedClusterResourceData(ctx, cluster, &state)
 	state.Paused = plan.Paused
+	state.RootPassword = plan.RootPassword
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)

@@ -41,7 +41,7 @@ resource "tidbcloud_dedicated_cluster" "example" {
     node_spec_key   = "2C4G"
     node_count      = 3
     storage_size_gi = 10
-    storage_type    = "BASIC"
+    storage_type    = "Basic"
   }
 }
 ```
@@ -115,6 +115,10 @@ Required:
 - `node_spec_key` (String) The node specification key.
 - `storage_size_gi` (Number) The storage size in GiB.
 - `storage_type` (String) The storage type.
+- Basic: Data disk: gp3; Raft log disk: none.
+- Standard: Data disk: gp3; Raft log disk: gp3.
+- Performance: Data disk: gp3; Raft log disk: io2.
+- Plus: Data disk: io2; Raft log disk: none.
 
 Read-Only:
 
@@ -124,7 +128,7 @@ Read-Only:
 <a id="nestedatt--pause_plan"></a>
 ### Nested Schema for `pause_plan`
 
-Optional:
+Read-Only:
 
 - `pause_type` (String) The type of pause.
 - `scheduled_resume_time` (String) The scheduled time for resuming the cluster.
@@ -139,6 +143,10 @@ Required:
 - `node_spec_key` (String) The node specification key.
 - `storage_size_gi` (Number) The storage size in GiB.
 - `storage_type` (String) The storage type.
+- Basic: Data disk: gp3; Raft log disk: none.
+- Standard: Data disk: gp3; Raft log disk: gp3.
+- Performance: Data disk: gp3; Raft log disk: io2.
+- Plus: Data disk: io2; Raft log disk: none.
 
 Read-Only:
 

@@ -26,6 +26,6 @@ resource "tidbcloud_dedicated_cluster" "example" {
     node_spec_key   = "2C4G"
     node_count      = 3
     storage_size_gi = 10
-    storage_type    = "BASIC"
+    storage_type    = "Basic"
   }
 }
