@@ -58,10 +58,10 @@ resource "tidbcloud_dedicated_cluster" "example" {
 
 ### Optional
 
-- `labels` (Map of String) A map of labels assigned to the cluster.
 - `pause_plan` (Attributes) Pause plan details for the cluster. (see [below for nested schema](#nestedatt--pause_plan))
 - `paused` (Boolean) Whether the cluster is paused.
 - `port` (Number) The port used for accessing the cluster.
+- `project_id` (String) The ID of the project. When not provided, the default project will be used.
 - `root_password` (String, Sensitive) The root password to access the cluster.
 - `tiflash_node_setting` (Attributes) Settings for TiFlash nodes. (see [below for nested schema](#nestedatt--tiflash_node_setting))
 
@@ -72,7 +72,7 @@ resource "tidbcloud_dedicated_cluster" "example" {
 - `cluster_id` (String) The ID of the cluster.
 - `create_time` (String) The creation time of the cluster.
 - `created_by` (String) The creator of the cluster.
-- `project_id` (String) The ID of the project.
+- `labels` (Map of String) A map of labels assigned to the cluster.
 - `region_display_name` (String) The display name of the region.
 - `state` (String) The current state of the cluster.
 - `update_time` (String) The last update time of the cluster.
