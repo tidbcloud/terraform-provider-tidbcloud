@@ -199,9 +199,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The spending limit of the cluster.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
 				Attributes: map[string]schema.Attribute{
 					"monthly": schema.Int32Attribute{
 						MarkdownDescription: "Maximum monthly spending limit in USD cents.",
@@ -327,9 +324,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"version": schema.StringAttribute{
 				MarkdownDescription: "The version of the cluster.",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"created_by": schema.StringAttribute{
 				MarkdownDescription: "The email of the creator of the cluster.",
@@ -363,9 +357,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"usage": schema.SingleNestedAttribute{
 				MarkdownDescription: "The usage of the cluster.",
 				Computed:            true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
 				Attributes: map[string]schema.Attribute{
 					"request_unit": schema.StringAttribute{
 						MarkdownDescription: "The request unit of the cluster.",
