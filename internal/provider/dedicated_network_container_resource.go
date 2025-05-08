@@ -2,25 +2,18 @@ package provider
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
-)
-
-type NetworkContainerStatus string
-
-const (
-	dedicatedNetworkContainerStatusActive   NetworkContainerStatus = "ACTIVE"
-	dedicatedNetworkContainerStatusInActive NetworkContainerStatus = "INACTIVE"
 )
 
 var (
@@ -32,6 +25,7 @@ type DedicatedNetworkContainerResource struct {
 }
 
 type DedicatedNetworkContainerResourceData struct {
+	ProjectId          types.String `tfsdk:"project_id"`
 	NetworkContainerId types.String `tfsdk:"network_container_id"`
 	RegionId           types.String `tfsdk:"region_id"`
 	CidrNotion         types.String `tfsdk:"cidr_notion"`
@@ -54,6 +48,15 @@ func (r *DedicatedNetworkContainerResource) Schema(_ context.Context, _ resource
 	resp.Schema = schema.Schema{
 		Description: "dedicated network container resource.",
 		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{
+				Description: "The project ID for the network container",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 			"network_container_id": schema.StringAttribute{
 				Description: "The ID of the network container",
 				Computed:    true,
@@ -122,7 +125,7 @@ func (r *DedicatedNetworkContainerResource) Create(ctx context.Context, req reso
 	}
 
 	tflog.Trace(ctx, "create dedicated_network_container_resource")
-	body, err := buildCreateDedicatedNetworkContainerBody(ctx, data)
+	body, err := buildCreateDedicatedNetworkContainerBody(data)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to build create body, got error: %s", err))
 		return
@@ -181,29 +184,16 @@ func (r *DedicatedNetworkContainerResource) Update(ctx context.Context, req reso
 }
 
 func (r *DedicatedNetworkContainerResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var networkContainerId string
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("network_container_id"), &networkContainerId)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	tflog.Trace(ctx, "delete dedicated_network_container_resource")
-	err := r.provider.DedicatedClient.DeleteNetworkContainer(ctx, networkContainerId)
-	if err != nil {
-		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteNetworkContainer, got error: %s", err))
-		return
-	}
+	resp.Diagnostics.AddError("Delete Error", "Network container can not be deleted")
+	return
 }
 
-func buildCreateDedicatedNetworkContainerBody(ctx context.Context, data DedicatedNetworkContainerResourceData) (dedicated.V1beta1NetworkContainer, error) {
+func buildCreateDedicatedNetworkContainerBody(data DedicatedNetworkContainerResourceData) (dedicated.V1beta1NetworkContainer, error) {
 	regionId := data.RegionId.ValueString()
 	cidrNotion := data.CidrNotion.ValueString()
-	var labels map[string]string
-	if !data.Labels.IsUnknown() {
-		diag := data.Labels.ElementsAs(ctx, &labels, false)
-		if diag.HasError() {
-			return dedicated.V1beta1NetworkContainer{}, errors.New("unable to convert labels")
-		}
+	labels := make(map[string]string)
+	if IsKnown(data.ProjectId) {
+		labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
 	}
 	return dedicated.V1beta1NetworkContainer{
 		RegionId:   regionId,
@@ -213,21 +203,27 @@ func buildCreateDedicatedNetworkContainerBody(ctx context.Context, data Dedicate
 }
 
 func refreshDedicatedNetworkContainerResourceData(ctx context.Context, networkContainer *dedicated.V1beta1NetworkContainer, data *DedicatedNetworkContainerResourceData) {
+	labels, diag := types.MapValueFrom(ctx, types.StringType, *networkContainer.Labels)
+	if diag.HasError() {
+		return
+	}
 	data.NetworkContainerId = types.StringValue(*networkContainer.NetworkContainerId)
 	data.State = types.StringValue(string(*networkContainer.State))
 	data.CloudProvider = types.StringValue(string(*networkContainer.CloudProvider))
 	data.RegionDisplayName = types.StringValue(*networkContainer.RegionDisplayName)
 	data.VpcId = types.StringValue(*networkContainer.VpcId)
+	data.ProjectId = types.StringValue((*networkContainer.Labels)[LabelsKeyProjectId])
+	data.Labels = labels
 }
 
 func WaitDedicatedNetworkContainerReady(ctx context.Context, timeout time.Duration, interval time.Duration, networkContainerId string,
 	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.V1beta1NetworkContainer, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
-			string(dedicatedNetworkContainerStatusInActive),
+			string(dedicated.V1BETA1NETWORKCONTAINERSTATE_INACTIVE),
 		},
 		Target: []string{
-			string(dedicatedNetworkContainerStatusActive),
+			string(dedicated.V1BETA1NETWORKCONTAINERSTATE_ACTIVE),
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,

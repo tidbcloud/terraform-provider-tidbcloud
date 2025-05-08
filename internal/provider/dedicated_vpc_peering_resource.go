@@ -8,19 +8,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
-)
-
-type VpcPeeringStatus string
-
-const (
-	dedicatedVpcPeeringStatusActive  VpcPeeringStatus = "ACTIVE"
-	dedicatedVpcPeeringStatusPending VpcPeeringStatus = "PENDING"
-	dedicatedVpcPeeringStatusFailed  VpcPeeringStatus = "FAILED"
 )
 
 var (
@@ -32,6 +26,7 @@ type DedicatedVpcPeeringResource struct {
 }
 
 type DedicatedVpcPeeringResourceData struct {
+	ProjectId                 types.String `tfsdk:"project_id"`
 	VpcPeeringId              types.String `tfsdk:"vpc_peering_id"`
 	TiDBCloudRegionId         types.String `tfsdk:"tidb_cloud_region_id"`
 	TiDBCloudCloudProvider    types.String `tfsdk:"tidb_cloud_cloud_provider"`
@@ -59,6 +54,15 @@ func (r *DedicatedVpcPeeringResource) Schema(_ context.Context, _ resource.Schem
 	resp.Schema = schema.Schema{
 		Description: "Resource for Dedicated VPC Peering.",
 		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{
+				Description: "The project ID for the VPC Peering",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 			"vpc_peering_id": schema.StringAttribute{
 				Description: "The ID of the VPC Peering",
 				Computed:    true,
@@ -147,7 +151,7 @@ func (r *DedicatedVpcPeeringResource) Create(ctx context.Context, req resource.C
 	}
 
 	tflog.Trace(ctx, "create dedicated_vpc_peering_resource")
-	body := buildCreateDedicatedVpcPeeringBody(ctx, data)
+	body := buildCreateDedicatedVpcPeeringBody(data)
 	VpcPeering, err := r.provider.DedicatedClient.CreateVPCPeering(ctx, &body)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call CreateVpcPeering, got error: %s", err))
@@ -216,14 +220,19 @@ func (r *DedicatedVpcPeeringResource) Delete(ctx context.Context, req resource.D
 	}
 }
 
-func buildCreateDedicatedVpcPeeringBody(ctx context.Context, data DedicatedVpcPeeringResourceData) dedicated.Dedicatedv1beta1VpcPeering {
+func buildCreateDedicatedVpcPeeringBody(data DedicatedVpcPeeringResourceData) dedicated.Dedicatedv1beta1VpcPeering {
 	customerRegionId := data.CustomerRegionId.ValueString()
+	labels := make(map[string]string)
+	if IsKnown(data.ProjectId) {
+		labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
+	}
 	return dedicated.Dedicatedv1beta1VpcPeering{
 		TidbCloudRegionId: data.TiDBCloudRegionId.ValueString(),
 		CustomerRegionId:  &customerRegionId,
 		CustomerAccountId: data.CustomerAccountId.ValueString(),
 		CustomerVpcId:     data.CustomerVpcId.ValueString(),
 		CustomerVpcCidr:   data.CustomerVpcCidr.ValueString(),
+		Labels:            &labels,
 	}
 }
 
@@ -248,11 +257,11 @@ func WaitDedicatedVpcPeeringReady(ctx context.Context, timeout time.Duration, in
 	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.Dedicatedv1beta1VpcPeering, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
-			string(dedicatedVpcPeeringStatusPending),
+			string(dedicated.DEDICATEDV1BETA1VPCPEERINGSTATE_PENDING),
 		},
 		Target: []string{
-			string(dedicatedVpcPeeringStatusActive),
-			string(dedicatedVpcPeeringStatusFailed),
+			string(dedicated.DEDICATEDV1BETA1VPCPEERINGSTATE_FAILED),
+			string(dedicated.DEDICATEDV1BETA1VPCPEERINGSTATE_ACTIVE),
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,

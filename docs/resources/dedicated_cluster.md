@@ -13,7 +13,7 @@ dedicated cluster resource
 ## Example Usage
 
 ```terraform
-variable "name" {
+variable "display_name" {
   type     = string
   nullable = false
 }
@@ -29,7 +29,7 @@ variable "root_password" {
 }
 
 resource "tidbcloud_dedicated_cluster" "example" {
-  name          = var.name
+  display_name  = var.display_name
   region_id     = var.region_id
   port          = 4000
   root_password = var.root_password
@@ -51,7 +51,7 @@ resource "tidbcloud_dedicated_cluster" "example" {
 
 ### Required
 
-- `name` (String) The name of the cluster.
+- `display_name` (String) The name of the cluster.
 - `region_id` (String) The region where the cluster is deployed.
 - `tidb_node_setting` (Attributes) Settings for TiDB nodes. (see [below for nested schema](#nestedatt--tidb_node_setting))
 - `tikv_node_setting` (Attributes) Settings for TiKV nodes. (see [below for nested schema](#nestedatt--tikv_node_setting))
@@ -62,16 +62,16 @@ resource "tidbcloud_dedicated_cluster" "example" {
 - `pause_plan` (Attributes) Pause plan details for the cluster. (see [below for nested schema](#nestedatt--pause_plan))
 - `paused` (Boolean) Whether the cluster is paused.
 - `port` (Number) The port used for accessing the cluster.
-- `root_password` (String) The root password to access the cluster.
+- `root_password` (String, Sensitive) The root password to access the cluster.
 - `tiflash_node_setting` (Attributes) Settings for TiFlash nodes. (see [below for nested schema](#nestedatt--tiflash_node_setting))
 
 ### Read-Only
 
 - `annotations` (Map of String) A map of annotations for the cluster.
 - `cloud_provider` (String) The cloud provider on which your cluster is hosted.
+- `cluster_id` (String) The ID of the cluster.
 - `create_time` (String) The creation time of the cluster.
 - `created_by` (String) The creator of the cluster.
-- `id` (String) The ID of the cluster.
 - `project_id` (String) The ID of the project.
 - `region_display_name` (String) The display name of the region.
 - `state` (String) The current state of the cluster.
@@ -88,11 +88,22 @@ Required:
 
 Read-Only:
 
+- `endpoints` (Attributes List) The endpoints of the node group. (see [below for nested schema](#nestedatt--tidb_node_setting--endpoints))
 - `is_default_group` (Boolean) Indicates if this is the default group.
 - `node_group_display_name` (String) The display name of the default node group.
 - `node_group_id` (String) The ID of the default node group.
 - `node_spec_display_name` (String) The display name of the node spec.
 - `state` (String) The state of the node group.
+
+<a id="nestedatt--tidb_node_setting--endpoints"></a>
+### Nested Schema for `tidb_node_setting.endpoints`
+
+Read-Only:
+
+- `connection_type` (String) The connection type of the endpoint.
+- `host` (String) The host of the endpoint.
+- `port` (Number) The port of the endpoint.
+
 
 
 <a id="nestedatt--tikv_node_setting"></a>

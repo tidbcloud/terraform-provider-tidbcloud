@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/juju/errors"
+	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
 type dedicatedPrivateEndpointConnectionsDataSourceData struct {
@@ -153,19 +155,20 @@ func (d *dedicatedPrivateEndpointConnectionsDataSource) Read(ctx context.Context
 	}
 
 	tflog.Trace(ctx, "read private endpoint connections data source")
-	privateEndpointConnections, err := d.provider.DedicatedClient.ListPrivateEndpointConnections(ctx, data.ClusterId.ValueString(), data.NodeGroupId.ValueString())
+	privateEndpointConnections, err := d.retrievePrivateEndpointConnections(ctx, data.ClusterId.ValueString(), data.NodeGroupId.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetPrivateEndpointConnection, got error: %s", err))
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call ListPrivateEndpointConnection, got error: %s", err))
 		return
 	}
 
 	var items []privateEndpointConnectionItem
+
 	for _, privateEndpointConnection := range privateEndpointConnections {
 		labels, diag := types.MapValueFrom(ctx, types.StringType, *privateEndpointConnection.Labels)
 		if diag.HasError() {
 			return
 		}
-		items = append(items, privateEndpointConnectionItem{
+		p := privateEndpointConnectionItem{
 			PrivateEndpointConnectionId: types.StringValue(*privateEndpointConnection.PrivateEndpointConnectionId),
 			Message:                     types.StringValue(*privateEndpointConnection.Message),
 			RegionId:                    types.StringValue(*privateEndpointConnection.RegionId),
@@ -175,16 +178,40 @@ func (d *dedicatedPrivateEndpointConnectionsDataSource) Read(ctx context.Context
 			PrivateLinkServiceState:     types.StringValue(string(*privateEndpointConnection.PrivateLinkServiceState)),
 			Labels:                      labels,
 			EndpointId:                  types.StringValue(privateEndpointConnection.EndpointId),
-			PrivateIpAddress:            types.StringValue(*privateEndpointConnection.PrivateIpAddress.Get()),
 			EndpointState:               types.StringValue(string(*privateEndpointConnection.EndpointState)),
 			NodeGroupDisplayName:        types.StringValue(*privateEndpointConnection.TidbNodeGroupDisplayName),
-			AccountId:                   types.StringValue(*privateEndpointConnection.AccountId.Get()),
 			Host:                        types.StringValue(*privateEndpointConnection.Host),
 			Port:                        types.Int64Value(int64(*privateEndpointConnection.Port)),
-		})
+		}
+		if privateEndpointConnection.PrivateIpAddress.IsSet() {
+			p.PrivateIpAddress = types.StringValue(*privateEndpointConnection.PrivateIpAddress.Get())
+		}
+		if privateEndpointConnection.AccountId.IsSet() {
+			p.AccountId = types.StringValue(*privateEndpointConnection.AccountId.Get())
+		}
+		items = append(items, p)
 	}
 	data.PrivateEndpointConnections = items
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
+}
+
+func (d dedicatedPrivateEndpointConnectionsDataSource) retrievePrivateEndpointConnections(ctx context.Context, clusterId, nodeGroupId string) ([]dedicated.V1beta1PrivateEndpointConnection, error) {
+	var items []dedicated.V1beta1PrivateEndpointConnection
+	pageSizeInt32 := int32(DefaultPageSize)
+	var pageToken *string
+	for {
+		privateEndpointConnections, err := d.provider.DedicatedClient.ListPrivateEndpointConnections(ctx, clusterId, nodeGroupId, &pageSizeInt32, pageToken)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		items = append(items, privateEndpointConnections.PrivateEndpointConnections...)
+
+		pageToken = privateEndpointConnections.NextPageToken
+		if IsNilOrEmpty(pageToken) {
+			break
+		}
+	}
+	return items, nil
 }

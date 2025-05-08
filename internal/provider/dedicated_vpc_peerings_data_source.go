@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/juju/errors"
+	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
 type dedicatedVpcPeeringsDataSourceData struct {
@@ -133,7 +135,7 @@ func (d *dedicatedVpcPeeringsDataSource) Read(ctx context.Context, req datasourc
 	}
 
 	tflog.Trace(ctx, "read vpc peerings data source")
-	vpcPeerings, err := d.provider.DedicatedClient.ListVPCPeerings(ctx)
+	vpcPeerings, err := d.retrieveVPCPeerings(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call ListVPCPeerings, got error: %s", err))
 		return
@@ -169,4 +171,23 @@ func (d *dedicatedVpcPeeringsDataSource) Read(ctx context.Context, req datasourc
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
+}
+
+func (d dedicatedVpcPeeringsDataSource) retrieveVPCPeerings(ctx context.Context) ([]dedicated.Dedicatedv1beta1VpcPeering, error) {
+	var items []dedicated.Dedicatedv1beta1VpcPeering
+	pageSizeInt32 := int32(DefaultPageSize)
+	var pageToken *string
+	for {
+		vpcPeerings, err := d.provider.DedicatedClient.ListVPCPeerings(ctx, &pageSizeInt32, pageToken)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		items = append(items, vpcPeerings.VpcPeerings...)
+
+		pageToken = vpcPeerings.NextPageToken
+		if IsNilOrEmpty(pageToken) {
+			break
+		}
+	}
+	return items, nil
 }

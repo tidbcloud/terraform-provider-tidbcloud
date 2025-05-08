@@ -15,14 +15,9 @@ import (
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
-type privateEndpointConnectionStatus string
-
 const (
-	dedicatedPrivateEndpointConnectionStatusActive     privateEndpointConnectionStatus = "ACTIVE"
-	dedicatedPrivateEndpointConnectionStatusPending    privateEndpointConnectionStatus = "PENDING"
-	dedicatedPrivateEndpointConnectionStatusDeleting   privateEndpointConnectionStatus = "DELETING"
-	dedicatedPrivateEndpointConnectionStatusFailed     privateEndpointConnectionStatus = "FAILED"
-	dedicatedPrivateEndpointConnectionStatusDiscovered privateEndpointConnectionStatus = "DISCOVERED"
+	dedicatedPrivateEndpointConnectionCreateTimeout  = time.Hour
+	dedicatedPrivateEndpointConnectionCreateInterval = 5 * time.Second
 )
 
 type dedicatedPrivateEndpointConnectionResourceData struct {
@@ -39,6 +34,7 @@ type dedicatedPrivateEndpointConnectionResourceData struct {
 	RegionDisplayName           types.String `tfsdk:"region_display_name"`
 	CloudProvider               types.String `tfsdk:"cloud_provider"`
 	PrivateLinkServiceName      types.String `tfsdk:"private_link_service_name"`
+	AccountId                   types.String `tfsdk:"account_id"`
 }
 
 type dedicatedPrivateEndpointConnectionResource struct {
@@ -123,6 +119,10 @@ func (r *dedicatedPrivateEndpointConnectionResource) Schema(_ context.Context, _
 				MarkdownDescription: "The name of the private link service.",
 				Computed:            true,
 			},
+			"account_id": schema.StringAttribute{
+				MarkdownDescription: "Only for GCP private service connections. It's GCP project name.",
+				Computed:            true,
+			},
 			"labels": schema.MapAttribute{
 				MarkdownDescription: "The labels of the endpoint.",
 				Computed:            true,
@@ -159,7 +159,7 @@ func (r dedicatedPrivateEndpointConnectionResource) Create(ctx context.Context, 
 	privateEndpointConnectionId := *privateEndpointConnection.PrivateEndpointConnectionId
 	data.PrivateEndpointConnectionId = types.StringValue(privateEndpointConnectionId)
 	tflog.Info(ctx, "wait dedicated private endpoint connection ready")
-	privateEndpointConnection, err = WaitDedicatedPrivateEndpointConnectionReady(ctx, clusterCreateTimeout, clusterCreateInterval, data.ClusterId.ValueString(), data.NodeGroupId.ValueString(), privateEndpointConnectionId, r.provider.DedicatedClient)
+	privateEndpointConnection, err = WaitDedicatedPrivateEndpointConnectionReady(ctx, dedicatedPrivateEndpointConnectionCreateTimeout, dedicatedPrivateEndpointConnectionCreateInterval, data.ClusterId.ValueString(), data.NodeGroupId.ValueString(), privateEndpointConnectionId, r.provider.DedicatedClient)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Dedicated private endpoint connection creation failed",
@@ -167,7 +167,7 @@ func (r dedicatedPrivateEndpointConnectionResource) Create(ctx context.Context, 
 		)
 		return
 	}
-	refreshDedicatedPrivateEndpointConnectionResourceData(ctx, privateEndpointConnection, &data)
+	refreshDedicatedPrivateEndpointConnectionResourceData(privateEndpointConnection, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -191,7 +191,7 @@ func (r dedicatedPrivateEndpointConnectionResource) Read(ctx context.Context, re
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetPrivateEndpointConnection, error: %s", err))
 		return
 	}
-	refreshDedicatedPrivateEndpointConnectionResourceData(ctx, privateEndpointConnection, &data)
+	refreshDedicatedPrivateEndpointConnectionResourceData(privateEndpointConnection, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -203,7 +203,7 @@ func (r dedicatedPrivateEndpointConnectionResource) Delete(ctx context.Context, 
 	var nodeGroupId string
 	var privateEndpointConnectionId string
 
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("id"), &clusterId)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("cluster_id"), &clusterId)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("node_group_id"), &nodeGroupId)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("private_endpoint_connection_id"), &privateEndpointConnectionId)...)
 	if resp.Diagnostics.HasError() {
@@ -234,28 +234,34 @@ func buildCreateDedicatedPrivateEndpointConnectionBody(data dedicatedPrivateEndp
 	}
 }
 
-func refreshDedicatedPrivateEndpointConnectionResourceData(ctx context.Context, resp *dedicated.V1beta1PrivateEndpointConnection, data *dedicatedPrivateEndpointConnectionResourceData) {
+func refreshDedicatedPrivateEndpointConnectionResourceData(resp *dedicated.V1beta1PrivateEndpointConnection, data *dedicatedPrivateEndpointConnectionResourceData) {
 	data.EndpointId = types.StringValue(resp.EndpointId)
-	data.PrivateIpAddress = types.StringValue(*resp.PrivateIpAddress.Get())
+	if resp.PrivateIpAddress.IsSet() {
+		data.PrivateIpAddress = types.StringValue(*resp.PrivateIpAddress.Get())
+	}
+	if resp.AccountId.IsSet() {
+		data.AccountId = types.StringValue(*resp.AccountId.Get())
+	}
 	data.EndpointStatus = types.StringValue(string(*resp.EndpointState))
 	data.Message = types.StringValue(*resp.Message)
 	data.RegionId = types.StringValue(*resp.RegionId)
 	data.RegionDisplayName = types.StringValue(*resp.RegionDisplayName)
 	data.CloudProvider = types.StringValue(string(*resp.CloudProvider))
 	data.PrivateLinkServiceName = types.StringValue(*resp.PrivateLinkServiceName)
+
 }
 
 func WaitDedicatedPrivateEndpointConnectionReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string, nodeGroupId string, privateEndpointConnectionId string,
 	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.V1beta1PrivateEndpointConnection, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
-			string(dedicatedPrivateEndpointConnectionStatusPending),
+			string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_PENDING),
 		},
 		Target: []string{
-			string(dedicatedPrivateEndpointConnectionStatusActive),
-			string(dedicatedPrivateEndpointConnectionStatusDiscovered),
-			string(dedicatedPrivateEndpointConnectionStatusDeleting),
-			string(dedicatedPrivateEndpointConnectionStatusFailed),
+			string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_ACTIVE),
+			string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_DELETING),
+			string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_FAILED),
+			string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_DISCOVERED),
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,
@@ -279,6 +285,7 @@ func dedicatedPrivateEndpointConnectionStateRefreshFunc(ctx context.Context, clu
 		if err != nil {
 			return nil, "", err
 		}
+		tflog.Debug(ctx, fmt.Sprintf("dedicated private endpoint connection state: %s", *privateEndpointConnection.EndpointState))
 		return privateEndpointConnection, string(*privateEndpointConnection.EndpointState), nil
 	}
 }

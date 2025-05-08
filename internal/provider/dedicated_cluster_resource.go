@@ -9,6 +9,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -19,31 +22,15 @@ import (
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
-const (
-	dedicatedClusterStatusCreating    clusterStatus = "CREATING"
-	dedicatedClusterStatusDeleting    clusterStatus = "DELETING"
-	dedicatedClusterStatusActive      clusterStatus = "ACTIVE"
-	dedicatedClusterStatusRestoring   clusterStatus = "RESTORING"
-	dedicatedClusterStatusMaintenance clusterStatus = "MAINTENANCE"
-	dedicatedClusterStatusDeleted     clusterStatus = "DELETED"
-	dedicatedClusterStatusInactive    clusterStatus = "INACTIVE"
-	dedicatedClusterStatusUPgrading   clusterStatus = "UPGRADING"
-	dedicatedClusterStatusImporting   clusterStatus = "IMPORTING"
-	dedicatedClusterStatusModifying   clusterStatus = "MODIFYING"
-	dedicatedClusterStatusPausing     clusterStatus = "PAUSING"
-	dedicatedClusterStatusPaused      clusterStatus = "PAUSED"
-	dedicatedClusterStatusResuming    clusterStatus = "RESUMING"
-)
-
 type dedicatedClusterResourceData struct {
 	ProjectId          types.String        `tfsdk:"project_id"`
-	ClusterId          types.String        `tfsdk:"id"`
-	Name               types.String        `tfsdk:"name"`
+	ClusterId          types.String        `tfsdk:"cluster_id"`
+	DisplayName        types.String        `tfsdk:"display_name"`
 	CloudProvider      types.String        `tfsdk:"cloud_provider"`
 	RegionId           types.String        `tfsdk:"region_id"`
 	Labels             types.Map           `tfsdk:"labels"`
 	RootPassword       types.String        `tfsdk:"root_password"`
-	Port               types.Int64         `tfsdk:"port"`
+	Port               types.Int32         `tfsdk:"port"`
 	Paused             types.Bool          `tfsdk:"paused"`
 	PausePlan          *pausePlan          `tfsdk:"pause_plan"`
 	State              types.String        `tfsdk:"state"`
@@ -65,26 +52,33 @@ type pausePlan struct {
 
 type tidbNodeSetting struct {
 	NodeSpecKey          types.String `tfsdk:"node_spec_key"`
-	NodeCount            types.Int64  `tfsdk:"node_count"`
+	NodeCount            types.Int32  `tfsdk:"node_count"`
 	NodeGroupId          types.String `tfsdk:"node_group_id"`
 	NodeGroupDisplayName types.String `tfsdk:"node_group_display_name"`
 	NodeSpecDisplayName  types.String `tfsdk:"node_spec_display_name"`
 	IsDefaultGroup       types.Bool   `tfsdk:"is_default_group"`
 	State                types.String `tfsdk:"state"`
+	Endpoints            []endpoint   `tfsdk:"endpoints"`
+}
+
+type endpoint struct {
+	Host           types.String `tfsdk:"host"`
+	Port           types.Int32  `tfsdk:"port"`
+	ConnectionType types.String `tfsdk:"connection_type"`
 }
 
 type tikvNodeSetting struct {
 	NodeSpecKey         types.String `tfsdk:"node_spec_key"`
-	NodeCount           types.Int64  `tfsdk:"node_count"`
-	StorageSizeGi       types.Int64  `tfsdk:"storage_size_gi"`
+	NodeCount           types.Int32  `tfsdk:"node_count"`
+	StorageSizeGi       types.Int32  `tfsdk:"storage_size_gi"`
 	StorageType         types.String `tfsdk:"storage_type"`
 	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
 }
 
 type tiflashNodeSetting struct {
 	NodeSpecKey         types.String `tfsdk:"node_spec_key"`
-	NodeCount           types.Int64  `tfsdk:"node_count"`
-	StorageSizeGi       types.Int64  `tfsdk:"storage_size_gi"`
+	NodeCount           types.Int32  `tfsdk:"node_count"`
+	StorageSizeGi       types.Int32  `tfsdk:"storage_size_gi"`
 	StorageType         types.String `tfsdk:"storage_type"`
 	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
 }
@@ -122,20 +116,23 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 				MarkdownDescription: "The ID of the project.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
+			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"name": schema.StringAttribute{
+			"display_name": schema.StringAttribute{
 				MarkdownDescription: "The name of the cluster.",
 				Required:            true,
 			},
 			"cloud_provider": schema.StringAttribute{
 				MarkdownDescription: "The cloud provider on which your cluster is hosted.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				MarkdownDescription: "The region where the cluster is deployed.",
@@ -153,14 +150,22 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			"root_password": schema.StringAttribute{
 				MarkdownDescription: "The root password to access the cluster.",
 				Optional:            true,
+				Sensitive:           true,
 			},
-			"port": schema.Int64Attribute{
+			"port": schema.Int32Attribute{
 				MarkdownDescription: "The port used for accessing the cluster.",
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"paused": schema.BoolAttribute{
 				MarkdownDescription: "Whether the cluster is paused.",
 				Optional:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"pause_plan": schema.SingleNestedAttribute{
 				MarkdownDescription: "Pause plan details for the cluster.",
@@ -183,14 +188,23 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			"version": schema.StringAttribute{
 				MarkdownDescription: "The version of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"created_by": schema.StringAttribute{
 				MarkdownDescription: "The creator of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				MarkdownDescription: "The creation time of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				MarkdownDescription: "The last update time of the cluster.",
@@ -199,6 +213,9 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			"region_display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the region.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"annotations": schema.MapAttribute{
 				MarkdownDescription: "A map of annotations for the cluster.",
@@ -213,17 +230,23 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The key of the node spec.",
 						Required:            true,
 					},
-					"node_count": schema.Int64Attribute{
+					"node_count": schema.Int32Attribute{
 						MarkdownDescription: "The number of nodes in the default node group.",
 						Required:            true,
 					},
 					"node_group_id": schema.StringAttribute{
 						MarkdownDescription: "The ID of the default node group.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"node_group_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the default node group.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"node_spec_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the node spec.",
@@ -232,10 +255,45 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 					"is_default_group": schema.BoolAttribute{
 						MarkdownDescription: "Indicates if this is the default group.",
 						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"state": schema.StringAttribute{
 						MarkdownDescription: "The state of the node group.",
 						Computed:            true,
+					},
+					"endpoints": schema.ListNestedAttribute{
+						MarkdownDescription: "The endpoints of the node group.",
+						Computed:            true,
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"host": schema.StringAttribute{
+									MarkdownDescription: "The host of the endpoint.",
+									Computed:            true,
+									PlanModifiers: []planmodifier.String{
+										stringplanmodifier.UseStateForUnknown(),
+									},
+								},
+								"port": schema.Int32Attribute{
+									MarkdownDescription: "The port of the endpoint.",
+									Computed:            true,
+									PlanModifiers: []planmodifier.Int32{
+										int32planmodifier.UseStateForUnknown(),
+									},
+								},
+								"connection_type": schema.StringAttribute{
+									MarkdownDescription: "The connection type of the endpoint.",
+									Computed:            true,
+									PlanModifiers: []planmodifier.String{
+										stringplanmodifier.UseStateForUnknown(),
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -247,11 +305,11 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The node specification key.",
 						Required:            true,
 					},
-					"node_count": schema.Int64Attribute{
+					"node_count": schema.Int32Attribute{
 						MarkdownDescription: "The number of nodes in the cluster.",
 						Required:            true,
 					},
-					"storage_size_gi": schema.Int64Attribute{
+					"storage_size_gi": schema.Int32Attribute{
 						MarkdownDescription: "The storage size in GiB.",
 						Required:            true,
 					},
@@ -273,11 +331,11 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The node specification key.",
 						Required:            true,
 					},
-					"node_count": schema.Int64Attribute{
+					"node_count": schema.Int32Attribute{
 						MarkdownDescription: "The number of nodes in the cluster.",
 						Required:            true,
 					},
-					"storage_size_gi": schema.Int64Attribute{
+					"storage_size_gi": schema.Int32Attribute{
 						MarkdownDescription: "The storage size in GiB.",
 						Required:            true,
 					},
@@ -318,6 +376,7 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to build CreateCluster body, got error: %s", err))
 		return
 	}
+
 	cluster, err := r.provider.DedicatedClient.CreateCluster(ctx, &body)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call CreateCluster, got error: %s", err))
@@ -345,11 +404,11 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 func (r dedicatedClusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var clusterId string
 
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("id"), &clusterId)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("cluster_id"), &clusterId)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Debug(ctx, fmt.Sprintf("read dedicated_cluster_resource clusterid: %s", clusterId))
+	tflog.Debug(ctx, fmt.Sprintf("read dedicated_cluster_resource cluster_id: %s", clusterId))
 
 	// call read api
 	tflog.Trace(ctx, "read dedicated_cluster_resource")
@@ -361,24 +420,12 @@ func (r dedicatedClusterResource) Read(ctx context.Context, req resource.ReadReq
 
 	// refresh data with read result
 	var data dedicatedClusterResourceData
-	// root_password, ip_access_list and pause will not return by read api, so we just use state's value even it changed on console!
-
 	var rootPassword types.String
 	var paused types.Bool
-	labels, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Labels)
-	if diag.HasError() {
-		return
-	}
-	annotations, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Annotations)
-	if diag.HasError() {
-		return
-	}
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("root_password"), &rootPassword)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("paused"), &paused)...)
 	data.RootPassword = rootPassword
 	data.Paused = paused
-	data.Annotations = annotations
-	data.Labels = labels
 	refreshDedicatedClusterResourceData(ctx, cluster, &data)
 
 	// save into the Terraform state
@@ -397,11 +444,11 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 		return
 	}
 	data.ClusterId = types.StringValue(*resp.ClusterId)
-	data.Name = types.StringValue(resp.DisplayName)
+	data.DisplayName = types.StringValue(resp.DisplayName)
 	data.CloudProvider = types.StringValue(string(*resp.CloudProvider))
 	data.RegionId = types.StringValue(resp.RegionId)
 	data.Labels = labels
-	data.Port = types.Int64Value(int64(resp.Port))
+	data.Port = types.Int32Value(resp.Port)
 	data.State = types.StringValue(string(*resp.State))
 	data.Version = types.StringValue(*resp.Version)
 	data.CreatedBy = types.StringValue(*resp.CreatedBy)
@@ -409,27 +456,37 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	data.UpdateTime = types.StringValue(resp.UpdateTime.String())
 	data.RegionDisplayName = types.StringValue(*resp.RegionDisplayName)
 	data.Annotations = annotations
+	data.ProjectId = types.StringValue((*resp.Labels)[LabelsKeyProjectId])
 
 	// tidb node setting
 	for _, group := range resp.TidbNodeSetting.TidbNodeGroups {
 		if *group.IsDefaultGroup {
+			var endpoints []endpoint
+			for _, e := range group.Endpoints {
+				endpoints = append(endpoints, endpoint{
+					Host:           types.StringValue(*e.Host),
+					Port:           types.Int32Value(*e.Port),
+					ConnectionType: types.StringValue(string(*e.ConnectionType)),
+				})
+			}
 			data.TiDBNodeSetting = tidbNodeSetting{
 				NodeSpecKey:          types.StringValue(*group.NodeSpecKey),
-				NodeCount:            types.Int64Value(int64(group.NodeCount)),
+				NodeCount:            types.Int32Value(group.NodeCount),
 				NodeGroupId:          types.StringValue(*group.TidbNodeGroupId),
 				NodeGroupDisplayName: types.StringValue(*group.DisplayName),
 				NodeSpecDisplayName:  types.StringValue(*group.NodeSpecDisplayName),
 				IsDefaultGroup:       types.BoolValue(*group.IsDefaultGroup),
 				State:                types.StringValue(string(*group.State)),
+				Endpoints:            endpoints,
 			}
 		}
 	}
 
 	data.TiKVNodeSetting = tikvNodeSetting{
 		NodeSpecKey:         types.StringValue(resp.TikvNodeSetting.NodeSpecKey),
-		NodeCount:           types.Int64Value(int64(resp.TikvNodeSetting.NodeCount)),
-		StorageSizeGi:       types.Int64Value(int64(resp.TikvNodeSetting.StorageSizeGi)),
-		StorageType:         types.StringValue(string(resp.TikvNodeSetting.StorageType)),
+		NodeCount:           types.Int32Value(resp.TikvNodeSetting.NodeCount),
+		StorageSizeGi:       types.Int32Value(resp.TikvNodeSetting.StorageSizeGi),
+		StorageType:         types.StringValue(string(*resp.TikvNodeSetting.StorageType)),
 		NodeSpecDisplayName: types.StringValue(*resp.TikvNodeSetting.NodeSpecDisplayName),
 	}
 
@@ -438,13 +495,12 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	if resp.TiflashNodeSetting != nil {
 		data.TiFlashNodeSetting = &tiflashNodeSetting{
 			NodeSpecKey:         types.StringValue(resp.TiflashNodeSetting.NodeSpecKey),
-			NodeCount:           types.Int64Value(int64(resp.TiflashNodeSetting.NodeCount)),
-			StorageSizeGi:       types.Int64Value(int64(resp.TiflashNodeSetting.StorageSizeGi)),
-			StorageType:         types.StringValue(string(resp.TiflashNodeSetting.StorageType)),
+			NodeCount:           types.Int32Value(resp.TiflashNodeSetting.NodeCount),
+			StorageSizeGi:       types.Int32Value(resp.TiflashNodeSetting.StorageSizeGi),
+			StorageType:         types.StringValue(string(*resp.TiflashNodeSetting.StorageType)),
 			NodeSpecDisplayName: types.StringValue(*resp.TiflashNodeSetting.NodeSpecDisplayName),
 		}
 	}
-
 }
 
 func (r dedicatedClusterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -465,7 +521,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 
 	// Check if paused state is changing
 	isPauseStateChanging := plan.Paused.ValueBool() != state.Paused.ValueBool()
-		
+
 	// Check if TiFlashNodeSetting is changing
 	isTiFlashNodeSettingChanging := false
 	if plan.TiFlashNodeSetting != nil && state.TiFlashNodeSetting != nil {
@@ -479,7 +535,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	// Check if any other attributes are changing
-	isOtherAttributesChanging := (plan.Name != state.Name ||
+	isOtherAttributesChanging := (plan.DisplayName != state.DisplayName ||
 		plan.TiDBNodeSetting.NodeCount != state.TiDBNodeSetting.NodeCount ||
 		plan.TiDBNodeSetting.NodeSpecKey != state.TiDBNodeSetting.NodeSpecKey ||
 
@@ -531,7 +587,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		body := &dedicated.ClusterServiceUpdateClusterRequest{}
 		// components change
 		// tidb
-		nodeCountInt32 := int32(plan.TiDBNodeSetting.NodeCount.ValueInt64())
+		nodeCountInt32 := int32(plan.TiDBNodeSetting.NodeCount.ValueInt32())
 		body.TidbNodeSetting = &dedicated.V1beta1UpdateClusterRequestTidbNodeSetting{
 			NodeSpecKey: plan.TiDBNodeSetting.NodeSpecKey.ValueStringPointer(),
 			TidbNodeGroups: []dedicated.UpdateClusterRequestTidbNodeSettingTidbNodeGroup{
@@ -540,10 +596,11 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 				},
 			},
 		}
+
 		// tikv
 		if plan.TiKVNodeSetting != state.TiKVNodeSetting {
-			nodeCountInt32 := int32(plan.TiKVNodeSetting.NodeCount.ValueInt64())
-			storageSizeGiInt32 := int32(plan.TiKVNodeSetting.StorageSizeGi.ValueInt64())
+			nodeCountInt32 := int32(plan.TiKVNodeSetting.NodeCount.ValueInt32())
+			storageSizeGiInt32 := int32(plan.TiKVNodeSetting.StorageSizeGi.ValueInt32())
 			body.TikvNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
 				NodeSpecKey:   plan.TiKVNodeSetting.NodeSpecKey.ValueStringPointer(),
 				NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
@@ -553,8 +610,8 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 
 		// tiflash
 		if plan.TiFlashNodeSetting != nil {
-			nodeCountInt32 := int32(plan.TiFlashNodeSetting.NodeCount.ValueInt64())
-			storageSizeGiInt32 := int32(plan.TiFlashNodeSetting.StorageSizeGi.ValueInt64())
+			nodeCountInt32 := int32(plan.TiFlashNodeSetting.NodeCount.ValueInt32())
+			storageSizeGiInt32 := int32(plan.TiFlashNodeSetting.StorageSizeGi.ValueInt32())
 			body.TiflashNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
 				NodeSpecKey:   plan.TiFlashNodeSetting.NodeSpecKey.ValueStringPointer(),
 				NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
@@ -562,8 +619,8 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 			}
 		}
 
-		if plan.Name != state.Name {
-			body.DisplayName = plan.Name.ValueStringPointer()
+		if plan.DisplayName != state.DisplayName {
+			body.DisplayName = plan.DisplayName.ValueStringPointer()
 		}
 
 		var labels map[string]string
@@ -603,7 +660,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 func (r dedicatedClusterResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var clusterId string
 
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("id"), &clusterId)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("cluster_id"), &clusterId)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -616,21 +673,26 @@ func (r dedicatedClusterResource) Delete(ctx context.Context, req resource.Delet
 	}
 }
 
+func (r dedicatedClusterResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("cluster_id"), req, resp)
+}
+
 func WaitDedicatedClusterReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string,
 	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
-			string(dedicatedClusterStatusCreating),
-			string(dedicatedClusterStatusModifying),
-			string(dedicatedClusterStatusResuming),
-			string(dedicatedClusterStatusImporting),
-			string(dedicatedClusterStatusPausing),
-			string(dedicatedClusterStatusUPgrading),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_CREATING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_MODIFYING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_RESUMING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_IMPORTING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_PAUSING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_UPGRADING),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_DELETING),
 		},
 		Target: []string{
-			string(dedicatedClusterStatusActive),
-			string(dedicatedClusterStatusPaused),
-			string(dedicatedClusterStatusMaintenance),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_ACTIVE),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_PAUSED),
+			string(dedicated.COMMONV1BETA1CLUSTERSTATE_MAINTENANCE),
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,
@@ -663,7 +725,7 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 		return dedicated.TidbCloudOpenApidedicatedv1beta1Cluster{}, errors.New("can not create a cluster with paused set to true")
 	}
 
-	displayName := data.Name.ValueString()
+	displayName := data.DisplayName.ValueString()
 	regionId := data.RegionId.ValueString()
 	rootPassword := data.RootPassword.ValueString()
 	version := data.Version.ValueString()
@@ -671,7 +733,7 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 	// tidb node groups
 	var nodeGroups []dedicated.Dedicatedv1beta1TidbNodeGroup
 	nodeGroups = append(nodeGroups, dedicated.Dedicatedv1beta1TidbNodeGroup{
-		NodeCount: int32(data.TiDBNodeSetting.NodeCount.ValueInt64()),
+		NodeCount: int32(data.TiDBNodeSetting.NodeCount.ValueInt32()),
 	})
 
 	// tidb node setting
@@ -683,28 +745,28 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 
 	// tikv node setting
 	tikvNodeSpeckKey := data.TiKVNodeSetting.NodeSpecKey.ValueString()
-	tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt64())
-	tikvStorageSizeGi := int32(data.TiKVNodeSetting.StorageSizeGi.ValueInt64())
-	tikvStorageType := dedicated.ClusterStorageNodeSettingStorageType(data.TiKVNodeSetting.StorageType.ValueString())
+	tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt32())
+	tikvStorageSizeGi := int32(data.TiKVNodeSetting.StorageSizeGi.ValueInt32())
+	tikvStorageType := dedicated.StorageNodeSettingStorageType(data.TiKVNodeSetting.StorageType.ValueString())
 	tikvNodeSetting := dedicated.V1beta1ClusterStorageNodeSetting{
 		NodeSpecKey:   tikvNodeSpeckKey,
 		NodeCount:     tikvNodeCount,
 		StorageSizeGi: tikvStorageSizeGi,
-		StorageType:   tikvStorageType,
+		StorageType:   &tikvStorageType,
 	}
 
 	var tiflashNodeSetting *dedicated.V1beta1ClusterStorageNodeSetting
 	// tiflash node setting
 	if data.TiFlashNodeSetting != nil {
 		tiflashNodeSpeckKey := data.TiFlashNodeSetting.NodeSpecKey.ValueString()
-		tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt64())
-		tiflashStorageSizeGi := int32(data.TiFlashNodeSetting.StorageSizeGi.ValueInt64())
-		tiflashStorageType := dedicated.ClusterStorageNodeSettingStorageType(data.TiFlashNodeSetting.StorageType.ValueString())
+		tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt32())
+		tiflashStorageSizeGi := int32(data.TiFlashNodeSetting.StorageSizeGi.ValueInt32())
+		tiflashStorageType := dedicated.StorageNodeSettingStorageType(data.TiFlashNodeSetting.StorageType.ValueString())
 		tiflashNodeSetting = &dedicated.V1beta1ClusterStorageNodeSetting{
 			NodeSpecKey:   tiflashNodeSpeckKey,
 			NodeCount:     tikvNodeCount,
 			StorageSizeGi: tiflashStorageSizeGi,
-			StorageType:   tiflashStorageType,
+			StorageType:   &tiflashStorageType,
 		}
 	}
 
@@ -721,7 +783,7 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 		TidbNodeSetting:    tidbNodeSetting,
 		TikvNodeSetting:    tikvNodeSetting,
 		TiflashNodeSetting: tiflashNodeSetting,
-		Port:               int32(data.Port.ValueInt64()),
+		Port:               data.Port.ValueInt32(),
 		RootPassword:       &rootPassword,
 		Version:            &version,
 	}, nil

@@ -22,20 +22,21 @@ type TiDBCloudDedicatedClient interface {
 	ListCloudProviders(ctx context.Context, projectId string) ([]dedicated.V1beta1RegionCloudProvider, error)
 	CreateCluster(ctx context.Context, body *dedicated.TidbCloudOpenApidedicatedv1beta1Cluster) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	GetCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	ListClusters(ctx context.Context, projectId string, pageSize *int32, pageToken *string) (*dedicated.TidbCloudOpenApidedicatedv1beta1ListClustersResponse, error)
 	DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	UpdateCluster(ctx context.Context, clusterId string, body *dedicated.ClusterServiceUpdateClusterRequest) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	PauseCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	ResumeCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	ChangeClusterRootPassword(ctx context.Context, clusterId string, body *dedicated.ClusterServiceResetRootPasswordBody) error
-	CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.Required) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	DeleteTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) error
 	UpdateTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	GetTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
-	ListTiDBNodeGroups(ctx context.Context, clusterId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	ListTiDBNodeGroups(ctx context.Context, clusterId string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListTidbNodeGroupsResponse, error)
 	CreatePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.V1beta1PrivateEndpointConnection, error)
 	DeletePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) error
 	GetPrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) (*dedicated.V1beta1PrivateEndpointConnection, error)
-	ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string) ([]dedicated.V1beta1PrivateEndpointConnection, error)
+	ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string, pageSize *int32, pageToken *string) (*dedicated.V1beta1ListPrivateEndpointConnectionsResponse, error)
 	CreateNetworkContainer(ctx context.Context, body *dedicated.V1beta1NetworkContainer) (*dedicated.V1beta1NetworkContainer, error)
 	DeleteNetworkContainer(ctx context.Context, networkContainerId string) error
 	GetNetworkContainer(ctx context.Context, networkContainerId string) (*dedicated.V1beta1NetworkContainer, error)
@@ -43,7 +44,7 @@ type TiDBCloudDedicatedClient interface {
 	CreateVPCPeering(ctx context.Context, body *dedicated.Dedicatedv1beta1VpcPeering) (*dedicated.Dedicatedv1beta1VpcPeering, error)
 	DeleteVPCPeering(ctx context.Context, vpcPeeringId string) error
 	GetVPCPeering(ctx context.Context, vpcPeeringId string) (*dedicated.Dedicatedv1beta1VpcPeering, error)
-	ListVPCPeerings(ctx context.Context) ([]dedicated.Dedicatedv1beta1VpcPeering, error)
+	ListVPCPeerings(ctx context.Context, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse, error)
 }
 
 func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userAgent string) (*dedicated.APIClient, error) {
@@ -71,7 +72,7 @@ type DedicatedClientDelegate struct {
 	dc *dedicated.APIClient
 }
 
-func NewDedicatedClientDelegate(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (*DedicatedClientDelegate, error) {
+func NewDedicatedClientDelegate(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (TiDBCloudDedicatedClient, error) {
 	transport := NewTransportWithAgent(&digest.Transport{
 		Username: publicKey,
 		Password: privateKey,
@@ -128,6 +129,21 @@ func (d *DedicatedClientDelegate) GetCluster(ctx context.Context, clusterId stri
 	return resp, parseError(err, h)
 }
 
+func (d *DedicatedClientDelegate) ListClusters(ctx context.Context, projectId string, pageSize *int32, pageToken *string) (*dedicated.TidbCloudOpenApidedicatedv1beta1ListClustersResponse, error) {
+	r := d.dc.ClusterServiceAPI.ClusterServiceListClusters(ctx)
+	if projectId != "" {
+		r = r.ProjectId(projectId)
+	}
+	if pageSize != nil {
+		r = r.PageSize(*pageSize)
+	}
+	if pageToken != nil {
+		r = r.PageToken(*pageToken)
+	}
+	resp, h, err := r.Execute()
+	return resp, parseError(err, h)
+}
+
 func (d *DedicatedClientDelegate) DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	resp, h, err := d.dc.ClusterServiceAPI.ClusterServiceDeleteCluster(ctx, clusterId).Execute()
 	return resp, parseError(err, h)
@@ -161,7 +177,7 @@ func (d *DedicatedClientDelegate) ChangeClusterRootPassword(ctx context.Context,
 	return parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+func (d *DedicatedClientDelegate) CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.Required) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
 	r := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceCreateTidbNodeGroup(ctx, clusterId)
 	if body != nil {
 		r = r.TidbNodeGroup(*body)
@@ -189,9 +205,16 @@ func (d *DedicatedClientDelegate) GetTiDBNodeGroup(ctx context.Context, clusterI
 	return resp, parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) ListTiDBNodeGroups(ctx context.Context, clusterId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
-	resp, h, err := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceListTidbNodeGroups(ctx, clusterId).Execute()
-	return resp.TidbNodeGroups, parseError(err, h)
+func (d *DedicatedClientDelegate) ListTiDBNodeGroups(ctx context.Context, clusterId string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListTidbNodeGroupsResponse, error) {
+	r := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceListTidbNodeGroups(ctx, clusterId)
+	if pageSize != nil {
+		r = r.PageSize(*pageSize)
+	}
+	if pageToken != nil {
+		r = r.PageToken(*pageToken)
+	}
+	resp, h, err := r.Execute()
+	return resp, parseError(err, h)
 }
 
 func (d *DedicatedClientDelegate) CreatePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.V1beta1PrivateEndpointConnection, error) {
@@ -213,9 +236,16 @@ func (d *DedicatedClientDelegate) GetPrivateEndpointConnection(ctx context.Conte
 	return resp, parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string) ([]dedicated.V1beta1PrivateEndpointConnection, error) {
-	resp, h, err := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceListPrivateEndpointConnections(ctx, clusterId, nodeGroupId).Execute()
-	return resp.PrivateEndpointConnections, parseError(err, h)
+func (d *DedicatedClientDelegate) ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string, pageSize *int32, pageToken *string) (*dedicated.V1beta1ListPrivateEndpointConnectionsResponse, error) {
+	r := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceListPrivateEndpointConnections(ctx, clusterId, nodeGroupId)
+	if pageSize != nil {
+		r = r.PageSize(*pageSize)
+	}
+	if pageToken != nil {
+		r = r.PageToken(*pageToken)
+	}
+	resp, h, err := r.Execute()
+	return resp, parseError(err, h)
 }
 
 func (d *DedicatedClientDelegate) CreateNetworkContainer(ctx context.Context, body *dedicated.V1beta1NetworkContainer) (*dedicated.V1beta1NetworkContainer, error) {
@@ -261,9 +291,16 @@ func (d *DedicatedClientDelegate) GetVPCPeering(ctx context.Context, vpcPeeringI
 	return resp, parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) ListVPCPeerings(ctx context.Context) ([]dedicated.Dedicatedv1beta1VpcPeering, error) {
-	resp, h, err := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceListVpcPeerings(ctx).Execute()
-	return resp.VpcPeerings, parseError(err, h)
+func (d *DedicatedClientDelegate) ListVPCPeerings(ctx context.Context, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse, error) {
+	r := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceListVpcPeerings(ctx)
+	if pageSize != nil {
+		r = r.PageSize(*pageSize)
+	}
+	if pageToken != nil {
+		r = r.PageToken(*pageToken)
+	}
+	resp, h, err := r.Execute()
+	return resp, parseError(err, h)
 }
 
 func parseError(err error, resp *http.Response) error {

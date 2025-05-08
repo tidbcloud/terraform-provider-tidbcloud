@@ -3,11 +3,17 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -26,12 +32,13 @@ const (
 type dedicatedNodeGroupResourceData struct {
 	ClusterId           types.String `tfsdk:"cluster_id"`
 	NodeSpecKey         types.String `tfsdk:"node_spec_key"`
-	NodeCount           types.Int64  `tfsdk:"node_count"`
+	NodeCount           types.Int32  `tfsdk:"node_count"`
 	NodeGroupId         types.String `tfsdk:"node_group_id"`
 	DisplayName         types.String `tfsdk:"display_name"`
 	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
 	IsDefaultGroup      types.Bool   `tfsdk:"is_default_group"`
 	State               types.String `tfsdk:"state"`
+	Endpoints           []endpoint   `tfsdk:"endpoints"`
 }
 
 type dedicatedNodeGroupResource struct {
@@ -71,13 +78,16 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 				MarkdownDescription: "The key of the node spec.",
 				Computed:            true,
 			},
-			"node_count": schema.Int64Attribute{
+			"node_count": schema.Int32Attribute{
 				MarkdownDescription: "The count of the nodes in the group.",
 				Required:            true,
 			},
 			"node_group_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the node group.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the node group.",
@@ -90,10 +100,45 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 			"is_default_group": schema.BoolAttribute{
 				MarkdownDescription: "Whether the node group is the default group.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"state": schema.StringAttribute{
 				MarkdownDescription: "The state of the node group.",
 				Computed:            true,
+			},
+			"endpoints": schema.ListNestedAttribute{
+				MarkdownDescription: "The endpoints of the node group.",
+				Computed:            true,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"host": schema.StringAttribute{
+							MarkdownDescription: "The host of the endpoint.",
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
+						"port": schema.Int32Attribute{
+							MarkdownDescription: "The port of the endpoint.",
+							Computed:            true,
+							PlanModifiers: []planmodifier.Int32{
+								int32planmodifier.UseStateForUnknown(),
+							},
+						},
+						"connection_type": schema.StringAttribute{
+							MarkdownDescription: "The connection type of the endpoint.",
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -127,6 +172,9 @@ func (r dedicatedNodeGroupResource) Create(ctx context.Context, req resource.Cre
 	nodeGroupId := *nodeGroup.TidbNodeGroupId
 	data.NodeGroupId = types.StringValue(nodeGroupId)
 	tflog.Info(ctx, "wait dedicated node group ready")
+	// it's a workaround, tidb node group state is active at the beginning, so we need to wait for it to be modifying
+	time.Sleep(1 * time.Minute)
+
 	nodeGroup, err = WaitDedicatedNodeGroupReady(ctx, clusterCreateTimeout, clusterCreateInterval, data.ClusterId.ValueString(), nodeGroupId, r.provider.DedicatedClient)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -135,7 +183,7 @@ func (r dedicatedNodeGroupResource) Create(ctx context.Context, req resource.Cre
 		)
 		return
 	}
-	refreshDedicatedNodeGroupResourceData(ctx, nodeGroup, &data)
+	refreshDedicatedNodeGroupResourceData(nodeGroup, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -150,7 +198,7 @@ func (r dedicatedNodeGroupResource) Read(ctx context.Context, req resource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Debug(ctx, fmt.Sprintf("read dedicated_node_group_resource clusterid: %s", data.NodeGroupId.ValueString()))
+	tflog.Debug(ctx, fmt.Sprintf("read dedicated_node_group_resource cluster_id: %s", data.NodeGroupId.ValueString()))
 
 	// call read api
 	tflog.Trace(ctx, "read dedicated_node_group_resource")
@@ -159,7 +207,7 @@ func (r dedicatedNodeGroupResource) Read(ctx context.Context, req resource.ReadR
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetTiDBNodeGroup, error: %s", err))
 		return
 	}
-	refreshDedicatedNodeGroupResourceData(ctx, nodeGroup, &data)
+	refreshDedicatedNodeGroupResourceData(nodeGroup, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -170,7 +218,7 @@ func (r dedicatedNodeGroupResource) Delete(ctx context.Context, req resource.Del
 	var clusterId string
 	var nodeGroupId string
 
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("id"), &clusterId)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("cluster_id"), &clusterId)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("node_group_id"), &nodeGroupId)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -201,7 +249,7 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	newDisplayName := plan.DisplayName.ValueString()
-	newNodeCount := int32(plan.NodeCount.ValueInt64())
+	newNodeCount := int32(plan.NodeCount.ValueInt32())
 	body := dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest{
 		DisplayName: &newDisplayName,
 		NodeCount:   *dedicated.NewNullableInt32(&newNodeCount),
@@ -223,7 +271,7 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 		)
 		return
 	}
-	refreshDedicatedNodeGroupResourceData(ctx, nodeGroup, &state)
+	refreshDedicatedNodeGroupResourceData(nodeGroup, &state)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)
@@ -231,32 +279,58 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 
 }
 
-func buildCreateDedicatedNodeGroupBody(data dedicatedNodeGroupResourceData) dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest {
-	displayName := data.DisplayName.ValueString()
-	nodeCount := int32(data.NodeCount.ValueInt64())
+func (r dedicatedNodeGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, ",")
 
-	return dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest{
+	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+		resp.Diagnostics.AddError(
+			"Unexpected Import Identifier",
+			fmt.Sprintf("Expected import identifier with format: cluster_id, node_group_id. Got: %q", req.ID),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cluster_id"), idParts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("node_group_id"), idParts[1])...)
+}
+
+func buildCreateDedicatedNodeGroupBody(data dedicatedNodeGroupResourceData) dedicated.Required {
+	displayName := data.DisplayName.ValueString()
+	nodeCount := int32(data.NodeCount.ValueInt32())
+
+	return dedicated.Required{
 		DisplayName: &displayName,
 		NodeCount:   nodeCount,
 	}
 }
 
-func refreshDedicatedNodeGroupResourceData(ctx context.Context, resp *dedicated.Dedicatedv1beta1TidbNodeGroup, data *dedicatedNodeGroupResourceData) {
+func refreshDedicatedNodeGroupResourceData(resp *dedicated.Dedicatedv1beta1TidbNodeGroup, data *dedicatedNodeGroupResourceData) {
 	data.DisplayName = types.StringValue(*resp.DisplayName)
 	data.NodeSpecDisplayName = types.StringValue(*resp.NodeSpecDisplayName)
 	data.IsDefaultGroup = types.BoolValue(*resp.IsDefaultGroup)
 	data.State = types.StringValue(string(*resp.State))
+	data.NodeCount = types.Int32Value(resp.NodeCount)
+	data.NodeSpecKey = types.StringValue(*resp.NodeSpecKey)
+	var endpoints []endpoint
+	for _, e := range resp.Endpoints {
+		endpoints = append(endpoints, endpoint{
+			Host:           types.StringValue(*e.Host),
+			Port:           types.Int32Value(*e.Port),
+			ConnectionType: types.StringValue(string(*e.ConnectionType)),
+		})
+	}
+	data.Endpoints = endpoints
 }
 
 func WaitDedicatedNodeGroupReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string, nodeGroupId string,
 	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
-			string(dedicatedNodeGroupStatusModifying),
+			string(dedicated.DEDICATEDV1BETA1TIDBNODEGROUPSTATE_MODIFYING),
 		},
 		Target: []string{
-			string(dedicatedNodeGroupStatusActive),
-			string(dedicatedNodeGroupStatusPaused),
+			string(dedicated.DEDICATEDV1BETA1TIDBNODEGROUPSTATE_ACTIVE),
+			string(dedicated.DEDICATEDV1BETA1TIDBNODEGROUPSTATE_PAUSED),
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,
