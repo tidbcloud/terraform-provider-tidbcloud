@@ -26,8 +26,8 @@ type dedicatedClusterDataSourceData struct {
 	UpdateTime         types.String        `tfsdk:"update_time"`
 	RegionDisplayName  types.String        `tfsdk:"region_display_name"`
 	Annotations        types.Map           `tfsdk:"annotations"`
-	TiDBNodeSetting    *tidbNodeSetting     `tfsdk:"tidb_node_setting"`
-	TiKVNodeSetting    *tikvNodeSetting     `tfsdk:"tikv_node_setting"`
+	TiDBNodeSetting    *tidbNodeSetting    `tfsdk:"tidb_node_setting"`
+	TiKVNodeSetting    *tikvNodeSetting    `tfsdk:"tikv_node_setting"`
 	TiFlashNodeSetting *tiflashNodeSetting `tfsdk:"tiflash_node_setting"`
 }
 

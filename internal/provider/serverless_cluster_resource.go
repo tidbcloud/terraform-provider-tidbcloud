@@ -199,9 +199,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The spending limit of the cluster.",
 				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
 				Attributes: map[string]schema.Attribute{
 					"monthly": schema.Int32Attribute{
 						MarkdownDescription: "Maximum monthly spending limit in USD cents.",

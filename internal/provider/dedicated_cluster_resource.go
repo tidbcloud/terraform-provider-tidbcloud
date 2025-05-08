@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -113,8 +112,13 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 		MarkdownDescription: "dedicated cluster resource",
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the project.",
+				MarkdownDescription: "The ID of the project. When not provided, the default project will be used.",
+				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
@@ -137,15 +141,14 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			"region_id": schema.StringAttribute{
 				MarkdownDescription: "The region where the cluster is deployed.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"labels": schema.MapAttribute{
 				MarkdownDescription: "A map of labels assigned to the cluster.",
-				Optional:            true,
 				Computed:            true,
-				PlanModifiers: []planmodifier.Map{
-					mapplanmodifier.UseStateForUnknown(),
-				},
-				ElementType: types.StringType,
+				ElementType:         types.StringType,
 			},
 			"root_password": schema.StringAttribute{
 				MarkdownDescription: "The root password to access the cluster.",
@@ -163,9 +166,6 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 			"paused": schema.BoolAttribute{
 				MarkdownDescription: "Whether the cluster is paused.",
 				Optional:            true,
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"pause_plan": schema.SingleNestedAttribute{
 				MarkdownDescription: "Pause plan details for the cluster.",
@@ -386,6 +386,10 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 	clusterId := *cluster.ClusterId
 	data.ClusterId = types.StringValue(clusterId)
 	tflog.Info(ctx, "wait dedicated cluster ready")
+
+	// it's a workaround, the OpenAPI GET cluster is not fully compatible with freshly created clusters
+	time.Sleep(1 * time.Minute)
+
 	cluster, err = WaitDedicatedClusterReady(ctx, clusterCreateTimeout, clusterCreateInterval, clusterId, r.provider.DedicatedClient)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -739,19 +743,19 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 	})
 
 	// tidb node setting
-	tidbNodeSpeckKey := data.TiDBNodeSetting.NodeSpecKey.ValueString()
+	tidbNodeSpecKey := data.TiDBNodeSetting.NodeSpecKey.ValueString()
 	tidbNodeSetting := dedicated.V1beta1ClusterTidbNodeSetting{
-		NodeSpecKey:    tidbNodeSpeckKey,
+		NodeSpecKey:    tidbNodeSpecKey,
 		TidbNodeGroups: nodeGroups,
 	}
 
 	// tikv node setting
-	tikvNodeSpeckKey := data.TiKVNodeSetting.NodeSpecKey.ValueString()
+	tikvNodeSpecKey := data.TiKVNodeSetting.NodeSpecKey.ValueString()
 	tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt32())
 	tikvStorageSizeGi := int32(data.TiKVNodeSetting.StorageSizeGi.ValueInt32())
 	tikvStorageType := dedicated.StorageNodeSettingStorageType(data.TiKVNodeSetting.StorageType.ValueString())
 	tikvNodeSetting := dedicated.V1beta1ClusterStorageNodeSetting{
-		NodeSpecKey:   tikvNodeSpeckKey,
+		NodeSpecKey:   tikvNodeSpecKey,
 		NodeCount:     tikvNodeCount,
 		StorageSizeGi: tikvStorageSizeGi,
 		StorageType:   &tikvStorageType,
@@ -760,22 +764,21 @@ func buildCreateDedicatedClusterBody(ctx context.Context, data dedicatedClusterR
 	var tiflashNodeSetting *dedicated.V1beta1ClusterStorageNodeSetting
 	// tiflash node setting
 	if data.TiFlashNodeSetting != nil {
-		tiflashNodeSpeckKey := data.TiFlashNodeSetting.NodeSpecKey.ValueString()
+		tiflashNodeSpecKey := data.TiFlashNodeSetting.NodeSpecKey.ValueString()
 		tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt32())
 		tiflashStorageSizeGi := int32(data.TiFlashNodeSetting.StorageSizeGi.ValueInt32())
 		tiflashStorageType := dedicated.StorageNodeSettingStorageType(data.TiFlashNodeSetting.StorageType.ValueString())
 		tiflashNodeSetting = &dedicated.V1beta1ClusterStorageNodeSetting{
-			NodeSpecKey:   tiflashNodeSpeckKey,
+			NodeSpecKey:   tiflashNodeSpecKey,
 			NodeCount:     tikvNodeCount,
 			StorageSizeGi: tiflashStorageSizeGi,
 			StorageType:   &tiflashStorageType,
 		}
 	}
 
-	var labels map[string]string
-	diag := data.Labels.ElementsAs(ctx, &labels, false)
-	if diag.HasError() {
-		return dedicated.TidbCloudOpenApidedicatedv1beta1Cluster{}, errors.New("Unable to convert labels")
+	labels := make(map[string]string)
+	if IsKnown(data.ProjectId) {
+		labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
 	}
 
 	return dedicated.TidbCloudOpenApidedicatedv1beta1Cluster{
