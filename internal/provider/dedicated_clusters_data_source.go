@@ -312,6 +312,9 @@ func (d *dedicatedClustersDataSource) Read(ctx context.Context, req datasource.R
 			StorageType:         types.StringValue(string(*cluster.TikvNodeSetting.StorageType)),
 			NodeSpecDisplayName: types.StringValue(*cluster.TikvNodeSetting.NodeSpecDisplayName),
 		}
+		if cluster.TikvNodeSetting.RaftStoreIops.IsSet() {
+			c.TiKVNodeSetting.RaftStoreIOPS = types.Int32Value(*cluster.TikvNodeSetting.RaftStoreIops.Get())
+		}
 
 		// tiflash node setting
 		if cluster.TiflashNodeSetting != nil {
@@ -322,7 +325,11 @@ func (d *dedicatedClustersDataSource) Read(ctx context.Context, req datasource.R
 				StorageType:         types.StringValue(string(*cluster.TiflashNodeSetting.StorageType)),
 				NodeSpecDisplayName: types.StringValue(*cluster.TiflashNodeSetting.NodeSpecDisplayName),
 			}
+			if cluster.TiflashNodeSetting.RaftStoreIops.IsSet() {
+				c.TiFlashNodeSetting.RaftStoreIOPS = types.Int32Value(*cluster.TiflashNodeSetting.RaftStoreIops.Get())
+			}
 		}
+
 		items = append(items, c)
 	}
 	data.Clusters = items

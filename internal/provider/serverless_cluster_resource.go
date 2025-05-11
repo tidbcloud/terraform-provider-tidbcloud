@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -376,17 +375,11 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The labels of the cluster.",
 				Computed:            true,
 				ElementType:         types.StringType,
-				PlanModifiers: []planmodifier.Map{
-					mapplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"annotations": schema.MapAttribute{
 				MarkdownDescription: "The annotations of the cluster.",
 				Computed:            true,
 				ElementType:         types.StringType,
-				PlanModifiers: []planmodifier.Map{
-					mapplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
