@@ -221,6 +221,10 @@ func (d *dedicatedClustersDataSource) Schema(_ context.Context, _ datasource.Sch
 									MarkdownDescription: "The display name of the node spec.",
 									Computed:            true,
 								},
+								"raft_store_iops": schema.Int32Attribute{
+									MarkdownDescription: "The IOPS of raft store",
+									Computed:            true,
+								},
 							},
 						},
 						"tiflash_node_setting": schema.SingleNestedAttribute{
@@ -245,6 +249,10 @@ func (d *dedicatedClustersDataSource) Schema(_ context.Context, _ datasource.Sch
 								},
 								"node_spec_display_name": schema.StringAttribute{
 									MarkdownDescription: "The display name of the node spec.",
+									Computed:            true,
+								},
+								"raft_store_iops": schema.Int32Attribute{
+									MarkdownDescription: "The IOPS of raft store",
 									Computed:            true,
 								},
 							},
