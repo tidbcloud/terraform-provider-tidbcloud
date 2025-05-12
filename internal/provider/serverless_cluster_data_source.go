@@ -209,11 +209,11 @@ func (d *serverlessClusterDataSource) Schema(_ context.Context, _ datasource.Sch
 						MarkdownDescription: "The request unit of the cluster.",
 						Computed:            true,
 					},
-					"row_based_storage": schema.Int64Attribute{
+					"row_based_storage": schema.Float64Attribute{
 						MarkdownDescription: "The row-based storage of the cluster.",
 						Computed:            true,
 					},
-					"columnar_storage": schema.Int64Attribute{
+					"columnar_storage": schema.Float64Attribute{
 						MarkdownDescription: "The columnar storage of the cluster.",
 						Computed:            true,
 					},
@@ -321,8 +321,8 @@ func (d *serverlessClusterDataSource) Read(ctx context.Context, req datasource.R
 	u := cluster.Usage
 	data.Usage = &usage{
 		RequestUnit:     types.StringValue(*u.RequestUnit),
-		RowBasedStorage: types.Int64Value(int64(*u.RowBasedStorage)),
-		ColumnarStorage: types.Int64Value(int64(*u.ColumnarStorage)),
+		RowBasedStorage: types.Float64Value(*u.RowBasedStorage),
+		ColumnarStorage: types.Float64Value(*u.ColumnarStorage),
 	}
 
 	data.Labels = labels

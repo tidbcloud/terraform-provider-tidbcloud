@@ -18,8 +18,6 @@ const (
 	UserAgent                   string = "terraform-provider-tidbcloud"
 )
 
-const ()
-
 // HookGlobal sets `*ptr = val` and returns a closure for restoring `*ptr` to
 // its original value. A runtime panic will occur if `val` is not assignable to
 // `*ptr`.

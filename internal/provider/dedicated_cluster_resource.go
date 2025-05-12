@@ -652,11 +652,10 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		// components change
 		// tidb
 		defaultNodeGroup := dedicated.UpdateClusterRequestTidbNodeSettingTidbNodeGroup{}
-		var tiProxySetting dedicated.Dedicatedv1beta1TidbNodeGroupTiProxySetting
 		nodeCount := plan.TiDBNodeSetting.NodeCount.ValueInt32()
 		defaultNodeGroup.NodeCount = *dedicated.NewNullableInt32(&nodeCount)
 		if plan.TiDBNodeSetting.TiProxySetting != nil {
-			tiProxySetting = dedicated.Dedicatedv1beta1TidbNodeGroupTiProxySetting{}
+			tiProxySetting := dedicated.Dedicatedv1beta1TidbNodeGroupTiProxySetting{}
 			tiProxyNodeCount := plan.TiDBNodeSetting.TiProxySetting.NodeCount.ValueInt32()
 			tiProxyType := dedicated.TidbNodeGroupTiProxyType(plan.TiDBNodeSetting.TiProxySetting.Type.ValueString())
 			tiProxySetting.NodeCount = *dedicated.NewNullableInt32(&tiProxyNodeCount)
@@ -806,10 +805,19 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 	version := data.Version.ValueString()
 
 	// tidb node groups
-	var nodeGroups []dedicated.Dedicatedv1beta1TidbNodeGroup
-	nodeGroups = append(nodeGroups, dedicated.Dedicatedv1beta1TidbNodeGroup{
-		NodeCount: int32(data.TiDBNodeSetting.NodeCount.ValueInt32()),
-	})
+	defaultNodeGroup := dedicated.Dedicatedv1beta1TidbNodeGroup{}
+	defaultNodeGroup.NodeCount = data.TiDBNodeSetting.NodeCount.ValueInt32()
+	if data.TiDBNodeSetting.TiProxySetting != nil {
+		tiProxySetting := dedicated.Dedicatedv1beta1TidbNodeGroupTiProxySetting{}
+		tiProxyNodeCount := data.TiDBNodeSetting.TiProxySetting.NodeCount.ValueInt32()
+		tiProxyType := dedicated.TidbNodeGroupTiProxyType(data.TiDBNodeSetting.TiProxySetting.Type.ValueString())
+		tiProxySetting.NodeCount = *dedicated.NewNullableInt32(&tiProxyNodeCount)
+		tiProxySetting.Type = &tiProxyType
+		defaultNodeGroup.TiproxySetting = &tiProxySetting
+	}
+	nodeGroups := []dedicated.Dedicatedv1beta1TidbNodeGroup{
+		defaultNodeGroup,
+	}
 
 	// tidb node setting
 	tidbNodeSpecKey := data.TiDBNodeSetting.NodeSpecKey.ValueString()
@@ -832,8 +840,8 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 		RaftStoreIops: *dedicated.NewNullableInt32(&tikvRaftStoreIOPS),
 	}
 
-	var tiflashNodeSetting *dedicated.V1beta1ClusterStorageNodeSetting
 	// tiflash node setting
+	var tiflashNodeSetting *dedicated.V1beta1ClusterStorageNodeSetting
 	if data.TiFlashNodeSetting != nil {
 		tiflashNodeSpecKey := data.TiFlashNodeSetting.NodeSpecKey.ValueString()
 		tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt32())

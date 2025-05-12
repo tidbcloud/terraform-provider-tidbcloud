@@ -19,13 +19,14 @@ type dedicatedNodeGroupsDataSourceData struct {
 }
 
 type nodeGroupItems struct {
-	NodeCount           types.Int32  `tfsdk:"node_count"`
-	NodeGroupId         types.String `tfsdk:"node_group_id"`
-	DisplayName         types.String `tfsdk:"display_name"`
-	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
-	IsDefaultGroup      types.Bool   `tfsdk:"is_default_group"`
-	State               types.String `tfsdk:"state"`
-	Endpoints           []endpoint   `tfsdk:"endpoints"`
+	NodeCount           types.Int32     `tfsdk:"node_count"`
+	NodeGroupId         types.String    `tfsdk:"node_group_id"`
+	DisplayName         types.String    `tfsdk:"display_name"`
+	NodeSpecDisplayName types.String    `tfsdk:"node_spec_display_name"`
+	IsDefaultGroup      types.Bool      `tfsdk:"is_default_group"`
+	State               types.String    `tfsdk:"state"`
+	Endpoints           []endpoint      `tfsdk:"endpoints"`
+	TiProxySetting      *tiProxySetting `tfsdk:"tiproxy_setting"`
 }
 
 var _ datasource.DataSource = &dedicatedNodeGroupsDataSource{}
@@ -114,6 +115,22 @@ func (d *dedicatedNodeGroupsDataSource) Schema(_ context.Context, _ datasource.S
 								},
 							},
 						},
+						"tiproxy_setting": schema.SingleNestedAttribute{
+							MarkdownDescription: "Settings for TiProxy nodes.",
+							Computed:            true,
+							Attributes: map[string]schema.Attribute{
+								"type": schema.StringAttribute{
+									MarkdownDescription: "The type of TiProxy nodes." +
+										"- SMALL: Low performance instance with 2 vCPUs and 4 GiB memory. Max QPS: 30, Max Data Traffic: 90 MiB/s." +
+										"- LARGE: High performance instance with 8 vCPUs and 16 GiB memory. Max QPS: 100, Max Data Traffic: 300 MiB/s.",
+									Computed: true,
+								},
+								"node_count": schema.Int32Attribute{
+									MarkdownDescription: "The number of TiProxy nodes.",
+									Computed:            true,
+								},
+							},
+						},
 					},
 				},
 			},
@@ -149,6 +166,13 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 				ConnectionType: types.StringValue(string(*e.ConnectionType)),
 			})
 		}
+		tiProxy := tiProxySetting{}
+		if nodeGroup.TiproxySetting != nil {
+			tiProxy = tiProxySetting{
+				Type:      types.StringValue(string(*nodeGroup.TiproxySetting.Type)),
+				NodeCount: types.Int32Value(*nodeGroup.TiproxySetting.NodeCount.Get()),
+			}
+		}
 		items = append(items, nodeGroupItems{
 			NodeCount:           types.Int32Value(nodeGroup.NodeCount),
 			NodeGroupId:         types.StringValue(*nodeGroup.TidbNodeGroupId),
@@ -157,6 +181,7 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 			IsDefaultGroup:      types.BoolValue(*nodeGroup.IsDefaultGroup),
 			State:               types.StringValue(string(*nodeGroup.State)),
 			Endpoints:           endpoints,
+			TiProxySetting:      &tiProxy,
 		})
 	}
 	data.NodeGroups = items

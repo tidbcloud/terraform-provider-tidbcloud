@@ -104,8 +104,8 @@ type encryptionConfig struct {
 
 type usage struct {
 	RequestUnit     types.String `tfsdk:"request_unit"`
-	RowBasedStorage types.Int64  `tfsdk:"row_based_storage"`
-	ColumnarStorage types.Int64  `tfsdk:"columnar_storage"`
+	RowBasedStorage types.Float64  `tfsdk:"row_based_storage"`
+	ColumnarStorage types.Float64  `tfsdk:"columnar_storage"`
 }
 
 type serverlessClusterResource struct {
@@ -361,11 +361,11 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 						MarkdownDescription: "The request unit of the cluster.",
 						Computed:            true,
 					},
-					"row_based_storage": schema.Int64Attribute{
+					"row_based_storage": schema.Float64Attribute{
 						MarkdownDescription: "The row-based storage of the cluster.",
 						Computed:            true,
 					},
-					"columnar_storage": schema.Int64Attribute{
+					"columnar_storage": schema.Float64Attribute{
 						MarkdownDescription: "The columnar storage of the cluster.",
 						Computed:            true,
 					},
@@ -713,8 +713,8 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 	u := resp.Usage
 	data.Usage = &usage{
 		RequestUnit:     types.StringValue(*u.RequestUnit),
-		RowBasedStorage: types.Int64Value(int64(*u.RowBasedStorage)),
-		ColumnarStorage: types.Int64Value(int64(*u.ColumnarStorage)),
+		RowBasedStorage: types.Float64Value(*u.RowBasedStorage),
+		ColumnarStorage: types.Float64Value(*u.ColumnarStorage),
 	}
 
 	data.Labels = labels
