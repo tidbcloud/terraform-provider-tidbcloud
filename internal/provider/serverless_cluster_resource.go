@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
@@ -45,7 +47,7 @@ type serverlessClusterResourceData struct {
 	ClusterId             types.String           `tfsdk:"cluster_id"`
 	DisplayName           types.String           `tfsdk:"display_name"`
 	Region                *region                `tfsdk:"region"`
-	SpendingLimit         *spendingLimit         `tfsdk:"spending_limit"`
+	SpendingLimit         types.Object           `tfsdk:"spending_limit"`
 	AutomatedBackupPolicy *automatedBackupPolicy `tfsdk:"automated_backup_policy"`
 	Endpoints             *endpoints             `tfsdk:"endpoints"`
 	EncryptionConfig      *encryptionConfig      `tfsdk:"encryption_config"`
@@ -55,7 +57,7 @@ type serverlessClusterResourceData struct {
 	UpdateTime            types.String           `tfsdk:"update_time"`
 	UserPrefix            types.String           `tfsdk:"user_prefix"`
 	State                 types.String           `tfsdk:"state"`
-	Usage                 *usage                 `tfsdk:"usage"`
+	Usage                 types.Object           `tfsdk:"usage"`
 	Labels                types.Map              `tfsdk:"labels"`
 	Annotations           types.Map              `tfsdk:"annotations"`
 }
@@ -69,6 +71,10 @@ type region struct {
 
 type spendingLimit struct {
 	Monthly types.Int32 `tfsdk:"monthly"`
+}
+
+var spendingLimitAttrTypes = map[string]attr.Type{
+	"monthly": types.Int32Type,
 }
 
 type automatedBackupPolicy struct {
@@ -103,9 +109,15 @@ type encryptionConfig struct {
 }
 
 type usage struct {
-	RequestUnit     types.String `tfsdk:"request_unit"`
-	RowBasedStorage types.Float64  `tfsdk:"row_based_storage"`
-	ColumnarStorage types.Float64  `tfsdk:"columnar_storage"`
+	RequestUnit     types.String  `tfsdk:"request_unit"`
+	RowBasedStorage types.Float64 `tfsdk:"row_based_storage"`
+	ColumnarStorage types.Float64 `tfsdk:"columnar_storage"`
+}
+
+var usageAttrTypes = map[string]attr.Type{
+	"request_unit":      types.StringType,
+	"row_based_storage": types.Float64Type,
+	"columnar_storage":  types.Float64Type,
 }
 
 type serverlessClusterResource struct {
@@ -403,7 +415,7 @@ func (r serverlessClusterResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	tflog.Trace(ctx, "create serverless_cluster_resource")
-	body, err := buildCreateServerlessClusterBody(data)
+	body, err := buildCreateServerlessClusterBody(ctx, data)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to build CreateCluster body, got error: %s", err))
 		return
@@ -443,21 +455,22 @@ func (r serverlessClusterResource) Create(ctx context.Context, req resource.Crea
 
 func (r serverlessClusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// get data from state
-	var data serverlessClusterResourceData
-	diags := req.State.Get(ctx, &data)
-	resp.Diagnostics.Append(diags...)
+	var clusterId string
+
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("cluster_id"), &clusterId)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Debug(ctx, fmt.Sprintf("read serverless_cluster_resource cluster_id: %s", data.ClusterId.ValueString()))
+	tflog.Debug(ctx, fmt.Sprintf("read serverless_cluster_resource cluster_id: %s", clusterId))
 
 	// call read api
 	tflog.Trace(ctx, "read serverless_cluster_resource")
-	cluster, err := r.provider.ServerlessClient.GetCluster(ctx, data.ClusterId.ValueString(), clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
+	cluster, err := r.provider.ServerlessClient.GetCluster(ctx, clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
 	if err != nil {
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
 		return
 	}
+	var data serverlessClusterResourceData
 	err = refreshServerlessClusterResourceData(ctx, cluster, &data)
 	if err != nil {
 		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless cluster resource data, got error: %s", err))
@@ -465,7 +478,7 @@ func (r serverlessClusterResource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	// save into the Terraform state.
-	diags = resp.State.Set(ctx, &data)
+	diags := resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 }
 
@@ -533,15 +546,30 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 		}
 	}
 
-	if plan.SpendingLimit != nil {
-		if plan.SpendingLimit.Monthly.ValueInt32() != state.SpendingLimit.Monthly.ValueInt32() {
-			spendingLimit := plan.SpendingLimit.Monthly.ValueInt32()
-			spendingLimitInt32 := int32(spendingLimit)
+	if IsKnown(plan.SpendingLimit) {
+		var planLimit spendingLimit
+		diags := plan.SpendingLimit.As(ctx, &planLimit, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			resp.Diagnostics.Append(diags...)
+			return
+		}
+
+		var stateLimit spendingLimit
+		if !state.SpendingLimit.IsNull() && !state.SpendingLimit.IsUnknown() {
+			diags := state.SpendingLimit.As(ctx, &stateLimit, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				resp.Diagnostics.Append(diags...)
+				return
+			}
+		}
+		if planLimit.Monthly.ValueInt32() != stateLimit.Monthly.ValueInt32() {
+			spendingLimitInt32 := int32(planLimit.Monthly.ValueInt32())
 			body.Cluster.SpendingLimit = &clusterV1beta1.ClusterSpendingLimit{
 				Monthly: &spendingLimitInt32,
 			}
 			body.UpdateMask = string(SpendingLimitMonthly)
 			tflog.Trace(ctx, fmt.Sprintf("update serverless_cluster_resource %s", SpendingLimitMonthly))
+
 			_, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
 			if err != nil {
 				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
@@ -587,7 +615,7 @@ func (r serverlessClusterResource) ImportState(ctx context.Context, req resource
 	resource.ImportStatePassthroughID(ctx, path.Root("cluster_id"), req, resp)
 }
 
-func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
+func buildCreateServerlessClusterBody(ctx context.Context, data serverlessClusterResourceData) (clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
 	displayName := data.DisplayName.ValueString()
 	regionName := data.Region.Name.ValueString()
 	labels := make(map[string]string)
@@ -602,8 +630,13 @@ func buildCreateServerlessClusterBody(data serverlessClusterResourceData) (clust
 		Labels: &labels,
 	}
 
-	if data.SpendingLimit != nil {
-		spendingLimit := data.SpendingLimit.Monthly.ValueInt32()
+	if IsKnown(data.SpendingLimit) {
+		var limit spendingLimit
+		diags := data.SpendingLimit.As(ctx, &limit, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}, errors.New("unable to convert spending limit")
+		}
+		spendingLimit := limit.Monthly.ValueInt32()
 		spendingLimitInt32 := int32(spendingLimit)
 		body.SpendingLimit = &clusterV1beta1.ClusterSpendingLimit{
 			Monthly: &spendingLimitInt32,
@@ -661,9 +694,12 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 		DisplayName:   types.StringValue(*r.DisplayName),
 	}
 
-	s := resp.SpendingLimit
-	data.SpendingLimit = &spendingLimit{
-		Monthly: types.Int32Value(*s.Monthly),
+	s := spendingLimit{
+		Monthly: types.Int32Value(*resp.SpendingLimit.Monthly),
+	}
+	data.SpendingLimit, diags = types.ObjectValueFrom(ctx, spendingLimitAttrTypes, s)
+	if diags.HasError() {
+		return errors.New("unable to convert spending limit")
 	}
 
 	a := resp.AutomatedBackupPolicy
@@ -710,11 +746,14 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 	data.UserPrefix = types.StringValue(*resp.UserPrefix)
 	data.State = types.StringValue(string(*resp.State))
 
-	u := resp.Usage
-	data.Usage = &usage{
-		RequestUnit:     types.StringValue(*u.RequestUnit),
-		RowBasedStorage: types.Float64Value(*u.RowBasedStorage),
-		ColumnarStorage: types.Float64Value(*u.ColumnarStorage),
+	u := &usage{
+		RequestUnit:     types.StringValue(*resp.Usage.RequestUnit),
+		RowBasedStorage: types.Float64Value(*resp.Usage.RowBasedStorage),
+		ColumnarStorage: types.Float64Value(*resp.Usage.ColumnarStorage),
+	}
+	data.Usage, diags = types.ObjectValueFrom(ctx, usageAttrTypes, u)
+	if diags.HasError() {
+		return errors.New("unable to convert usage")
 	}
 
 	data.Labels = labels
