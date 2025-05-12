@@ -802,7 +802,6 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 	displayName := data.DisplayName.ValueString()
 	regionId := data.RegionId.ValueString()
 	rootPassword := data.RootPassword.ValueString()
-	version := data.Version.ValueString()
 
 	// tidb node groups
 	defaultNodeGroup := dedicated.Dedicatedv1beta1TidbNodeGroup{}
@@ -871,6 +870,5 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 		TiflashNodeSetting: tiflashNodeSetting,
 		Port:               data.Port.ValueInt32(),
 		RootPassword:       &rootPassword,
-		Version:            &version,
 	}, nil
 }
