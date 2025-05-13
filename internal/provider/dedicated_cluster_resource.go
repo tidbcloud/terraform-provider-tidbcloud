@@ -670,18 +670,18 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		}
 
 		// tikv
-		if plan.TiKVNodeSetting != state.TiKVNodeSetting {
-			nodeCountInt32 := int32(plan.TiKVNodeSetting.NodeCount.ValueInt32())
-			storageSizeGiInt32 := int32(plan.TiKVNodeSetting.StorageSizeGi.ValueInt32())
-			storageType := dedicated.StorageNodeSettingStorageType(plan.TiKVNodeSetting.StorageType.ValueString())
+		nodeCountInt32 := int32(plan.TiKVNodeSetting.NodeCount.ValueInt32())
+		storageSizeGiInt32 := int32(plan.TiKVNodeSetting.StorageSizeGi.ValueInt32())
+		storageType := dedicated.StorageNodeSettingStorageType(plan.TiKVNodeSetting.StorageType.ValueString())
+		body.TikvNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
+			NodeSpecKey:   plan.TiKVNodeSetting.NodeSpecKey.ValueStringPointer(),
+			NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
+			StorageSizeGi: &storageSizeGiInt32,
+			StorageType:   &storageType,
+		}
+		if IsKnown(plan.TiKVNodeSetting.RaftStoreIOPS) {
 			raftStoreIOPS := plan.TiKVNodeSetting.RaftStoreIOPS.ValueInt32()
-			body.TikvNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
-				NodeSpecKey:   plan.TiKVNodeSetting.NodeSpecKey.ValueStringPointer(),
-				NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
-				StorageSizeGi: &storageSizeGiInt32,
-				StorageType:   &storageType,
-				RaftStoreIops: *dedicated.NewNullableInt32(&raftStoreIOPS),
-			}
+			body.TikvNodeSetting.RaftStoreIops = *dedicated.NewNullableInt32(&raftStoreIOPS)
 		}
 
 		// tiflash
@@ -689,13 +689,15 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 			nodeCountInt32 := int32(plan.TiFlashNodeSetting.NodeCount.ValueInt32())
 			storageSizeGiInt32 := int32(plan.TiFlashNodeSetting.StorageSizeGi.ValueInt32())
 			storageType := dedicated.StorageNodeSettingStorageType(plan.TiFlashNodeSetting.StorageType.ValueString())
-			raftStoreIOPS := plan.TiFlashNodeSetting.RaftStoreIOPS.ValueInt32()
 			body.TiflashNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
 				NodeSpecKey:   plan.TiFlashNodeSetting.NodeSpecKey.ValueStringPointer(),
 				NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
 				StorageSizeGi: &storageSizeGiInt32,
 				StorageType:   &storageType,
-				RaftStoreIops: *dedicated.NewNullableInt32(&raftStoreIOPS),
+			}
+			if IsKnown(plan.TiFlashNodeSetting.RaftStoreIOPS) {
+				raftStoreIOPS := plan.TiFlashNodeSetting.RaftStoreIOPS.ValueInt32()
+				body.TiflashNodeSetting.RaftStoreIops = *dedicated.NewNullableInt32(&raftStoreIOPS)
 			}
 		}
 
@@ -830,13 +832,15 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 	tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt32())
 	tikvStorageSizeGi := int32(data.TiKVNodeSetting.StorageSizeGi.ValueInt32())
 	tikvStorageType := dedicated.StorageNodeSettingStorageType(data.TiKVNodeSetting.StorageType.ValueString())
-	tikvRaftStoreIOPS := data.TiKVNodeSetting.RaftStoreIOPS.ValueInt32()
 	tikvNodeSetting := dedicated.V1beta1ClusterStorageNodeSetting{
 		NodeSpecKey:   tikvNodeSpecKey,
 		NodeCount:     tikvNodeCount,
 		StorageSizeGi: tikvStorageSizeGi,
 		StorageType:   &tikvStorageType,
-		RaftStoreIops: *dedicated.NewNullableInt32(&tikvRaftStoreIOPS),
+	}
+	if IsKnown(data.TiKVNodeSetting.RaftStoreIOPS) {
+		tikvRaftStoreIOPS := data.TiKVNodeSetting.RaftStoreIOPS.ValueInt32()
+		tikvNodeSetting.RaftStoreIops = *dedicated.NewNullableInt32(&tikvRaftStoreIOPS)
 	}
 
 	// tiflash node setting
@@ -846,13 +850,15 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 		tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt32())
 		tiflashStorageSizeGi := int32(data.TiFlashNodeSetting.StorageSizeGi.ValueInt32())
 		tiflashStorageType := dedicated.StorageNodeSettingStorageType(data.TiFlashNodeSetting.StorageType.ValueString())
-		tiflashRaftStoreIOPS := data.TiFlashNodeSetting.RaftStoreIOPS.ValueInt32()
 		tiflashNodeSetting = &dedicated.V1beta1ClusterStorageNodeSetting{
 			NodeSpecKey:   tiflashNodeSpecKey,
 			NodeCount:     tikvNodeCount,
 			StorageSizeGi: tiflashStorageSizeGi,
 			StorageType:   &tiflashStorageType,
-			RaftStoreIops: *dedicated.NewNullableInt32(&tiflashRaftStoreIOPS),
+		}
+		if IsKnown(data.TiFlashNodeSetting.RaftStoreIOPS) {
+			tiflashRaftStoreIOPS := data.TiFlashNodeSetting.RaftStoreIOPS.ValueInt32()
+			tiflashNodeSetting.RaftStoreIops = *dedicated.NewNullableInt32(&tiflashRaftStoreIOPS)
 		}
 	}
 

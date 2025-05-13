@@ -23,12 +23,6 @@ import (
 
 type nodeGroupStatus string
 
-const (
-	dedicatedNodeGroupStatusActive    nodeGroupStatus = "ACTIVE"
-	dedicatedNodeGroupStatusModifying nodeGroupStatus = "MODIFYING"
-	dedicatedNodeGroupStatusPaused    nodeGroupStatus = "PAUSED"
-)
-
 type dedicatedNodeGroupResourceData struct {
 	ClusterId           types.String    `tfsdk:"cluster_id"`
 	NodeSpecKey         types.String    `tfsdk:"node_spec_key"`
