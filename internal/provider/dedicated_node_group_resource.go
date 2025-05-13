@@ -21,24 +21,17 @@ import (
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
-type nodeGroupStatus string
-
-const (
-	dedicatedNodeGroupStatusActive    nodeGroupStatus = "ACTIVE"
-	dedicatedNodeGroupStatusModifying nodeGroupStatus = "MODIFYING"
-	dedicatedNodeGroupStatusPaused    nodeGroupStatus = "PAUSED"
-)
-
 type dedicatedNodeGroupResourceData struct {
-	ClusterId           types.String `tfsdk:"cluster_id"`
-	NodeSpecKey         types.String `tfsdk:"node_spec_key"`
-	NodeCount           types.Int32  `tfsdk:"node_count"`
-	NodeGroupId         types.String `tfsdk:"node_group_id"`
-	DisplayName         types.String `tfsdk:"display_name"`
-	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
-	IsDefaultGroup      types.Bool   `tfsdk:"is_default_group"`
-	State               types.String `tfsdk:"state"`
-	Endpoints           []endpoint   `tfsdk:"endpoints"`
+	ClusterId           types.String    `tfsdk:"cluster_id"`
+	NodeSpecKey         types.String    `tfsdk:"node_spec_key"`
+	NodeCount           types.Int32     `tfsdk:"node_count"`
+	NodeGroupId         types.String    `tfsdk:"node_group_id"`
+	DisplayName         types.String    `tfsdk:"display_name"`
+	NodeSpecDisplayName types.String    `tfsdk:"node_spec_display_name"`
+	IsDefaultGroup      types.Bool      `tfsdk:"is_default_group"`
+	State               types.String    `tfsdk:"state"`
+	Endpoints           []endpoint      `tfsdk:"endpoints"`
+	TiProxySetting      *tiProxySetting `tfsdk:"tiproxy_setting"`
 }
 
 type dedicatedNodeGroupResource struct {
@@ -137,6 +130,22 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 								stringplanmodifier.UseStateForUnknown(),
 							},
 						},
+					},
+				},
+			},
+			"tiproxy_setting": schema.SingleNestedAttribute{
+				MarkdownDescription: "Settings for TiProxy nodes.",
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						MarkdownDescription: "The type of TiProxy nodes." +
+							"- SMALL: Low performance instance with 2 vCPUs and 4 GiB memory. Max QPS: 30, Max Data Traffic: 90 MiB/s." +
+							"- LARGE: High performance instance with 8 vCPUs and 16 GiB memory. Max QPS: 100, Max Data Traffic: 300 MiB/s.",
+						Optional: true,
+					},
+					"node_count": schema.Int32Attribute{
+						MarkdownDescription: "The number of TiProxy nodes.",
+						Optional:            true,
 					},
 				},
 			},
@@ -254,6 +263,16 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 		DisplayName: &newDisplayName,
 		NodeCount:   *dedicated.NewNullableInt32(&newNodeCount),
 	}
+
+	if plan.TiProxySetting != nil {
+		tiProxySetting := dedicated.Dedicatedv1beta1TidbNodeGroupTiProxySetting{}
+		tiProxyNodeCount := plan.TiProxySetting.NodeCount.ValueInt32()
+		tiProxyType := dedicated.TidbNodeGroupTiProxyType(plan.TiProxySetting.Type.ValueString())
+		tiProxySetting.NodeCount = *dedicated.NewNullableInt32(&tiProxyNodeCount)
+		tiProxySetting.Type = &tiProxyType
+		body.TiproxySetting = &tiProxySetting
+	}
+
 	// call update api
 	tflog.Trace(ctx, "update dedicated_node_group_resource")
 	_, err := r.provider.DedicatedClient.UpdateTiDBNodeGroup(ctx, state.ClusterId.ValueString(), plan.NodeGroupId.ValueString(), &body)
@@ -297,11 +316,21 @@ func (r dedicatedNodeGroupResource) ImportState(ctx context.Context, req resourc
 func buildCreateDedicatedNodeGroupBody(data dedicatedNodeGroupResourceData) dedicated.Required {
 	displayName := data.DisplayName.ValueString()
 	nodeCount := int32(data.NodeCount.ValueInt32())
-
-	return dedicated.Required{
+	nodeGroup := dedicated.Required{
 		DisplayName: &displayName,
 		NodeCount:   nodeCount,
 	}
+
+	if data.TiProxySetting != nil {
+		tiProxySetting := dedicated.Dedicatedv1beta1TidbNodeGroupTiProxySetting{}
+		tiProxyNodeCount := data.TiProxySetting.NodeCount.ValueInt32()
+		tiProxyType := dedicated.TidbNodeGroupTiProxyType(data.TiProxySetting.Type.ValueString())
+		tiProxySetting.NodeCount = *dedicated.NewNullableInt32(&tiProxyNodeCount)
+		tiProxySetting.Type = &tiProxyType
+		nodeGroup.TiproxySetting = &tiProxySetting
+	}
+
+	return nodeGroup
 }
 
 func refreshDedicatedNodeGroupResourceData(resp *dedicated.Dedicatedv1beta1TidbNodeGroup, data *dedicatedNodeGroupResourceData) {

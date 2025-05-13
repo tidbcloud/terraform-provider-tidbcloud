@@ -41,7 +41,7 @@ resource "tidbcloud_dedicated_cluster" "example" {
     node_spec_key   = "2C4G"
     node_count      = 3
     storage_size_gi = 10
-    storage_type    = "BASIC"
+    storage_type    = "Basic"
   }
 }
 ```
@@ -58,10 +58,9 @@ resource "tidbcloud_dedicated_cluster" "example" {
 
 ### Optional
 
-- `labels` (Map of String) A map of labels assigned to the cluster.
-- `pause_plan` (Attributes) Pause plan details for the cluster. (see [below for nested schema](#nestedatt--pause_plan))
 - `paused` (Boolean) Whether the cluster is paused.
 - `port` (Number) The port used for accessing the cluster.
+- `project_id` (String) The ID of the project. When not provided, the default project will be used.
 - `root_password` (String, Sensitive) The root password to access the cluster.
 - `tiflash_node_setting` (Attributes) Settings for TiFlash nodes. (see [below for nested schema](#nestedatt--tiflash_node_setting))
 
@@ -72,7 +71,8 @@ resource "tidbcloud_dedicated_cluster" "example" {
 - `cluster_id` (String) The ID of the cluster.
 - `create_time` (String) The creation time of the cluster.
 - `created_by` (String) The creator of the cluster.
-- `project_id` (String) The ID of the project.
+- `labels` (Map of String) A map of labels assigned to the cluster.
+- `pause_plan` (Attributes) Pause plan details for the cluster. (see [below for nested schema](#nestedatt--pause_plan))
 - `region_display_name` (String) The display name of the region.
 - `state` (String) The current state of the cluster.
 - `update_time` (String) The last update time of the cluster.
@@ -86,6 +86,10 @@ Required:
 - `node_count` (Number) The number of nodes in the default node group.
 - `node_spec_key` (String) The key of the node spec.
 
+Optional:
+
+- `tiproxy_setting` (Attributes) Settings for TiProxy nodes. (see [below for nested schema](#nestedatt--tidb_node_setting--tiproxy_setting))
+
 Read-Only:
 
 - `endpoints` (Attributes List) The endpoints of the node group. (see [below for nested schema](#nestedatt--tidb_node_setting--endpoints))
@@ -94,6 +98,15 @@ Read-Only:
 - `node_group_id` (String) The ID of the default node group.
 - `node_spec_display_name` (String) The display name of the node spec.
 - `state` (String) The state of the node group.
+
+<a id="nestedatt--tidb_node_setting--tiproxy_setting"></a>
+### Nested Schema for `tidb_node_setting.tiproxy_setting`
+
+Optional:
+
+- `node_count` (Number) The number of TiProxy nodes.
+- `type` (String) The type of TiProxy nodes.- SMALL: Low performance instance with 2 vCPUs and 4 GiB memory. Max QPS: 30, Max Data Traffic: 90 MiB/s.- LARGE: High performance instance with 8 vCPUs and 16 GiB memory. Max QPS: 100, Max Data Traffic: 300 MiB/s.
+
 
 <a id="nestedatt--tidb_node_setting--endpoints"></a>
 ### Nested Schema for `tidb_node_setting.endpoints`
@@ -114,20 +127,15 @@ Required:
 - `node_count` (Number) The number of nodes in the cluster.
 - `node_spec_key` (String) The node specification key.
 - `storage_size_gi` (Number) The storage size in GiB.
-- `storage_type` (String) The storage type.
+
+Optional:
+
+- `raft_store_iops` (Number) The IOPS of raft store
+- `storage_type` (String) The storage type.- Basic: Data disk: gp3; Raft log disk: none.- Standard: Data disk: gp3; Raft log disk: gp3.- Performance: Data disk: gp3; Raft log disk: io2.- Plus: Data disk: io2; Raft log disk: none.
 
 Read-Only:
 
 - `node_spec_display_name` (String) The display name of the node spec.
-
-
-<a id="nestedatt--pause_plan"></a>
-### Nested Schema for `pause_plan`
-
-Optional:
-
-- `pause_type` (String) The type of pause.
-- `scheduled_resume_time` (String) The scheduled time for resuming the cluster.
 
 
 <a id="nestedatt--tiflash_node_setting"></a>
@@ -138,8 +146,21 @@ Required:
 - `node_count` (Number) The number of nodes in the cluster.
 - `node_spec_key` (String) The node specification key.
 - `storage_size_gi` (Number) The storage size in GiB.
-- `storage_type` (String) The storage type.
+
+Optional:
+
+- `raft_store_iops` (Number) The IOPS of raft store
+- `storage_type` (String) The storage type.- Basic: Data disk: gp3; Raft log disk: none.- Standard: Data disk: gp3; Raft log disk: gp3.- Performance: Data disk: gp3; Raft log disk: io2.- Plus: Data disk: io2; Raft log disk: none.
 
 Read-Only:
 
 - `node_spec_display_name` (String) The display name of the node spec.
+
+
+<a id="nestedatt--pause_plan"></a>
+### Nested Schema for `pause_plan`
+
+Read-Only:
+
+- `pause_type` (String) The type of pause.
+- `scheduled_resume_time` (String) The scheduled time for resuming the cluster.

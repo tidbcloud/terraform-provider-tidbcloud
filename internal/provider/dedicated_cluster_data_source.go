@@ -26,8 +26,8 @@ type dedicatedClusterDataSourceData struct {
 	UpdateTime         types.String        `tfsdk:"update_time"`
 	RegionDisplayName  types.String        `tfsdk:"region_display_name"`
 	Annotations        types.Map           `tfsdk:"annotations"`
-	TiDBNodeSetting    *tidbNodeSetting     `tfsdk:"tidb_node_setting"`
-	TiKVNodeSetting    *tikvNodeSetting     `tfsdk:"tikv_node_setting"`
+	TiDBNodeSetting    *tidbNodeSetting    `tfsdk:"tidb_node_setting"`
+	TiKVNodeSetting    *tikvNodeSetting    `tfsdk:"tikv_node_setting"`
 	TiFlashNodeSetting *tiflashNodeSetting `tfsdk:"tiflash_node_setting"`
 }
 
@@ -184,6 +184,22 @@ func (d *dedicatedClusterDataSource) Schema(_ context.Context, _ datasource.Sche
 							},
 						},
 					},
+					"tiproxy_setting": schema.SingleNestedAttribute{
+						MarkdownDescription: "Settings for TiProxy nodes.",
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"type": schema.StringAttribute{
+								MarkdownDescription: "The type of TiProxy nodes." +
+									"- SMALL: Low performance instance with 2 vCPUs and 4 GiB memory. Max QPS: 30, Max Data Traffic: 90 MiB/s." +
+									"- LARGE: High performance instance with 8 vCPUs and 16 GiB memory. Max QPS: 100, Max Data Traffic: 300 MiB/s.",
+								Computed: true,
+							},
+							"node_count": schema.Int32Attribute{
+								MarkdownDescription: "The number of TiProxy nodes.",
+								Computed:            true,
+							},
+						},
+					},
 				},
 			},
 			"tikv_node_setting": schema.SingleNestedAttribute{
@@ -210,6 +226,10 @@ func (d *dedicatedClusterDataSource) Schema(_ context.Context, _ datasource.Sche
 						MarkdownDescription: "The display name of the node spec.",
 						Computed:            true,
 					},
+					"raft_store_iops": schema.Int32Attribute{
+						MarkdownDescription: "The IOPS of raft store",
+						Computed:            true,
+					},
 				},
 			},
 			"tiflash_node_setting": schema.SingleNestedAttribute{
@@ -234,6 +254,10 @@ func (d *dedicatedClusterDataSource) Schema(_ context.Context, _ datasource.Sche
 					},
 					"node_spec_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the node spec.",
+						Computed:            true,
+					},
+					"raft_store_iops": schema.Int32Attribute{
+						MarkdownDescription: "The IOPS of raft store",
 						Computed:            true,
 					},
 				},
@@ -292,6 +316,13 @@ func (d *dedicatedClusterDataSource) Read(ctx context.Context, req datasource.Re
 					ConnectionType: types.StringValue(string(*e.ConnectionType)),
 				})
 			}
+			defaultTiProxySetting := tiProxySetting{}
+			if group.TiproxySetting != nil {
+				defaultTiProxySetting = tiProxySetting{
+					Type:      types.StringValue(string(*group.TiproxySetting.Type)),
+					NodeCount: types.Int32Value(*group.TiproxySetting.NodeCount.Get()),
+				}
+			}
 			data.TiDBNodeSetting = &tidbNodeSetting{
 				NodeSpecKey:          types.StringValue(*group.NodeSpecKey),
 				NodeCount:            types.Int32Value(group.NodeCount),
@@ -301,6 +332,7 @@ func (d *dedicatedClusterDataSource) Read(ctx context.Context, req datasource.Re
 				IsDefaultGroup:       types.BoolValue(*group.IsDefaultGroup),
 				State:                types.StringValue(string(*group.State)),
 				Endpoints:            endpoints,
+				TiProxySetting:       &defaultTiProxySetting,
 			}
 		}
 	}
@@ -312,8 +344,10 @@ func (d *dedicatedClusterDataSource) Read(ctx context.Context, req datasource.Re
 		StorageType:         types.StringValue(string(*cluster.TikvNodeSetting.StorageType)),
 		NodeSpecDisplayName: types.StringValue(*cluster.TikvNodeSetting.NodeSpecDisplayName),
 	}
+	if cluster.TikvNodeSetting.RaftStoreIops.IsSet() {
+		data.TiKVNodeSetting.RaftStoreIOPS = types.Int32Value(*cluster.TikvNodeSetting.RaftStoreIops.Get())
+	}
 
-	// may return
 	// tiflash node setting
 	if cluster.TiflashNodeSetting != nil {
 		data.TiFlashNodeSetting = &tiflashNodeSetting{
@@ -322,6 +356,9 @@ func (d *dedicatedClusterDataSource) Read(ctx context.Context, req datasource.Re
 			StorageSizeGi:       types.Int32Value(cluster.TiflashNodeSetting.StorageSizeGi),
 			StorageType:         types.StringValue(string(*cluster.TiflashNodeSetting.StorageType)),
 			NodeSpecDisplayName: types.StringValue(*cluster.TiflashNodeSetting.NodeSpecDisplayName),
+		}
+		if cluster.TiflashNodeSetting.RaftStoreIops.IsSet() {
+			data.TiFlashNodeSetting.RaftStoreIOPS = types.Int32Value(*cluster.TiflashNodeSetting.RaftStoreIops.Get())
 		}
 	}
 
