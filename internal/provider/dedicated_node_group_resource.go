@@ -21,8 +21,6 @@ import (
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
-type nodeGroupStatus string
-
 type dedicatedNodeGroupResourceData struct {
 	ClusterId           types.String    `tfsdk:"cluster_id"`
 	NodeSpecKey         types.String    `tfsdk:"node_spec_key"`
