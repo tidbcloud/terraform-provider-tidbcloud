@@ -8,9 +8,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/juju/errors"
+	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
 type dedicatedNetworkContainersDataSourceData struct {
+	ProjectId         types.String           `tfsdk:"project_id"`
 	NetworkContainers []networkContainerItem `tfsdk:"network_containers"`
 }
 
@@ -54,6 +57,10 @@ func (d *dedicatedNetworkContainersDataSource) Schema(_ context.Context, _ datas
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "dedicated network containers data source",
 		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{
+				MarkdownDescription: "The project ID for the network containers. If unspecified, the project ID of default project is used.",
+				Optional:            true,
+			},
 			"network_containers": schema.ListNestedAttribute{
 				MarkdownDescription: "The network containers.",
 				Computed:            true,
@@ -108,7 +115,7 @@ func (d *dedicatedNetworkContainersDataSource) Read(ctx context.Context, req dat
 	}
 
 	tflog.Trace(ctx, "read network containers data source")
-	networkContainers, err := d.provider.DedicatedClient.ListNetworkContainers(ctx)
+	networkContainers, err := d.retrieveNetworkContainers(ctx, data.ProjectId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call ListNetworkContainers, got error: %s", err))
 		return
@@ -135,4 +142,23 @@ func (d *dedicatedNetworkContainersDataSource) Read(ctx context.Context, req dat
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
+}
+
+func (d dedicatedNetworkContainersDataSource) retrieveNetworkContainers(ctx context.Context, projectId string) ([]dedicated.V1beta1NetworkContainer, error) {
+	var items []dedicated.V1beta1NetworkContainer
+	pageSizeInt32 := int32(DefaultPageSize)
+	var pageToken *string
+	for {
+		networkContainers, err := d.provider.DedicatedClient.ListNetworkContainers(ctx, projectId, &pageSizeInt32, pageToken)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		items = append(items, networkContainers.NetworkContainers...)
+
+		pageToken = networkContainers.NextPageToken
+		if IsNilOrEmpty(pageToken) {
+			break
+		}
+	}
+	return items, nil
 }

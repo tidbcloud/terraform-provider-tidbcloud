@@ -241,7 +241,6 @@ func (r serverlessSQLUserResource) ImportState(ctx context.Context, req resource
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cluster_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_name"), idParts[1])...)
-
 }
 
 func buildCreateServerlessSQLUserBody(ctx context.Context, data serverlessSQLUserResourceData) (iam.ApiCreateSqlUserReq, error) {

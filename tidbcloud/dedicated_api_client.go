@@ -40,11 +40,11 @@ type TiDBCloudDedicatedClient interface {
 	CreateNetworkContainer(ctx context.Context, body *dedicated.V1beta1NetworkContainer) (*dedicated.V1beta1NetworkContainer, error)
 	DeleteNetworkContainer(ctx context.Context, networkContainerId string) error
 	GetNetworkContainer(ctx context.Context, networkContainerId string) (*dedicated.V1beta1NetworkContainer, error)
-	ListNetworkContainers(ctx context.Context) ([]dedicated.V1beta1NetworkContainer, error)
+	ListNetworkContainers(ctx context.Context, projectId string, pageSize *int32, pageToken *string) (*dedicated.V1beta1ListNetworkContainersResponse, error)
 	CreateVPCPeering(ctx context.Context, body *dedicated.Dedicatedv1beta1VpcPeering) (*dedicated.Dedicatedv1beta1VpcPeering, error)
 	DeleteVPCPeering(ctx context.Context, vpcPeeringId string) error
 	GetVPCPeering(ctx context.Context, vpcPeeringId string) (*dedicated.Dedicatedv1beta1VpcPeering, error)
-	ListVPCPeerings(ctx context.Context, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse, error)
+	ListVPCPeerings(ctx context.Context, projectId string, cloudProvider string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse, error)
 }
 
 func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userAgent string) (*dedicated.APIClient, error) {
@@ -267,9 +267,19 @@ func (d *DedicatedClientDelegate) GetNetworkContainer(ctx context.Context, netwo
 	return resp, parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) ListNetworkContainers(ctx context.Context) ([]dedicated.V1beta1NetworkContainer, error) {
-	resp, h, err := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceListNetworkContainers(ctx).Execute()
-	return resp.NetworkContainers, parseError(err, h)
+func (d *DedicatedClientDelegate) ListNetworkContainers(ctx context.Context, projectId string, pageSize *int32, pageToken *string) (*dedicated.V1beta1ListNetworkContainersResponse, error) {
+	r := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceListNetworkContainers(ctx)
+	if projectId != "" {
+		r = r.ProjectId(projectId)
+	}
+	if pageSize != nil {
+		r = r.PageSize(*pageSize)
+	}
+	if pageToken != nil {
+		r = r.PageToken(*pageToken)
+	}
+	resp, h, err := r.Execute()
+	return resp, parseError(err, h)
 }
 
 func (d *DedicatedClientDelegate) CreateVPCPeering(ctx context.Context, body *dedicated.Dedicatedv1beta1VpcPeering) (*dedicated.Dedicatedv1beta1VpcPeering, error) {
@@ -291,8 +301,14 @@ func (d *DedicatedClientDelegate) GetVPCPeering(ctx context.Context, vpcPeeringI
 	return resp, parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) ListVPCPeerings(ctx context.Context, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse, error) {
+func (d *DedicatedClientDelegate) ListVPCPeerings(ctx context.Context, projectId string, cloudProvider string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse, error) {
 	r := d.dc.NetworkContainerServiceAPI.NetworkContainerServiceListVpcPeerings(ctx)
+	if projectId != "" {
+		r = r.ProjectId(projectId)
+	}
+	if cloudProvider != "" {
+		r = r.CloudProvider(dedicated.PrivateEndpointConnectionServiceListPrivateEndpointConnectionsCloudProviderParameter(cloudProvider))
+	}
 	if pageSize != nil {
 		r = r.PageSize(*pageSize)
 	}

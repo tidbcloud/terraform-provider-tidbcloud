@@ -20,9 +20,9 @@ func TestUTDedicatedVPCPeeringsDataSource(t *testing.T) {
 	})()
 
 	listResp := dedicated.Dedicatedv1beta1ListVpcPeeringsResponse{}
-	listResp.UnmarshalJSON([]byte(testUTApiListSqlUsersResponse))
+	listResp.UnmarshalJSON([]byte(testUTDedicatedv1beta1ListVpcPeeringsResponse))
 
-	s.EXPECT().ListVPCPeerings(gomock.Any(), gomock.Any(), gomock.Any()).Return(&listResp, nil).AnyTimes()
+	s.EXPECT().ListVPCPeerings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&listResp, nil).AnyTimes()
 
 	testUTDedicatedVPCPeeringsDataSource(t)
 }

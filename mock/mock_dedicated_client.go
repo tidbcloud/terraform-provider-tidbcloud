@@ -316,18 +316,18 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListClusters(ctx, projectId,
 }
 
 // ListNetworkContainers mocks base method.
-func (m *MockTiDBCloudDedicatedClient) ListNetworkContainers(ctx context.Context) ([]dedicated.V1beta1NetworkContainer, error) {
+func (m *MockTiDBCloudDedicatedClient) ListNetworkContainers(ctx context.Context, projectId string, pageSize *int32, pageToken *string) (*dedicated.V1beta1ListNetworkContainersResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListNetworkContainers", ctx)
-	ret0, _ := ret[0].([]dedicated.V1beta1NetworkContainer)
+	ret := m.ctrl.Call(m, "ListNetworkContainers", ctx, projectId, pageSize, pageToken)
+	ret0, _ := ret[0].(*dedicated.V1beta1ListNetworkContainersResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListNetworkContainers indicates an expected call of ListNetworkContainers.
-func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListNetworkContainers(ctx interface{}) *gomock.Call {
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListNetworkContainers(ctx, projectId, pageSize, pageToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNetworkContainers", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListNetworkContainers), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNetworkContainers", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListNetworkContainers), ctx, projectId, pageSize, pageToken)
 }
 
 // ListPrivateEndpointConnections mocks base method.
@@ -376,18 +376,18 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListTiDBNodeGroups(ctx, clus
 }
 
 // ListVPCPeerings mocks base method.
-func (m *MockTiDBCloudDedicatedClient) ListVPCPeerings(ctx context.Context, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse, error) {
+func (m *MockTiDBCloudDedicatedClient) ListVPCPeerings(ctx context.Context, projectId, cloudProvider string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListVPCPeerings", ctx, pageSize, pageToken)
+	ret := m.ctrl.Call(m, "ListVPCPeerings", ctx, projectId, cloudProvider, pageSize, pageToken)
 	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListVPCPeerings indicates an expected call of ListVPCPeerings.
-func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListVPCPeerings(ctx, pageSize, pageToken interface{}) *gomock.Call {
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListVPCPeerings(ctx, projectId, cloudProvider, pageSize, pageToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCPeerings", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListVPCPeerings), ctx, pageSize, pageToken)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCPeerings", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListVPCPeerings), ctx, projectId, cloudProvider, pageSize, pageToken)
 }
 
 // PauseCluster mocks base method.

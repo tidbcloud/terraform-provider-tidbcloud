@@ -24,7 +24,7 @@ func TestUTDedicatedNetworkContainerResource(t *testing.T) {
 	createNetworkContainerResp := dedicated.V1beta1NetworkContainer{}
 	createNetworkContainerResp.UnmarshalJSON([]byte(testUTNetworkContainer(string(dedicated.V1BETA1NETWORKCONTAINERSTATE_INACTIVE))))
 	getNetworkContainerResp := dedicated.V1beta1NetworkContainer{}
-	getNetworkContainerResp.UnmarshalJSON([]byte(testUTNetworkContainer(string(dedicated.V1BETA1NETWORKCONTAINERSTATE_ACTIVE))))
+	getNetworkContainerResp.UnmarshalJSON([]byte(testUTNetworkContainer(string(dedicated.V1BETA1NETWORKCONTAINERSTATE_INACTIVE))))
 
 	s.EXPECT().CreateNetworkContainer(gomock.Any(), gomock.Any()).Return(&createNetworkContainerResp, nil)
 	s.EXPECT().GetNetworkContainer(gomock.Any(), gomock.Any()).Return(&getNetworkContainerResp, nil).AnyTimes()
@@ -71,17 +71,17 @@ resource "tidbcloud_dedicated_network_container" "test" {
 func testUTNetworkContainer(state string) string {
 	return fmt.Sprintf(`
 {
-    "name": "networkContainers/1866022343512424448",
-    "networkContainerId": "1866022343512424448",
+    "name": "networkContainers/18600000000",
+    "networkContainerId": "1860000000000",
     "labels": {
-        "tidb.cloud/project": "3199728"
+        "tidb.cloud/project": "300000"
     },
     "regionId": "aws-ap-northeast-3",
     "cidrNotion": "172.16.0.0/21",
     "cloudProvider": "aws",
     "state": "%s",
     "regionDisplayName": "Osaka (ap-northeast-3)",
-    "vpcId": "vpc-0f43eeeb34c3c2f1c"
+    "vpcId": "vpc-0f43ee000000000"
 }
 `, state)
 }

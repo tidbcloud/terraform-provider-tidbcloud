@@ -3,11 +3,14 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -69,18 +72,30 @@ func (r *dedicatedPrivateEndpointConnectionResource) Schema(_ context.Context, _
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"cluster_display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"node_group_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the node group.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"private_endpoint_connection_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the private endpoint connection.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"endpoint_id": schema.StringAttribute{
 				MarkdownDescription: "The endpoint ID of the private link connection.\n" +
@@ -88,6 +103,9 @@ func (r *dedicatedPrivateEndpointConnectionResource) Schema(_ context.Context, _
 					"For GCP, it's private service connect endpoint ID.\n" +
 					"For Azure, it's private endpoint resource ID.",
 				Required: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"private_ip_address": schema.StringAttribute{
 				MarkdownDescription: "The private IP address of the private endpoint in the user's vNet.\n" +
@@ -106,22 +124,37 @@ func (r *dedicatedPrivateEndpointConnectionResource) Schema(_ context.Context, _
 			"region_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the region.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the region.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"cloud_provider": schema.StringAttribute{
 				MarkdownDescription: "The cloud provider of the region.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"private_link_service_name": schema.StringAttribute{
 				MarkdownDescription: "The name of the private link service.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"account_id": schema.StringAttribute{
 				MarkdownDescription: "Only for GCP private service connections. It's GCP project name.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"labels": schema.MapAttribute{
 				MarkdownDescription: "The labels of the endpoint.",
@@ -222,6 +255,22 @@ func (r dedicatedPrivateEndpointConnectionResource) Delete(ctx context.Context, 
 func (r dedicatedPrivateEndpointConnectionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	resp.Diagnostics.AddError("Update Error", "Update is not supported for dedicated private endpoint connection")
 	return
+}
+
+func (r dedicatedPrivateEndpointConnectionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, ",")
+
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+		resp.Diagnostics.AddError(
+			"Unexpected Import Identifier",
+			fmt.Sprintf("Expected import identifier with format: cluster_id, node_group_id, private_endpoint_connection_id. Got: %q", req.ID),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cluster_id"), idParts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("node_group_id"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("private_endpoint_connection_id"), idParts[2])...)
 }
 
 func buildCreateDedicatedPrivateEndpointConnectionBody(data dedicatedPrivateEndpointConnectionResourceData) dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest {

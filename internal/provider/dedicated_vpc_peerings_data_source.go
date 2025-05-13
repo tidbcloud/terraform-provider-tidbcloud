@@ -13,7 +13,9 @@ import (
 )
 
 type dedicatedVpcPeeringsDataSourceData struct {
-	VpcPeerings []VpcPeeringItem `tfsdk:"vpc_peerings"`
+	ProjectId     types.String     `tfsdk:"project_id"`
+	CloudProvider types.String     `tfsdk:"cloud_provider"`
+	VpcPeerings   []VpcPeeringItem `tfsdk:"vpc_peerings"`
 }
 
 type VpcPeeringItem struct {
@@ -61,6 +63,14 @@ func (d *dedicatedVpcPeeringsDataSource) Schema(_ context.Context, _ datasource.
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "dedicated vpc peerings data source",
 		Attributes: map[string]schema.Attribute{
+			"project_id": schema.StringAttribute{
+				MarkdownDescription: "The project ID for the vpc peerings. If unspecified, the project ID of default project is used.",
+				Optional:            true,
+			},
+			"cloud_provider": schema.StringAttribute{
+				MarkdownDescription: "The cloud provider for the vpc peerings. If specified, only VPC peerings of the specified cloud provider will be returned.",
+				Optional:            true,
+			},
 			"vpc_peerings": schema.ListNestedAttribute{
 				MarkdownDescription: "The vpc peerings.",
 				Computed:            true,
@@ -135,7 +145,7 @@ func (d *dedicatedVpcPeeringsDataSource) Read(ctx context.Context, req datasourc
 	}
 
 	tflog.Trace(ctx, "read vpc peerings data source")
-	vpcPeerings, err := d.retrieveVPCPeerings(ctx)
+	vpcPeerings, err := d.retrieveVPCPeerings(ctx, data.ProjectId.ValueString(), data.CloudProvider.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call ListVPCPeerings, got error: %s", err))
 		return
@@ -173,12 +183,12 @@ func (d *dedicatedVpcPeeringsDataSource) Read(ctx context.Context, req datasourc
 	resp.Diagnostics.Append(diags...)
 }
 
-func (d dedicatedVpcPeeringsDataSource) retrieveVPCPeerings(ctx context.Context) ([]dedicated.Dedicatedv1beta1VpcPeering, error) {
+func (d dedicatedVpcPeeringsDataSource) retrieveVPCPeerings(ctx context.Context, projectId, cloudProvider string) ([]dedicated.Dedicatedv1beta1VpcPeering, error) {
 	var items []dedicated.Dedicatedv1beta1VpcPeering
 	pageSizeInt32 := int32(DefaultPageSize)
 	var pageToken *string
 	for {
-		vpcPeerings, err := d.provider.DedicatedClient.ListVPCPeerings(ctx, &pageSizeInt32, pageToken)
+		vpcPeerings, err := d.provider.DedicatedClient.ListVPCPeerings(ctx, projectId, cloudProvider, &pageSizeInt32, pageToken)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}

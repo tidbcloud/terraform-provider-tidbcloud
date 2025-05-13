@@ -66,6 +66,9 @@ func (r *DedicatedVpcPeeringResource) Schema(_ context.Context, _ resource.Schem
 			"vpc_peering_id": schema.StringAttribute{
 				Description: "The ID of the VPC Peering",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"tidb_cloud_region_id": schema.StringAttribute{
 				Description: "The region ID of the TiDB Cloud",
@@ -74,18 +77,30 @@ func (r *DedicatedVpcPeeringResource) Schema(_ context.Context, _ resource.Schem
 			"tidb_cloud_cloud_provider": schema.StringAttribute{
 				Description: "The cloud provider of the TiDB Cloud",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"tidb_cloud_account_id": schema.StringAttribute{
 				Description: "The account ID of the TiDB Cloud",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"tidb_cloud_vpc_id": schema.StringAttribute{
 				Description: "The VPC ID of the TiDB Cloud",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"tidb_cloud_vpc_cidr": schema.StringAttribute{
 				Description: "The VPC CIDR of the TiDB Cloud",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"customer_region_id": schema.StringAttribute{
 				Description: "The region ID of the AWS VPC",
@@ -110,6 +125,9 @@ func (r *DedicatedVpcPeeringResource) Schema(_ context.Context, _ resource.Schem
 			"aws_vpc_peering_connection_id": schema.StringAttribute{
 				Description: "The ID of the AWS VPC Peering Connection",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"labels": schema.MapAttribute{
 				Description: "The labels for the vpc peering",
@@ -206,18 +224,22 @@ func (r *DedicatedVpcPeeringResource) Update(ctx context.Context, req resource.U
 }
 
 func (r *DedicatedVpcPeeringResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var VpcPeeringId string
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("vpc_peering_id"), &VpcPeeringId)...)
+	var vpcPeeringId string
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("vpc_peering_id"), &vpcPeeringId)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tflog.Trace(ctx, "delete dedicated_vpc_peering_resource")
-	err := r.provider.DedicatedClient.DeleteVPCPeering(ctx, VpcPeeringId)
+	err := r.provider.DedicatedClient.DeleteVPCPeering(ctx, vpcPeeringId)
 	if err != nil {
 		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteVpcPeering, got error: %s", err))
 		return
 	}
+}
+
+func (r *DedicatedVpcPeeringResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("vpc_peering_id"), req, resp)
 }
 
 func buildCreateDedicatedVpcPeeringBody(data DedicatedVpcPeeringResourceData) dedicated.Dedicatedv1beta1VpcPeering {
@@ -243,6 +265,7 @@ func refreshDedicatedVpcPeeringResourceData(ctx context.Context, vpcPeering *ded
 	data.TiDBCloudAccountId = types.StringValue(*vpcPeering.TidbCloudAccountId)
 	data.TiDBCloudVpcId = types.StringValue(*vpcPeering.TidbCloudVpcId)
 	data.TiDBCloudVpcCidr = types.StringValue(*vpcPeering.TidbCloudVpcCidr)
+	data.ProjectId = types.StringValue((*vpcPeering.Labels)[LabelsKeyProjectId])
 	if vpcPeering.AwsVpcPeeringConnectionId.IsSet() {
 		data.AWSVpcPeeringConnectionId = types.StringValue(*vpcPeering.AwsVpcPeeringConnectionId.Get())
 	}
