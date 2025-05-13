@@ -127,11 +127,11 @@ Required:
 - `node_count` (Number) The number of nodes in the cluster.
 - `node_spec_key` (String) The node specification key.
 - `storage_size_gi` (Number) The storage size in GiB.
-- `storage_type` (String) The storage type.- Basic: Data disk: gp3; Raft log disk: none.- Standard: Data disk: gp3; Raft log disk: gp3.- Performance: Data disk: gp3; Raft log disk: io2.- Plus: Data disk: io2; Raft log disk: none.
 
 Optional:
 
 - `raft_store_iops` (Number) The IOPS of raft store
+- `storage_type` (String) The storage type.- Basic: Data disk: gp3; Raft log disk: none.- Standard: Data disk: gp3; Raft log disk: gp3.- Performance: Data disk: gp3; Raft log disk: io2.- Plus: Data disk: io2; Raft log disk: none.
 
 Read-Only:
 
@@ -146,11 +146,11 @@ Required:
 - `node_count` (Number) The number of nodes in the cluster.
 - `node_spec_key` (String) The node specification key.
 - `storage_size_gi` (Number) The storage size in GiB.
-- `storage_type` (String) The storage type.- Basic: Data disk: gp3; Raft log disk: none.- Standard: Data disk: gp3; Raft log disk: gp3.- Performance: Data disk: gp3; Raft log disk: io2.- Plus: Data disk: io2; Raft log disk: none.
 
 Optional:
 
 - `raft_store_iops` (Number) The IOPS of raft store
+- `storage_type` (String) The storage type.- Basic: Data disk: gp3; Raft log disk: none.- Standard: Data disk: gp3; Raft log disk: gp3.- Performance: Data disk: gp3; Raft log disk: io2.- Plus: Data disk: io2; Raft log disk: none.
 
 Read-Only:
 

@@ -347,7 +347,8 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 							"- Standard: Data disk: gp3; Raft log disk: gp3." +
 							"- Performance: Data disk: gp3; Raft log disk: io2." +
 							"- Plus: Data disk: io2; Raft log disk: none.",
-						Required: true,
+						Optional: true,
+						Computed: true,
 					},
 					"node_spec_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the node spec.",
@@ -381,7 +382,8 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 							"- Standard: Data disk: gp3; Raft log disk: gp3." +
 							"- Performance: Data disk: gp3; Raft log disk: io2." +
 							"- Plus: Data disk: io2; Raft log disk: none.",
-						Required: true,
+						Optional: true,
+						Computed: true,
 					},
 					"node_spec_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the node spec.",
