@@ -155,11 +155,11 @@ func (d *serverlessBranchDataSource) Schema(_ context.Context, _ datasource.Sche
 						MarkdownDescription: "The request unit of the branch.",
 						Computed:            true,
 					},
-					"row_based_storage": schema.Int64Attribute{
+					"row_based_storage": schema.Float64Attribute{
 						MarkdownDescription: "The row-based storage of the branch.",
 						Computed:            true,
 					},
-					"columnar_storage": schema.Int64Attribute{
+					"columnar_storage": schema.Float64Attribute{
 						MarkdownDescription: "The columnar storage of the branch.",
 						Computed:            true,
 					},
@@ -242,8 +242,8 @@ func (d *serverlessBranchDataSource) Read(ctx context.Context, req datasource.Re
 	u := branch.Usage
 	data.Usage = &usage{
 		RequestUnit:     types.StringValue(*u.RequestUnit),
-		RowBasedStorage: types.Int64Value(int64(*u.RowStorage)),
-		ColumnarStorage: types.Int64Value(int64(*u.ColumnarStorage)),
+		RowBasedStorage: types.Float64Value(*u.RowStorage),
+		ColumnarStorage: types.Float64Value(*u.ColumnarStorage),
 	}
 
 	data.Annotations = annotations
