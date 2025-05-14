@@ -4,8 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
@@ -20,18 +24,24 @@ type DedicatedAuditLogConfigResource struct {
 }
 
 type dedicatedAuditLogConfigResourceData struct {
-	ClusterId        types.String      `tfsdk:"cluster_id"`
-	Enabled          types.Bool        `tfsdk:"enabled"`
-	BucketUri        types.String      `tfsdk:"bucket_uri"`
-	BucketRegionId   types.String      `tfsdk:"bucket_region_id"`
-	AWSRoleArn       types.String      `tfsdk:"aws_role_arn"`
-	AzureSasToken    types.String      `tfsdk:"azure_sas_token"`
-	BucketWriteCheck *bucketWriteCheck `tfsdk:"bucket_write_check"`
+	ClusterId        types.String `tfsdk:"cluster_id"`
+	Enabled          types.Bool   `tfsdk:"enabled"`
+	BucketUri        types.String `tfsdk:"bucket_uri"`
+	BucketRegionId   types.String `tfsdk:"bucket_region_id"`
+	AWSRoleArn       types.String `tfsdk:"aws_role_arn"`
+	AzureSasToken    types.String `tfsdk:"azure_sas_token"`
+	BucketWriteCheck types.Object `tfsdk:"bucket_write_check"`
+	BucketManager    types.String `tfsdk:"bucket_manager"`
 }
 
 type bucketWriteCheck struct {
 	Writable    types.Bool   `tfsdk:"writable"`
 	ErrorReason types.String `tfsdk:"error_reason"`
+}
+
+var bucketWriteCheckAttrTypes = map[string]attr.Type{
+	"writable":     types.BoolType,
+	"error_reason": types.StringType,
 }
 
 func NewDedicatedAuditLogConfigResource() resource.Resource {
@@ -49,6 +59,9 @@ func (r *DedicatedAuditLogConfigResource) Schema(_ context.Context, _ resource.S
 			"cluster_id": schema.StringAttribute{
 				Description: "The ID of the cluster",
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"enabled": schema.BoolAttribute{
 				Description: "Whether the audit log is enabled",
@@ -83,6 +96,10 @@ func (r *DedicatedAuditLogConfigResource) Schema(_ context.Context, _ resource.S
 						Computed:    true,
 					},
 				},
+			},
+			"bucket_manager": schema.StringAttribute{
+				Description: "The bucket manager",
+				Computed:    true,
 			},
 		},
 	}
@@ -130,7 +147,11 @@ func (r *DedicatedAuditLogConfigResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	refreshDedicatedAuditLogConfigResourceData(AuditLogConfig, &data)
+	diags = refreshDedicatedAuditLogConfigResourceData(ctx, AuditLogConfig, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -154,7 +175,12 @@ func (r *DedicatedAuditLogConfigResource) Read(ctx context.Context, req resource
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetAuditLogConfig, error: %s", err))
 		return
 	}
-	refreshDedicatedAuditLogConfigResourceData(AuditLogConfig, &data)
+
+	diags = refreshDedicatedAuditLogConfigResourceData(ctx, AuditLogConfig, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -207,7 +233,7 @@ func (r *DedicatedAuditLogConfigResource) Update(ctx context.Context, req resour
 		return
 	}
 
-	refreshDedicatedAuditLogConfigResourceData(auditLogConfig, &state)
+	refreshDedicatedAuditLogConfigResourceData(ctx, auditLogConfig, &state)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)
@@ -221,32 +247,45 @@ func (r *DedicatedAuditLogConfigResource) Delete(ctx context.Context, req resour
 	return
 }
 
-func buildCreateDedicatedAuditLogConfigBody(data dedicatedAuditLogConfigResourceData) (dedicated.DatabaseAuditLogServiceCreateAuditLogConfigRequest, error) {
+func buildCreateDedicatedAuditLogConfigBody(data dedicatedAuditLogConfigResourceData) (dedicated.Required1, error) {
 	enabled := data.Enabled.ValueBool()
 	bucketUri := data.BucketUri.ValueString()
 	bucketRegionId := data.BucketRegionId.ValueString()
 	awsRoleArn := data.AWSRoleArn.ValueString()
 	azureSasToken := data.AzureSasToken.ValueString()
 
-	return dedicated.DatabaseAuditLogServiceCreateAuditLogConfigRequest{
+	return dedicated.Required1{
 		Enabled:        &enabled,
-		BucketUri:      bucketUri,
+		BucketUri:      &bucketUri,
 		BucketRegionId: &bucketRegionId,
 		AwsRoleArn:     &awsRoleArn,
 		AzureSasToken:  &azureSasToken,
 	}, nil
 }
 
-func refreshDedicatedAuditLogConfigResourceData(auditLogConfig *dedicated.Dedicatedv1beta1AuditLogConfig, data *dedicatedAuditLogConfigResourceData) {
+func refreshDedicatedAuditLogConfigResourceData(ctx context.Context, auditLogConfig *dedicated.Dedicatedv1beta1AuditLogConfig, data *dedicatedAuditLogConfigResourceData) diag.Diagnostics {
 	data.Enabled = types.BoolValue(*auditLogConfig.Enabled)
-	data.BucketUri = types.StringValue(auditLogConfig.BucketUri)
+	data.BucketUri = types.StringValue(*auditLogConfig.BucketUri)
 	data.BucketRegionId = types.StringValue(*auditLogConfig.BucketRegionId)
-	data.AWSRoleArn = types.StringValue(*auditLogConfig.AwsRoleArn)
-	data.AzureSasToken = types.StringValue(*auditLogConfig.AzureSasToken)
+	if auditLogConfig.AwsRoleArn == nil {
+		data.AWSRoleArn = types.StringValue(*auditLogConfig.AwsRoleArn)
+	}
+	if auditLogConfig.AzureSasToken == nil {
+		data.AzureSasToken = types.StringValue(*auditLogConfig.AzureSasToken)
+	}
+	data.BucketManager = types.StringValue(string(*auditLogConfig.BucketManager))
 	if auditLogConfig.BucketWriteCheck != nil {
-		data.BucketWriteCheck = &bucketWriteCheck{
+		b := &bucketWriteCheck{
 			Writable:    types.BoolValue(*auditLogConfig.BucketWriteCheck.Writable),
 			ErrorReason: types.StringValue(*auditLogConfig.BucketWriteCheck.ErrorReason),
 		}
+		bucketWriteCheck, diags := types.ObjectValueFrom(ctx, bucketWriteCheckAttrTypes, b)
+		if diags.HasError() {
+			return diags
+		}
+		data.BucketWriteCheck = bucketWriteCheck
+	} else {
+		data.BucketWriteCheck = types.ObjectNull(bucketWriteCheckAttrTypes)
 	}
+	return nil
 }

@@ -50,27 +50,28 @@ func (d *dedicatedAuditLogFilterRuleDataSource) Schema(_ context.Context, _ data
 		Attributes: map[string]schema.Attribute{
 			"audit_log_filter_rule_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the audit log filter rule",
-				Required: 		  true,
+				Required:            true,
 			},
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster",
-				Required: 		  true,
+				Required:            true,
 			},
 			"user_expr": schema.StringAttribute{
 				MarkdownDescription: "The user expression",
-				Computed: 		  true,
+				Computed:            true,
 			},
 			"db_expr": schema.StringAttribute{
 				MarkdownDescription: "The db expression",
-				Computed: 		  true,
+				Computed:            true,
 			},
 			"table_expr": schema.StringAttribute{
 				MarkdownDescription: "The table expression",
-				Computed: 		  true,
+				Computed:            true,
 			},
 			"access_type_list": schema.ListAttribute{
 				MarkdownDescription: "The access type list",
-				Computed: 		  true,
+				Computed:            true,
+				ElementType:         types.StringType,
 			},
 		},
 	}
@@ -94,10 +95,12 @@ func (d *dedicatedAuditLogFilterRuleDataSource) Read(ctx context.Context, req da
 	data.UserExpr = types.StringValue(*auditLogFilterRule.UserExpr)
 	data.DBExpr = types.StringValue(*auditLogFilterRule.DbExpr)
 	data.TableExpr = types.StringValue(*auditLogFilterRule.TableExpr)
-	diags = data.AccessTypeList.ElementsAs(ctx, &auditLogFilterRule.AccessTypeList, false)
+	accessTypeList, diags := types.ListValueFrom(ctx, types.StringType, auditLogFilterRule.AccessTypeList)
 	if resp.Diagnostics.HasError() {
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to convert AccessTypeList to list, got error: %s", diags))
 		return
 	}
+	data.AccessTypeList = accessTypeList
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 }

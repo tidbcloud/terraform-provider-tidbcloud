@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
@@ -45,10 +47,16 @@ func (r *DedicatedAuditLogFilterRuleResource) Schema(_ context.Context, _ resour
 			"audit_log_filter_rule_id": schema.StringAttribute{
 				Description: "The ID of the audit log filter rule",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"cluster_id": schema.StringAttribute{
 				Description: "The ID of the cluster",
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"user_expr": schema.StringAttribute{
 				Description: "The user expression",
@@ -170,7 +178,7 @@ func (r *DedicatedAuditLogFilterRuleResource) Delete(ctx context.Context, req re
 	}
 }
 
-func buildCreateDedicatedAuditLogFilterRuleBody(ctx context.Context, data DedicatedAuditLogFilterRuleResourceData) (dedicated.DatabaseAuditLogServiceCreateAuditLogFilterRuleRequest, error) {
+func buildCreateDedicatedAuditLogFilterRuleBody(ctx context.Context, data DedicatedAuditLogFilterRuleResourceData) (dedicated.Required2, error) {
 	userExpr := data.UserExpr.ValueString()
 	dbExpr := data.DBExpr.ValueString()
 	tableExpr := data.TableExpr.ValueString()
@@ -178,14 +186,13 @@ func buildCreateDedicatedAuditLogFilterRuleBody(ctx context.Context, data Dedica
 	var accessTypeList []string
 	diag := data.AccessTypeList.ElementsAs(ctx, &accessTypeList, false)
 	if diag.HasError() {
-		return dedicated.DatabaseAuditLogServiceCreateAuditLogFilterRuleRequest{}, errors.New("unable to get access type list")
+		return dedicated.Required2{}, errors.New("unable to get access type list")
 	}
 
-	return dedicated.DatabaseAuditLogServiceCreateAuditLogFilterRuleRequest{
+	return dedicated.Required2{
 		UserExpr:       &userExpr,
 		DbExpr:         &dbExpr,
 		TableExpr:      &tableExpr,
 		AccessTypeList: accessTypeList,
 	}, nil
 }
-

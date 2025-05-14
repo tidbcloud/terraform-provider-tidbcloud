@@ -191,6 +191,7 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 		NewDedicatedNodeGroupsDataSource,
 		NewDedicatedClusterDataSource,
 		NewDedicatedClustersDataSource,
+		NewDedicatedAuditLogConfigDataSource,
 		NewDedicatedAuditLogFilterRuleDataSource,
 		NewDedicatedAuditLogFilterRulesDataSource,
 

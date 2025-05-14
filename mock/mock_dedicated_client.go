@@ -49,6 +49,36 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) ChangeClusterRootPassword(ct
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeClusterRootPassword", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ChangeClusterRootPassword), ctx, clusterId, body)
 }
 
+// CreateAuditLogConfig mocks base method.
+func (m *MockTiDBCloudDedicatedClient) CreateAuditLogConfig(ctx context.Context, clusterId string, body *dedicated.Required1) (*dedicated.Dedicatedv1beta1AuditLogConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAuditLogConfig", ctx, clusterId, body)
+	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1AuditLogConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAuditLogConfig indicates an expected call of CreateAuditLogConfig.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreateAuditLogConfig(ctx, clusterId, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAuditLogConfig", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).CreateAuditLogConfig), ctx, clusterId, body)
+}
+
+// CreateAuditLogFilterRule mocks base method.
+func (m *MockTiDBCloudDedicatedClient) CreateAuditLogFilterRule(ctx context.Context, clusterId string, body *dedicated.Required2) (*dedicated.V1beta1AuditLogFilterRule, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAuditLogFilterRule", ctx, clusterId, body)
+	ret0, _ := ret[0].(*dedicated.V1beta1AuditLogFilterRule)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAuditLogFilterRule indicates an expected call of CreateAuditLogFilterRule.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreateAuditLogFilterRule(ctx, clusterId, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAuditLogFilterRule", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).CreateAuditLogFilterRule), ctx, clusterId, body)
+}
+
 // CreateCluster mocks base method.
 func (m *MockTiDBCloudDedicatedClient) CreateCluster(ctx context.Context, body *dedicated.TidbCloudOpenApidedicatedv1beta1Cluster) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	m.ctrl.T.Helper()
@@ -79,6 +109,20 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreateTiDBNodeGroup(ctx, clu
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTiDBNodeGroup", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).CreateTiDBNodeGroup), ctx, clusterId, body)
 }
 
+// DeleteAuditLogFilterRule mocks base method.
+func (m *MockTiDBCloudDedicatedClient) DeleteAuditLogFilterRule(ctx context.Context, clusterId, auditLogFilterRuleId string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAuditLogFilterRule", ctx, clusterId, auditLogFilterRuleId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAuditLogFilterRule indicates an expected call of DeleteAuditLogFilterRule.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) DeleteAuditLogFilterRule(ctx, clusterId, auditLogFilterRuleId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAuditLogFilterRule", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).DeleteAuditLogFilterRule), ctx, clusterId, auditLogFilterRuleId)
+}
+
 // DeleteCluster mocks base method.
 func (m *MockTiDBCloudDedicatedClient) DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	m.ctrl.T.Helper()
@@ -106,6 +150,36 @@ func (m *MockTiDBCloudDedicatedClient) DeleteTiDBNodeGroup(ctx context.Context, 
 func (mr *MockTiDBCloudDedicatedClientMockRecorder) DeleteTiDBNodeGroup(ctx, clusterId, nodeGroupId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTiDBNodeGroup", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).DeleteTiDBNodeGroup), ctx, clusterId, nodeGroupId)
+}
+
+// GetAuditLogConfig mocks base method.
+func (m *MockTiDBCloudDedicatedClient) GetAuditLogConfig(ctx context.Context, clusterId string) (*dedicated.Dedicatedv1beta1AuditLogConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAuditLogConfig", ctx, clusterId)
+	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1AuditLogConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAuditLogConfig indicates an expected call of GetAuditLogConfig.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetAuditLogConfig(ctx, clusterId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuditLogConfig", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetAuditLogConfig), ctx, clusterId)
+}
+
+// GetAuditLogFilterRule mocks base method.
+func (m *MockTiDBCloudDedicatedClient) GetAuditLogFilterRule(ctx context.Context, clusterId, auditLogFilterRuleId string) (*dedicated.V1beta1AuditLogFilterRule, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAuditLogFilterRule", ctx, clusterId, auditLogFilterRuleId)
+	ret0, _ := ret[0].(*dedicated.V1beta1AuditLogFilterRule)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAuditLogFilterRule indicates an expected call of GetAuditLogFilterRule.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetAuditLogFilterRule(ctx, clusterId, auditLogFilterRuleId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuditLogFilterRule", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetAuditLogFilterRule), ctx, clusterId, auditLogFilterRuleId)
 }
 
 // GetCluster mocks base method.
@@ -151,6 +225,21 @@ func (m *MockTiDBCloudDedicatedClient) GetTiDBNodeGroup(ctx context.Context, clu
 func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetTiDBNodeGroup(ctx, clusterId, nodeGroupId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTiDBNodeGroup", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetTiDBNodeGroup), ctx, clusterId, nodeGroupId)
+}
+
+// ListAuditLogFilterRules mocks base method.
+func (m *MockTiDBCloudDedicatedClient) ListAuditLogFilterRules(ctx context.Context, clusterId string, pageSize *int32, pageToken *string) (*dedicated.V1beta1ListAuditLogFilterRulesResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAuditLogFilterRules", ctx, clusterId, pageSize, pageToken)
+	ret0, _ := ret[0].(*dedicated.V1beta1ListAuditLogFilterRulesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAuditLogFilterRules indicates an expected call of ListAuditLogFilterRules.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListAuditLogFilterRules(ctx, clusterId, pageSize, pageToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAuditLogFilterRules", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListAuditLogFilterRules), ctx, clusterId, pageSize, pageToken)
 }
 
 // ListCloudProviders mocks base method.
@@ -241,6 +330,21 @@ func (m *MockTiDBCloudDedicatedClient) ResumeCluster(ctx context.Context, cluste
 func (mr *MockTiDBCloudDedicatedClientMockRecorder) ResumeCluster(ctx, clusterId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResumeCluster", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ResumeCluster), ctx, clusterId)
+}
+
+// UpdateAuditLogConfig mocks base method.
+func (m *MockTiDBCloudDedicatedClient) UpdateAuditLogConfig(ctx context.Context, clusterId string, body *dedicated.DatabaseAuditLogServiceUpdateAuditLogConfigRequest) (*dedicated.Dedicatedv1beta1AuditLogConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAuditLogConfig", ctx, clusterId, body)
+	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1AuditLogConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAuditLogConfig indicates an expected call of UpdateAuditLogConfig.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) UpdateAuditLogConfig(ctx, clusterId, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAuditLogConfig", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).UpdateAuditLogConfig), ctx, clusterId, body)
 }
 
 // UpdateCluster mocks base method.
