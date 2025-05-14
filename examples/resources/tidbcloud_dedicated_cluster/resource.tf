@@ -1,4 +1,4 @@
-variable "name" {
+variable "display_name" {
   type     = string
   nullable = false
 }
@@ -14,7 +14,7 @@ variable "root_password" {
 }
 
 resource "tidbcloud_dedicated_cluster" "example" {
-  name          = var.name
+  display_name  = var.display_name
   region_id     = var.region_id
   port          = 4000
   root_password = var.root_password
@@ -26,6 +26,6 @@ resource "tidbcloud_dedicated_cluster" "example" {
     node_spec_key   = "2C4G"
     node_count      = 3
     storage_size_gi = 10
-    storage_type    = "BASIC"
+    storage_type    = "Basic"
   }
 }

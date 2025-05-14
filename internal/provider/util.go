@@ -3,17 +3,19 @@ package provider
 import (
 	cryptorand "crypto/rand"
 	"math/big"
+	"os"
 )
 
 const (
-	TiDBCloudPublicKey         string = "TIDBCLOUD_PUBLIC_KEY"
-	TiDBCloudPrivateKey        string = "TIDBCLOUD_PRIVATE_KEY"
-	TiDBCloudHost              string = "TIDBCLOUD_HOST"
-	TiDBCloudDedicatedEndpoint string = "TIDBCLOUD_DEDICATED_ENDPOINT"
-	TiDBCloudIAMEndpoint       string = "TIDBCLOUD_IAM_ENDPOINT"
-	TiDBCloudProjectID         string = "TIDBCLOUD_PROJECT_ID"
-	TiDBCloudClusterID         string = "TIDBCLOUD_CLUSTER_ID"
-	UserAgent                  string = "terraform-provider-tidbcloud"
+	TiDBCloudPublicKey          string = "TIDBCLOUD_PUBLIC_KEY"
+	TiDBCloudPrivateKey         string = "TIDBCLOUD_PRIVATE_KEY"
+	TiDBCloudHost               string = "TIDBCLOUD_HOST"
+	TiDBCloudDedicatedEndpoint  string = "TIDBCLOUD_DEDICATED_ENDPOINT"
+	TiDBCloudServerlessEndpoint string = "TIDBCLOUD_SERVERLESS_ENDPOINT"
+	TiDBCloudIAMEndpoint        string = "TIDBCLOUD_IAM_ENDPOINT"
+	TiDBCloudProjectID          string = "TIDBCLOUD_PROJECT_ID"
+	TiDBCloudClusterID          string = "TIDBCLOUD_CLUSTER_ID"
+	UserAgent                   string = "terraform-provider-tidbcloud"
 )
 
 const ()
@@ -50,4 +52,17 @@ type Knowable interface {
 // IsKnown is a shortcut that checks in a value is neither null nor unknown.
 func IsKnown(t Knowable) bool {
 	return !t.IsUnknown() && !t.IsNull()
+}
+
+func IsNilOrEmpty(s *string) bool {
+	return s == nil || *s == ""
+}
+
+func setupTestEnv() {
+	if os.Getenv(TiDBCloudPublicKey) == "" {
+		os.Setenv(TiDBCloudPublicKey, "fake")
+	}
+	if os.Getenv(TiDBCloudPrivateKey) == "" {
+		os.Setenv(TiDBCloudPrivateKey, "fake")
+	}
 }

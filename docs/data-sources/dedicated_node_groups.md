@@ -45,8 +45,28 @@ output "output" {
 Read-Only:
 
 - `display_name` (String) The display name of the region.
+- `endpoints` (Attributes List) The endpoints of the node group. (see [below for nested schema](#nestedatt--node_groups--endpoints))
 - `is_default_group` (Boolean) Indicates if this is the default group.
 - `node_count` (Number) The number of nodes in the node group.
 - `node_group_id` (String) The ID of the node group.
 - `node_spec_display_name` (String) The display name of the node spec.
 - `state` (String) The state of the node group.
+- `tiproxy_setting` (Attributes) Settings for TiProxy nodes. (see [below for nested schema](#nestedatt--node_groups--tiproxy_setting))
+
+<a id="nestedatt--node_groups--endpoints"></a>
+### Nested Schema for `node_groups.endpoints`
+
+Read-Only:
+
+- `connection_type` (String) The connection type of the endpoint.
+- `host` (String) The host of the endpoint.
+- `port` (Number) The port of the endpoint.
+
+
+<a id="nestedatt--node_groups--tiproxy_setting"></a>
+### Nested Schema for `node_groups.tiproxy_setting`
+
+Read-Only:
+
+- `node_count` (Number) The number of TiProxy nodes.
+- `type` (String) The type of TiProxy nodes.- SMALL: Low performance instance with 2 vCPUs and 4 GiB memory. Max QPS: 30, Max Data Traffic: 90 MiB/s.- LARGE: High performance instance with 8 vCPUs and 16 GiB memory. Max QPS: 100, Max Data Traffic: 300 MiB/s.

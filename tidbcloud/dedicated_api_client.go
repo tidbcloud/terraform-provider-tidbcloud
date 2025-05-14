@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/icholy/digest"
+	"github.com/juju/errors"
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
@@ -21,16 +22,17 @@ type TiDBCloudDedicatedClient interface {
 	ListCloudProviders(ctx context.Context, projectId string) ([]dedicated.V1beta1RegionCloudProvider, error)
 	CreateCluster(ctx context.Context, body *dedicated.TidbCloudOpenApidedicatedv1beta1Cluster) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	GetCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	ListClusters(ctx context.Context, projectId string, pageSize *int32, pageToken *string) (*dedicated.TidbCloudOpenApidedicatedv1beta1ListClustersResponse, error)
 	DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	UpdateCluster(ctx context.Context, clusterId string, body *dedicated.ClusterServiceUpdateClusterRequest) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	PauseCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	ResumeCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	ChangeClusterRootPassword(ctx context.Context, clusterId string, body *dedicated.ClusterServiceResetRootPasswordBody) error
-	CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.Required) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	DeleteTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) error
 	UpdateTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	GetTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
-	ListTiDBNodeGroups(ctx context.Context, clusterId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	ListTiDBNodeGroups(ctx context.Context, clusterId string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListTidbNodeGroupsResponse, error)
 	CreateAuditLogConfig(ctx context.Context, clusterId string, body *dedicated.DatabaseAuditLogServiceCreateAuditLogConfigRequest) (*dedicated.Dedicatedv1beta1AuditLogConfig, error)
 	UpdateAuditLogConfig(ctx context.Context, clusterId string, body *dedicated.DatabaseAuditLogServiceUpdateAuditLogConfigRequest) (*dedicated.Dedicatedv1beta1AuditLogConfig, error)
 	GetAuditLogConfig(ctx context.Context, clusterId string) (*dedicated.Dedicatedv1beta1AuditLogConfig, error)
@@ -38,7 +40,7 @@ type TiDBCloudDedicatedClient interface {
 	DeleteAuditLogFilterRule(ctx context.Context, clusterId string, auditLogFilterRuleId string) error
 	GetAuditLogFilterRule(ctx context.Context, clusterId string, auditLogFilterRuleId string) (*dedicated.V1beta1AuditLogFilterRule, error)
 	ListAuditLogFilterRules(ctx context.Context, clusterId string) ([]dedicated.V1beta1AuditLogFilterRule, error)
-}
+	}
 
 func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userAgent string) (*dedicated.APIClient, error) {
 	httpClient := &http.Client{
@@ -49,7 +51,7 @@ func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userA
 	if dedicatedEndpoint == "" {
 		dedicatedEndpoint = DefaultDedicatedEndpoint
 	}
-	dedicatedURL, err := url.ParseRequestURI(dedicatedEndpoint)
+	dedicatedURL, err := validateApiUrl(dedicatedEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +67,7 @@ type DedicatedClientDelegate struct {
 	dc *dedicated.APIClient
 }
 
-func NewDedicatedClientDelegate(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (*DedicatedClientDelegate, error) {
+func NewDedicatedClientDelegate(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (TiDBCloudDedicatedClient, error) {
 	transport := NewTransportWithAgent(&digest.Transport{
 		Username: publicKey,
 		Password: privateKey,
@@ -122,6 +124,21 @@ func (d *DedicatedClientDelegate) GetCluster(ctx context.Context, clusterId stri
 	return resp, parseError(err, h)
 }
 
+func (d *DedicatedClientDelegate) ListClusters(ctx context.Context, projectId string, pageSize *int32, pageToken *string) (*dedicated.TidbCloudOpenApidedicatedv1beta1ListClustersResponse, error) {
+	r := d.dc.ClusterServiceAPI.ClusterServiceListClusters(ctx)
+	if projectId != "" {
+		r = r.ProjectId(projectId)
+	}
+	if pageSize != nil {
+		r = r.PageSize(*pageSize)
+	}
+	if pageToken != nil {
+		r = r.PageToken(*pageToken)
+	}
+	resp, h, err := r.Execute()
+	return resp, parseError(err, h)
+}
+
 func (d *DedicatedClientDelegate) DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	resp, h, err := d.dc.ClusterServiceAPI.ClusterServiceDeleteCluster(ctx, clusterId).Execute()
 	return resp, parseError(err, h)
@@ -155,7 +172,7 @@ func (d *DedicatedClientDelegate) ChangeClusterRootPassword(ctx context.Context,
 	return parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+func (d *DedicatedClientDelegate) CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.Required) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
 	r := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceCreateTidbNodeGroup(ctx, clusterId)
 	if body != nil {
 		r = r.TidbNodeGroup(*body)
@@ -183,9 +200,16 @@ func (d *DedicatedClientDelegate) GetTiDBNodeGroup(ctx context.Context, clusterI
 	return resp, parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) ListTiDBNodeGroups(ctx context.Context, clusterId string) ([]dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
-	resp, h, err := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceListTidbNodeGroups(ctx, clusterId).Execute()
-	return resp.TidbNodeGroups, parseError(err, h)
+func (d *DedicatedClientDelegate) ListTiDBNodeGroups(ctx context.Context, clusterId string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListTidbNodeGroupsResponse, error) {
+	r := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceListTidbNodeGroups(ctx, clusterId)
+	if pageSize != nil {
+		r = r.PageSize(*pageSize)
+	}
+	if pageToken != nil {
+		r = r.PageToken(*pageToken)
+	}
+	resp, h, err := r.Execute()
+	return resp, parseError(err, h)
 }
 
 func (d *DedicatedClientDelegate) CreateAuditLogConfig(ctx context.Context, clusterId string, body *dedicated.DatabaseAuditLogServiceCreateAuditLogConfigRequest) (*dedicated.Dedicatedv1beta1AuditLogConfig, error) {
@@ -260,4 +284,12 @@ func parseError(err error, resp *http.Response) error {
 		traceId = resp.Header.Get("X-Debug-Trace-Id")
 	}
 	return fmt.Errorf("%s[%s][%s] %s", path, err.Error(), traceId, body)
+}
+
+func validateApiUrl(value string) (*url.URL, error) {
+	u, err := url.ParseRequestURI(value)
+	if err != nil {
+		return nil, errors.Annotate(err, "api url should format as <schema>://<host>")
+	}
+	return u, nil
 }
