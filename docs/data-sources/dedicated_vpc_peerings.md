@@ -36,10 +36,6 @@ output "output" {
 <a id="nestedatt--vpc_peerings"></a>
 ### Nested Schema for `vpc_peerings`
 
-Required:
-
-- `vpc_peering_id` (String) The ID of the VPC Peering
-
 Read-Only:
 
 - `aws_vpc_peering_connection_id` (String) The ID of the AWS VPC Peering Connection
@@ -54,3 +50,4 @@ Read-Only:
 - `tidb_cloud_region_id` (String) The region ID of the TiDB Cloud
 - `tidb_cloud_vpc_cidr` (String) The VPC CIDR of the TiDB Cloud
 - `tidb_cloud_vpc_id` (String) The VPC ID of the TiDB Cloud
+- `vpc_peering_id` (String) The ID of the VPC Peering
