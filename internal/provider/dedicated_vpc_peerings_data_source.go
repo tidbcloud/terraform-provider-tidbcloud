@@ -78,7 +78,7 @@ func (d *dedicatedVpcPeeringsDataSource) Schema(_ context.Context, _ datasource.
 					Attributes: map[string]schema.Attribute{
 						"vpc_peering_id": schema.StringAttribute{
 							Description: "The ID of the VPC Peering",
-							Required:    true,
+							Computed:    true,
 						},
 						"tidb_cloud_region_id": schema.StringAttribute{
 							Description: "The region ID of the TiDB Cloud",
