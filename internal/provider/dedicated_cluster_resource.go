@@ -422,7 +422,6 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to build CreateCluster body, got error: %s", err))
 		return
 	}
-
 	cluster, err := r.provider.DedicatedClient.CreateCluster(ctx, &body)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call CreateCluster, got error: %s", err))
@@ -583,7 +582,6 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 
 	// Check if paused state is changing
 	isPauseStateChanging := plan.Paused.ValueBool() != state.Paused.ValueBool()
-
 	// Check if TiFlashNodeSetting is changing
 	isTiFlashNodeSettingChanging := false
 	if plan.TiFlashNodeSetting != nil && state.TiFlashNodeSetting != nil {
