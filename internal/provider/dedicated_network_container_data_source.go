@@ -12,6 +12,7 @@ import (
 
 type dedicatedNetworkContainerDataSourceData struct {
 	NetworkContainerId types.String `tfsdk:"network_container_id"`
+	ProjectId          types.String `tfsdk:"project_id"`
 	RegionId           types.String `tfsdk:"region_id"`
 	RegionDisplayName  types.String `tfsdk:"region_display_name"`
 	CloudProvider      types.String `tfsdk:"cloud_provider"`
@@ -53,6 +54,10 @@ func (d *dedicatedNetworkContainerDataSource) Schema(_ context.Context, _ dataso
 			"network_container_id": schema.StringAttribute{
 				Description: "The ID of the network container",
 				Required:    true,
+			},
+			"project_id": schema.StringAttribute{
+				Description: "The project ID for the network container",
+				Computed:    true,
 			},
 			"region_id": schema.StringAttribute{
 				Description: "The region ID for the network container",
@@ -113,6 +118,7 @@ func (d *dedicatedNetworkContainerDataSource) Read(ctx context.Context, req data
 	data.CidrNotion = types.StringValue(*networkContainer.CidrNotion)
 	data.VpcId = types.StringValue(*networkContainer.VpcId)
 	data.Labels = labels
+	data.ProjectId = types.StringValue((*networkContainer.Labels)[LabelsKeyProjectId])
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

@@ -33,7 +33,7 @@ type privateEndpointConnectionItem struct {
 	NodeGroupDisplayName        types.String `tfsdk:"node_group_display_name"`
 	AccountId                   types.String `tfsdk:"account_id"`
 	Host                        types.String `tfsdk:"host"`
-	Port                        types.Int64  `tfsdk:"port"`
+	Port                        types.Int32  `tfsdk:"port"`
 }
 
 var _ datasource.DataSource = &dedicatedPrivateEndpointConnectionsDataSource{}
@@ -80,7 +80,7 @@ func (d *dedicatedPrivateEndpointConnectionsDataSource) Schema(_ context.Context
 					Attributes: map[string]schema.Attribute{
 						"private_endpoint_connection_id": schema.StringAttribute{
 							MarkdownDescription: "The ID of the private endpoint connection.",
-							Required:            true,
+							Computed:            true,
 						},
 						"message": schema.StringAttribute{
 							MarkdownDescription: "The message of the private endpoint connection.",
@@ -135,7 +135,7 @@ func (d *dedicatedPrivateEndpointConnectionsDataSource) Schema(_ context.Context
 							MarkdownDescription: "The host of the private endpoint connection.",
 							Computed:            true,
 						},
-						"port": schema.Int64Attribute{
+						"port": schema.Int32Attribute{
 							MarkdownDescription: "The port of the private endpoint connection.",
 							Computed:            true,
 						},
@@ -181,7 +181,7 @@ func (d *dedicatedPrivateEndpointConnectionsDataSource) Read(ctx context.Context
 			EndpointState:               types.StringValue(string(*privateEndpointConnection.EndpointState)),
 			NodeGroupDisplayName:        types.StringValue(*privateEndpointConnection.TidbNodeGroupDisplayName),
 			Host:                        types.StringValue(*privateEndpointConnection.Host),
-			Port:                        types.Int64Value(int64(*privateEndpointConnection.Port)),
+			Port:                        types.Int32Value(*privateEndpointConnection.Port),
 		}
 		if privateEndpointConnection.PrivateIpAddress.IsSet() {
 			p.PrivateIpAddress = types.StringValue(*privateEndpointConnection.PrivateIpAddress.Get())

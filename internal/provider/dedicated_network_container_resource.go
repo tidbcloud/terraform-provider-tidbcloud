@@ -143,8 +143,6 @@ func (r *DedicatedNetworkContainerResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	networkContainerId := *networkContainer.NetworkContainerId
-	data.NetworkContainerId = types.StringValue(networkContainerId)
 	refreshDedicatedNetworkContainerResourceData(ctx, networkContainer, &data)
 
 	// save into the Terraform state.

@@ -11,7 +11,7 @@ import (
 )
 
 type dedicatedVpcPeeringDataSourceData struct {
-	VpcPeeringId types.String `tfsdk:"vpc_peering_id"`
+	VpcPeeringId              types.String `tfsdk:"vpc_peering_id"`
 	TiDBCloudRegionId         types.String `tfsdk:"tidb_cloud_region_id"`
 	TiDBCloudCloudProvider    types.String `tfsdk:"tidb_cloud_cloud_provider"`
 	TiDBCloudAccountId        types.String `tfsdk:"tidb_cloud_account_id"`

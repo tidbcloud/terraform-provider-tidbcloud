@@ -28,7 +28,7 @@ type dedicatedPrivateEndpointConnectionDataSourceData struct {
 	NodeGroupDisplayName        types.String `tfsdk:"node_group_display_name"`
 	AccountId                   types.String `tfsdk:"account_id"`
 	Host                        types.String `tfsdk:"host"`
-	Port                        types.Int64  `tfsdk:"port"`
+	Port                        types.Int32  `tfsdk:"port"`
 }
 
 var _ datasource.DataSource = &dedicatedPrivateEndpointConnectionDataSource{}
@@ -129,7 +129,7 @@ func (d *dedicatedPrivateEndpointConnectionDataSource) Schema(_ context.Context,
 				MarkdownDescription: "The host of the private endpoint connection.",
 				Computed:            true,
 			},
-			"port": schema.Int64Attribute{
+			"port": schema.Int32Attribute{
 				MarkdownDescription: "The port of the private endpoint connection.",
 				Computed:            true,
 			},
@@ -174,7 +174,7 @@ func (d *dedicatedPrivateEndpointConnectionDataSource) Read(ctx context.Context,
 	data.EndpointState = types.StringValue(string(*privateEndpointConnection.EndpointState))
 	data.NodeGroupDisplayName = types.StringValue(*privateEndpointConnection.TidbNodeGroupDisplayName)
 	data.Host = types.StringValue(*privateEndpointConnection.Host)
-	data.Port = types.Int64Value(int64(*privateEndpointConnection.Port))
+	data.Port = types.Int32Value(*privateEndpointConnection.Port)
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

@@ -48,10 +48,6 @@ output "output" {
 <a id="nestedatt--private_endpoint_connections"></a>
 ### Nested Schema for `private_endpoint_connections`
 
-Required:
-
-- `private_endpoint_connection_id` (String) The ID of the private endpoint connection.
-
 Read-Only:
 
 - `account_id` (String) The ID of the account.
@@ -63,6 +59,7 @@ Read-Only:
 - `message` (String) The message of the private endpoint connection.
 - `node_group_display_name` (String) The display name of the node group.
 - `port` (Number) The port of the private endpoint connection.
+- `private_endpoint_connection_id` (String) The ID of the private endpoint connection.
 - `private_ip_address` (String) The private IP address of the endpoint.
 - `private_link_service_name` (String) The name of the private link service.
 - `private_link_service_state` (String) The state of the private link service.

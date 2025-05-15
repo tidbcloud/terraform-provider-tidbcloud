@@ -49,18 +49,18 @@ For Azure, it's private endpoint resource ID.
 
 ### Optional
 
-- `private_ip_address` (String) The private IP address of the private endpoint in the user's vNet.
-TiDB Cloud will setup a public DNS record for this private IP address. So the user can use DNS address to connect to the cluster.
-Only available for Azure clusters.
+- `private_ip_address` (String) The private IP address of the private endpoint in the user's vNet.TiDB Cloud will setup a public DNS record for this private IP address. So the user can use DNS address to connect to the cluster.Only available for Azure clusters.
 
 ### Read-Only
 
 - `account_id` (String) Only for GCP private service connections. It's GCP project name.
 - `cloud_provider` (String) The cloud provider of the region.
 - `cluster_display_name` (String) The display name of the cluster.
-- `endpoint_status` (String) The status of the endpoint.
+- `endpoint_state` (String) The state of the endpoint.
+- `host` (String) The host of the private endpoint connection.
 - `labels` (Map of String) The labels of the endpoint.
 - `message` (String) The message of the endpoint.
+- `port` (Number) The port of the private endpoint connection.
 - `private_endpoint_connection_id` (String) The ID of the private endpoint connection.
 - `private_link_service_name` (String) The name of the private link service.
 - `region_display_name` (String) The display name of the region.

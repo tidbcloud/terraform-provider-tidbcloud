@@ -6,9 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -31,13 +33,15 @@ type dedicatedPrivateEndpointConnectionResourceData struct {
 	Labels                      types.Map    `tfsdk:"labels"`
 	EndpointId                  types.String `tfsdk:"endpoint_id"`
 	PrivateIpAddress            types.String `tfsdk:"private_ip_address"`
-	EndpointStatus              types.String `tfsdk:"endpoint_status"`
+	EndpointState               types.String `tfsdk:"endpoint_state"`
 	Message                     types.String `tfsdk:"message"`
 	RegionId                    types.String `tfsdk:"region_id"`
 	RegionDisplayName           types.String `tfsdk:"region_display_name"`
 	CloudProvider               types.String `tfsdk:"cloud_provider"`
 	PrivateLinkServiceName      types.String `tfsdk:"private_link_service_name"`
 	AccountId                   types.String `tfsdk:"account_id"`
+	Host                        types.String `tfsdk:"host"`
+	Port                        types.Int32  `tfsdk:"port"`
 }
 
 type dedicatedPrivateEndpointConnectionResource struct {
@@ -79,9 +83,6 @@ func (r *dedicatedPrivateEndpointConnectionResource) Schema(_ context.Context, _
 			"cluster_display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the cluster.",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"node_group_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the node group.",
@@ -108,13 +109,13 @@ func (r *dedicatedPrivateEndpointConnectionResource) Schema(_ context.Context, _
 				},
 			},
 			"private_ip_address": schema.StringAttribute{
-				MarkdownDescription: "The private IP address of the private endpoint in the user's vNet.\n" +
-					"TiDB Cloud will setup a public DNS record for this private IP address. So the user can use DNS address to connect to the cluster.\n" +
+				MarkdownDescription: "The private IP address of the private endpoint in the user's vNet." +
+					"TiDB Cloud will setup a public DNS record for this private IP address. So the user can use DNS address to connect to the cluster." +
 					"Only available for Azure clusters.",
 				Optional: true,
 			},
-			"endpoint_status": schema.StringAttribute{
-				MarkdownDescription: "The status of the endpoint.",
+			"endpoint_state": schema.StringAttribute{
+				MarkdownDescription: "The state of the endpoint.",
 				Computed:            true,
 			},
 			"message": schema.StringAttribute{
@@ -154,6 +155,20 @@ func (r *dedicatedPrivateEndpointConnectionResource) Schema(_ context.Context, _
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"host": schema.StringAttribute{
+				MarkdownDescription: "The host of the private endpoint connection.",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"port": schema.Int32Attribute{
+				MarkdownDescription: "The port of the private endpoint connection.",
+				Computed:            true,
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
 			},
 			"labels": schema.MapAttribute{
@@ -200,7 +215,8 @@ func (r dedicatedPrivateEndpointConnectionResource) Create(ctx context.Context, 
 		)
 		return
 	}
-	refreshDedicatedPrivateEndpointConnectionResourceData(privateEndpointConnection, &data)
+
+	refreshDedicatedPrivateEndpointConnectionResourceData(ctx, privateEndpointConnection, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -224,7 +240,7 @@ func (r dedicatedPrivateEndpointConnectionResource) Read(ctx context.Context, re
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetPrivateEndpointConnection, error: %s", err))
 		return
 	}
-	refreshDedicatedPrivateEndpointConnectionResourceData(privateEndpointConnection, &data)
+	refreshDedicatedPrivateEndpointConnectionResourceData(ctx, privateEndpointConnection, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -283,7 +299,7 @@ func buildCreateDedicatedPrivateEndpointConnectionBody(data dedicatedPrivateEndp
 	}
 }
 
-func refreshDedicatedPrivateEndpointConnectionResourceData(resp *dedicated.V1beta1PrivateEndpointConnection, data *dedicatedPrivateEndpointConnectionResourceData) {
+func refreshDedicatedPrivateEndpointConnectionResourceData(ctx context.Context, resp *dedicated.V1beta1PrivateEndpointConnection, data *dedicatedPrivateEndpointConnectionResourceData) diag.Diagnostics {
 	data.EndpointId = types.StringValue(resp.EndpointId)
 	if resp.PrivateIpAddress.IsSet() {
 		data.PrivateIpAddress = types.StringValue(*resp.PrivateIpAddress.Get())
@@ -291,13 +307,22 @@ func refreshDedicatedPrivateEndpointConnectionResourceData(resp *dedicated.V1bet
 	if resp.AccountId.IsSet() {
 		data.AccountId = types.StringValue(*resp.AccountId.Get())
 	}
-	data.EndpointStatus = types.StringValue(string(*resp.EndpointState))
+	labels, diags := types.MapValueFrom(ctx, types.StringType, *resp.Labels)
+	if diags.HasError() {
+		return diags
+	}
+	data.Labels = labels
+	data.ClusterDisplayName = types.StringValue(*resp.ClusterDisplayName)
+	data.EndpointState = types.StringValue(string(*resp.EndpointState))
 	data.Message = types.StringValue(*resp.Message)
 	data.RegionId = types.StringValue(*resp.RegionId)
 	data.RegionDisplayName = types.StringValue(*resp.RegionDisplayName)
 	data.CloudProvider = types.StringValue(string(*resp.CloudProvider))
 	data.PrivateLinkServiceName = types.StringValue(*resp.PrivateLinkServiceName)
+	data.Host = types.StringValue(*resp.Host)
+	data.Port = types.Int32Value(*resp.Port)
 
+	return nil
 }
 
 func WaitDedicatedPrivateEndpointConnectionReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string, nodeGroupId string, privateEndpointConnectionId string,

@@ -39,6 +39,7 @@ output "output" {
 - `cidr_notion` (String) CIDR notation for the network container
 - `cloud_provider` (String) The cloud provider for the network container
 - `labels` (Map of String) The labels for the network container
+- `project_id` (String) The project ID for the network container
 - `region_display_name` (String) The region display name for the network container
 - `region_id` (String) The region ID for the network container
 - `state` (String) The state of the network container
