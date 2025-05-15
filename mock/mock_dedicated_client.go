@@ -64,6 +64,36 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreateCluster(ctx, body inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCluster", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).CreateCluster), ctx, body)
 }
 
+// CreateNetworkContainer mocks base method.
+func (m *MockTiDBCloudDedicatedClient) CreateNetworkContainer(ctx context.Context, body *dedicated.V1beta1NetworkContainer) (*dedicated.V1beta1NetworkContainer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateNetworkContainer", ctx, body)
+	ret0, _ := ret[0].(*dedicated.V1beta1NetworkContainer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateNetworkContainer indicates an expected call of CreateNetworkContainer.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreateNetworkContainer(ctx, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNetworkContainer", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).CreateNetworkContainer), ctx, body)
+}
+
+// CreatePrivateEndpointConnection mocks base method.
+func (m *MockTiDBCloudDedicatedClient) CreatePrivateEndpointConnection(ctx context.Context, clusterId, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.V1beta1PrivateEndpointConnection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreatePrivateEndpointConnection", ctx, clusterId, nodeGroupId, body)
+	ret0, _ := ret[0].(*dedicated.V1beta1PrivateEndpointConnection)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreatePrivateEndpointConnection indicates an expected call of CreatePrivateEndpointConnection.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreatePrivateEndpointConnection(ctx, clusterId, nodeGroupId, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePrivateEndpointConnection", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).CreatePrivateEndpointConnection), ctx, clusterId, nodeGroupId, body)
+}
+
 // CreateTiDBNodeGroup mocks base method.
 func (m *MockTiDBCloudDedicatedClient) CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.Required) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
 	m.ctrl.T.Helper()
@@ -77,6 +107,21 @@ func (m *MockTiDBCloudDedicatedClient) CreateTiDBNodeGroup(ctx context.Context, 
 func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreateTiDBNodeGroup(ctx, clusterId, body interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTiDBNodeGroup", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).CreateTiDBNodeGroup), ctx, clusterId, body)
+}
+
+// CreateVPCPeering mocks base method.
+func (m *MockTiDBCloudDedicatedClient) CreateVPCPeering(ctx context.Context, body *dedicated.Dedicatedv1beta1VpcPeering) (*dedicated.Dedicatedv1beta1VpcPeering, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateVPCPeering", ctx, body)
+	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1VpcPeering)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateVPCPeering indicates an expected call of CreateVPCPeering.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreateVPCPeering(ctx, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPCPeering", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).CreateVPCPeering), ctx, body)
 }
 
 // DeleteCluster mocks base method.
@@ -94,6 +139,34 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) DeleteCluster(ctx, clusterId
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCluster", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).DeleteCluster), ctx, clusterId)
 }
 
+// DeleteNetworkContainer mocks base method.
+func (m *MockTiDBCloudDedicatedClient) DeleteNetworkContainer(ctx context.Context, networkContainerId string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteNetworkContainer", ctx, networkContainerId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteNetworkContainer indicates an expected call of DeleteNetworkContainer.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) DeleteNetworkContainer(ctx, networkContainerId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNetworkContainer", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).DeleteNetworkContainer), ctx, networkContainerId)
+}
+
+// DeletePrivateEndpointConnection mocks base method.
+func (m *MockTiDBCloudDedicatedClient) DeletePrivateEndpointConnection(ctx context.Context, clusterId, nodeGroupId, privateEndpointConnectionId string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePrivateEndpointConnection", ctx, clusterId, nodeGroupId, privateEndpointConnectionId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePrivateEndpointConnection indicates an expected call of DeletePrivateEndpointConnection.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) DeletePrivateEndpointConnection(ctx, clusterId, nodeGroupId, privateEndpointConnectionId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePrivateEndpointConnection", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).DeletePrivateEndpointConnection), ctx, clusterId, nodeGroupId, privateEndpointConnectionId)
+}
+
 // DeleteTiDBNodeGroup mocks base method.
 func (m *MockTiDBCloudDedicatedClient) DeleteTiDBNodeGroup(ctx context.Context, clusterId, nodeGroupId string) error {
 	m.ctrl.T.Helper()
@@ -106,6 +179,20 @@ func (m *MockTiDBCloudDedicatedClient) DeleteTiDBNodeGroup(ctx context.Context, 
 func (mr *MockTiDBCloudDedicatedClientMockRecorder) DeleteTiDBNodeGroup(ctx, clusterId, nodeGroupId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTiDBNodeGroup", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).DeleteTiDBNodeGroup), ctx, clusterId, nodeGroupId)
+}
+
+// DeleteVPCPeering mocks base method.
+func (m *MockTiDBCloudDedicatedClient) DeleteVPCPeering(ctx context.Context, vpcPeeringId string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteVPCPeering", ctx, vpcPeeringId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteVPCPeering indicates an expected call of DeleteVPCPeering.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) DeleteVPCPeering(ctx, vpcPeeringId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPCPeering", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).DeleteVPCPeering), ctx, vpcPeeringId)
 }
 
 // GetCluster mocks base method.
@@ -121,6 +208,36 @@ func (m *MockTiDBCloudDedicatedClient) GetCluster(ctx context.Context, clusterId
 func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetCluster(ctx, clusterId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCluster", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetCluster), ctx, clusterId)
+}
+
+// GetNetworkContainer mocks base method.
+func (m *MockTiDBCloudDedicatedClient) GetNetworkContainer(ctx context.Context, networkContainerId string) (*dedicated.V1beta1NetworkContainer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNetworkContainer", ctx, networkContainerId)
+	ret0, _ := ret[0].(*dedicated.V1beta1NetworkContainer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNetworkContainer indicates an expected call of GetNetworkContainer.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetNetworkContainer(ctx, networkContainerId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNetworkContainer", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetNetworkContainer), ctx, networkContainerId)
+}
+
+// GetPrivateEndpointConnection mocks base method.
+func (m *MockTiDBCloudDedicatedClient) GetPrivateEndpointConnection(ctx context.Context, clusterId, nodeGroupId, privateEndpointConnectionId string) (*dedicated.V1beta1PrivateEndpointConnection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPrivateEndpointConnection", ctx, clusterId, nodeGroupId, privateEndpointConnectionId)
+	ret0, _ := ret[0].(*dedicated.V1beta1PrivateEndpointConnection)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPrivateEndpointConnection indicates an expected call of GetPrivateEndpointConnection.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetPrivateEndpointConnection(ctx, clusterId, nodeGroupId, privateEndpointConnectionId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateEndpointConnection", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetPrivateEndpointConnection), ctx, clusterId, nodeGroupId, privateEndpointConnectionId)
 }
 
 // GetRegion mocks base method.
@@ -153,6 +270,21 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetTiDBNodeGroup(ctx, cluste
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTiDBNodeGroup", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetTiDBNodeGroup), ctx, clusterId, nodeGroupId)
 }
 
+// GetVPCPeering mocks base method.
+func (m *MockTiDBCloudDedicatedClient) GetVPCPeering(ctx context.Context, vpcPeeringId string) (*dedicated.Dedicatedv1beta1VpcPeering, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVPCPeering", ctx, vpcPeeringId)
+	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1VpcPeering)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVPCPeering indicates an expected call of GetVPCPeering.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetVPCPeering(ctx, vpcPeeringId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVPCPeering", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetVPCPeering), ctx, vpcPeeringId)
+}
+
 // ListCloudProviders mocks base method.
 func (m *MockTiDBCloudDedicatedClient) ListCloudProviders(ctx context.Context, projectId string) ([]dedicated.V1beta1RegionCloudProvider, error) {
 	m.ctrl.T.Helper()
@@ -183,6 +315,36 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListClusters(ctx, projectId,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListClusters", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListClusters), ctx, projectId, pageSize, pageToken)
 }
 
+// ListNetworkContainers mocks base method.
+func (m *MockTiDBCloudDedicatedClient) ListNetworkContainers(ctx context.Context, projectId string, pageSize *int32, pageToken *string) (*dedicated.V1beta1ListNetworkContainersResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNetworkContainers", ctx, projectId, pageSize, pageToken)
+	ret0, _ := ret[0].(*dedicated.V1beta1ListNetworkContainersResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListNetworkContainers indicates an expected call of ListNetworkContainers.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListNetworkContainers(ctx, projectId, pageSize, pageToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNetworkContainers", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListNetworkContainers), ctx, projectId, pageSize, pageToken)
+}
+
+// ListPrivateEndpointConnections mocks base method.
+func (m *MockTiDBCloudDedicatedClient) ListPrivateEndpointConnections(ctx context.Context, clusterId, nodeGroupId string, pageSize *int32, pageToken *string) (*dedicated.V1beta1ListPrivateEndpointConnectionsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPrivateEndpointConnections", ctx, clusterId, nodeGroupId, pageSize, pageToken)
+	ret0, _ := ret[0].(*dedicated.V1beta1ListPrivateEndpointConnectionsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPrivateEndpointConnections indicates an expected call of ListPrivateEndpointConnections.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListPrivateEndpointConnections(ctx, clusterId, nodeGroupId, pageSize, pageToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPrivateEndpointConnections", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListPrivateEndpointConnections), ctx, clusterId, nodeGroupId, pageSize, pageToken)
+}
+
 // ListRegions mocks base method.
 func (m *MockTiDBCloudDedicatedClient) ListRegions(ctx context.Context, cloudProvider, projectId string) ([]dedicated.Commonv1beta1Region, error) {
 	m.ctrl.T.Helper()
@@ -211,6 +373,21 @@ func (m *MockTiDBCloudDedicatedClient) ListTiDBNodeGroups(ctx context.Context, c
 func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListTiDBNodeGroups(ctx, clusterId, pageSize, pageToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTiDBNodeGroups", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListTiDBNodeGroups), ctx, clusterId, pageSize, pageToken)
+}
+
+// ListVPCPeerings mocks base method.
+func (m *MockTiDBCloudDedicatedClient) ListVPCPeerings(ctx context.Context, projectId, cloudProvider string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListVPCPeerings", ctx, projectId, cloudProvider, pageSize, pageToken)
+	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListVPCPeerings indicates an expected call of ListVPCPeerings.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListVPCPeerings(ctx, projectId, cloudProvider, pageSize, pageToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCPeerings", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListVPCPeerings), ctx, projectId, cloudProvider, pageSize, pageToken)
 }
 
 // PauseCluster mocks base method.
