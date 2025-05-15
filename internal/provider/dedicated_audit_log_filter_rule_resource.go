@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -176,6 +177,21 @@ func (r *DedicatedAuditLogFilterRuleResource) Delete(ctx context.Context, req re
 		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteAuditLogFilterRule, got error: %s", err))
 		return
 	}
+}
+
+func (r *DedicatedAuditLogFilterRuleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, ",")
+
+	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+		resp.Diagnostics.AddError(
+			"Unexpected Import Identifier",
+			fmt.Sprintf("Expected import identifier with format: cluster_id, audit_log_filter_rule_id. Got: %q", req.ID),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cluster_id"), idParts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("audit_log_filter_rule_id"), idParts[1])...)
 }
 
 func buildCreateDedicatedAuditLogFilterRuleBody(ctx context.Context, data DedicatedAuditLogFilterRuleResourceData) (dedicated.Required2, error) {

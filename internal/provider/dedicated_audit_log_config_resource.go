@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -245,6 +246,10 @@ func (r *DedicatedAuditLogConfigResource) Update(ctx context.Context, req resour
 func (r *DedicatedAuditLogConfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	resp.Diagnostics.AddError("Delete Error", "Delete is not supported for dedicated audit log config, you can only disable it")
 	return
+}
+
+func (r *DedicatedAuditLogConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("cluster_id"), req, resp)
 }
 
 func buildCreateDedicatedAuditLogConfigBody(data dedicatedAuditLogConfigResourceData) (dedicated.Required1, error) {
