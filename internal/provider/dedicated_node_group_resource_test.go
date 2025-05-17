@@ -58,15 +58,19 @@ func TestUTDedicatedNodeGroupResource(t *testing.T) {
 	getNodeGroupAfterUpdateResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApidedicatedv1beta1NodeGroup(clusterId, "test_group2", string(dedicated.COMMONV1BETA1CLUSTERSTATE_ACTIVE), 2)))
 	updateNodeGroupSuccessResp := dedicated.Dedicatedv1beta1TidbNodeGroup{}
 	updateNodeGroupSuccessResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApidedicatedv1beta1NodeGroup(clusterId, "test_group2", string(dedicated.COMMONV1BETA1CLUSTERSTATE_MODIFYING), 2)))
+	publicEndpointResp := dedicated.V1beta1PublicEndpointSetting{}
+	publicEndpointResp.UnmarshalJSON([]byte(testUTV1beta1PublicEndpointSetting()))
 
 	s.EXPECT().CreateTiDBNodeGroup(gomock.Any(), clusterId, gomock.Any()).Return(&createNodeGroupResp, nil)
-
 	gomock.InOrder(
 		s.EXPECT().GetTiDBNodeGroup(gomock.Any(), clusterId, nodeGroupId).Return(&getNodeGroupResp, nil).Times(3),
 		s.EXPECT().GetTiDBNodeGroup(gomock.Any(), clusterId, nodeGroupId).Return(&getNodeGroupAfterUpdateResp, nil).Times(2),
 	)
 	s.EXPECT().UpdateTiDBNodeGroup(gomock.Any(), clusterId, nodeGroupId, gomock.Any()).Return(&updateNodeGroupSuccessResp, nil)
 	s.EXPECT().DeleteTiDBNodeGroup(gomock.Any(), clusterId, gomock.Any()).Return(nil)
+
+	s.EXPECT().GetPublicEndpoint(gomock.Any(), gomock.Any(), gomock.Any()).Return(&publicEndpointResp, nil).AnyTimes()
+	s.EXPECT().UpdatePublicEndpoint(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&publicEndpointResp, nil).AnyTimes()
 
 	testDedicatedNodeGroupResource(t)
 }
@@ -196,4 +200,17 @@ func testUTTidbCloudOpenApidedicatedv1beta1NodeGroup(clusterId, displayName, sta
         "remainingDeletionNodeCount": 0
     }
 }`, clusterId, clusterId, displayName, nodeCount, state)
+}
+
+func testUTV1beta1PublicEndpointSetting() string {
+	return `
+{
+  "enabled": true,
+  "ipAccessList": [
+    {
+      "cidrNotation": "0.0.0.0/32",
+      "description": "test"
+    }
+  ]
+}`
 }

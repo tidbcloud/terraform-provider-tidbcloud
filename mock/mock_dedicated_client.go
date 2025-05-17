@@ -240,6 +240,21 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetPrivateEndpointConnection
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateEndpointConnection", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetPrivateEndpointConnection), ctx, clusterId, nodeGroupId, privateEndpointConnectionId)
 }
 
+// GetPublicEndpoint mocks base method.
+func (m *MockTiDBCloudDedicatedClient) GetPublicEndpoint(ctx context.Context, clusterId, nodeGroupId string) (*dedicated.V1beta1PublicEndpointSetting, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPublicEndpoint", ctx, clusterId, nodeGroupId)
+	ret0, _ := ret[0].(*dedicated.V1beta1PublicEndpointSetting)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPublicEndpoint indicates an expected call of GetPublicEndpoint.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetPublicEndpoint(ctx, clusterId, nodeGroupId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPublicEndpoint", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetPublicEndpoint), ctx, clusterId, nodeGroupId)
+}
+
 // GetRegion mocks base method.
 func (m *MockTiDBCloudDedicatedClient) GetRegion(ctx context.Context, regionId string) (*dedicated.Commonv1beta1Region, error) {
 	m.ctrl.T.Helper()
@@ -433,6 +448,21 @@ func (m *MockTiDBCloudDedicatedClient) UpdateCluster(ctx context.Context, cluste
 func (mr *MockTiDBCloudDedicatedClientMockRecorder) UpdateCluster(ctx, clusterId, body interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCluster", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).UpdateCluster), ctx, clusterId, body)
+}
+
+// UpdatePublicEndpoint mocks base method.
+func (m *MockTiDBCloudDedicatedClient) UpdatePublicEndpoint(ctx context.Context, clusterId, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdatePublicEndpointSettingRequest) (*dedicated.V1beta1PublicEndpointSetting, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePublicEndpoint", ctx, clusterId, nodeGroupId, body)
+	ret0, _ := ret[0].(*dedicated.V1beta1PublicEndpointSetting)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdatePublicEndpoint indicates an expected call of UpdatePublicEndpoint.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) UpdatePublicEndpoint(ctx, clusterId, nodeGroupId, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePublicEndpoint", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).UpdatePublicEndpoint), ctx, clusterId, nodeGroupId, body)
 }
 
 // UpdateTiDBNodeGroup mocks base method.
