@@ -11,16 +11,17 @@ import (
 )
 
 type dedicatedNodeGroupDataSourceData struct {
-	ClusterId           types.String    `tfsdk:"cluster_id"`
-	NodeSpecKey         types.String    `tfsdk:"node_spec_key"`
-	NodeCount           types.Int64     `tfsdk:"node_count"`
-	NodeGroupId         types.String    `tfsdk:"node_group_id"`
-	DisplayName         types.String    `tfsdk:"display_name"`
-	NodeSpecDisplayName types.String    `tfsdk:"node_spec_display_name"`
-	IsDefaultGroup      types.Bool      `tfsdk:"is_default_group"`
-	State               types.String    `tfsdk:"state"`
-	Endpoints           []endpoint      `tfsdk:"endpoints"`
-	TiProxySetting      *tiProxySetting `tfsdk:"tiproxy_setting"`
+	ClusterId             types.String           `tfsdk:"cluster_id"`
+	NodeSpecKey           types.String           `tfsdk:"node_spec_key"`
+	NodeCount             types.Int64            `tfsdk:"node_count"`
+	NodeGroupId           types.String           `tfsdk:"node_group_id"`
+	DisplayName           types.String           `tfsdk:"display_name"`
+	NodeSpecDisplayName   types.String           `tfsdk:"node_spec_display_name"`
+	IsDefaultGroup        types.Bool             `tfsdk:"is_default_group"`
+	State                 types.String           `tfsdk:"state"`
+	Endpoints             []endpoint             `tfsdk:"endpoints"`
+	TiProxySetting        *tiProxySetting        `tfsdk:"tiproxy_setting"`
+	PublicEndpointSetting *publicEndpointSetting `tfsdk:"public_endpoint_setting"`
 }
 
 var _ datasource.DataSource = &dedicatedNodeGroupDataSource{}
@@ -120,6 +121,21 @@ func (d *dedicatedNodeGroupDataSource) Schema(_ context.Context, _ datasource.Sc
 					},
 				},
 			},
+			"public_endpoint_setting": schema.SingleNestedAttribute{
+				MarkdownDescription: "Settings for public endpoints.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"enabled": schema.BoolAttribute{
+						MarkdownDescription: "Whether public endpoints are enabled.",
+						Computed:            true,
+					},
+					"ip_access_list": schema.ListAttribute{
+						MarkdownDescription: "IP access list for the public endpoint.",
+						Computed:            true,
+						ElementType:         types.ObjectType{AttrTypes: ipAccessListItemAttrTypes},
+					},
+				},
+			},
 		},
 	}
 }
@@ -136,6 +152,11 @@ func (d *dedicatedNodeGroupDataSource) Read(ctx context.Context, req datasource.
 	nodeGroup, err := d.provider.DedicatedClient.GetTiDBNodeGroup(ctx, data.ClusterId.ValueString(), data.NodeGroupId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetRTiDBNodeGroup, got error: %s", err))
+		return
+	}
+	publicEndpointSetting, err := d.provider.DedicatedClient.GetPublicEndpoint(ctx, data.ClusterId.ValueString(), data.NodeGroupId.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetPublicEndpoint, got error: %s", err))
 		return
 	}
 
@@ -161,6 +182,7 @@ func (d *dedicatedNodeGroupDataSource) Read(ctx context.Context, req datasource.
 		}
 		data.TiProxySetting = &tiProxy
 	}
+	data.PublicEndpointSetting = convertDedicatedPublicEndpointSetting(publicEndpointSetting)
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

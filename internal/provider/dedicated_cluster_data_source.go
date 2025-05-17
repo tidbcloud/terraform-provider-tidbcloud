@@ -200,6 +200,21 @@ func (d *dedicatedClusterDataSource) Schema(_ context.Context, _ datasource.Sche
 							},
 						},
 					},
+					"public_endpoint_setting": schema.SingleNestedAttribute{
+						MarkdownDescription: "Settings for public endpoints.",
+						Computed:            true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								MarkdownDescription: "Whether public endpoints are enabled.",
+								Computed:            true,
+							},
+							"ip_access_list": schema.ListAttribute{
+								MarkdownDescription: "IP access list for the public endpoint.",
+								Computed:            true,
+								ElementType:         types.ObjectType{AttrTypes: ipAccessListItemAttrTypes},
+							},
+						},
+					},
 				},
 			},
 			"tikv_node_setting": schema.SingleNestedAttribute{
@@ -281,6 +296,8 @@ func (d *dedicatedClusterDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
+	
+
 	labels, diag := types.MapValueFrom(ctx, types.StringType, *cluster.Labels)
 	if diag.HasError() {
 		return
@@ -323,6 +340,11 @@ func (d *dedicatedClusterDataSource) Read(ctx context.Context, req datasource.Re
 					NodeCount: types.Int32Value(*group.TiproxySetting.NodeCount.Get()),
 				}
 			}
+			publicEndpointSetting, err := d.provider.DedicatedClient.GetPublicEndpoint(ctx, data.ClusterId.ValueString(), *group.TidbNodeGroupId)
+			if err != nil {
+				resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetPublicEndpoint, got error: %s", err))
+				return
+			}
 			data.TiDBNodeSetting = &tidbNodeSetting{
 				NodeSpecKey:          types.StringValue(*group.NodeSpecKey),
 				NodeCount:            types.Int32Value(group.NodeCount),
@@ -333,6 +355,7 @@ func (d *dedicatedClusterDataSource) Read(ctx context.Context, req datasource.Re
 				State:                types.StringValue(string(*group.State)),
 				Endpoints:            endpoints,
 				TiProxySetting:       &defaultTiProxySetting,
+				PublicEndpointSetting: convertDedicatedPublicEndpointSetting(publicEndpointSetting),
 			}
 		}
 	}

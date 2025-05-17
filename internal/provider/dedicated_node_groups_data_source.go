@@ -19,14 +19,15 @@ type dedicatedNodeGroupsDataSourceData struct {
 }
 
 type nodeGroupItems struct {
-	NodeCount           types.Int32     `tfsdk:"node_count"`
-	NodeGroupId         types.String    `tfsdk:"node_group_id"`
-	DisplayName         types.String    `tfsdk:"display_name"`
-	NodeSpecDisplayName types.String    `tfsdk:"node_spec_display_name"`
-	IsDefaultGroup      types.Bool      `tfsdk:"is_default_group"`
-	State               types.String    `tfsdk:"state"`
-	Endpoints           []endpoint      `tfsdk:"endpoints"`
-	TiProxySetting      *tiProxySetting `tfsdk:"tiproxy_setting"`
+	NodeCount             types.Int32            `tfsdk:"node_count"`
+	NodeGroupId           types.String           `tfsdk:"node_group_id"`
+	DisplayName           types.String           `tfsdk:"display_name"`
+	NodeSpecDisplayName   types.String           `tfsdk:"node_spec_display_name"`
+	IsDefaultGroup        types.Bool             `tfsdk:"is_default_group"`
+	State                 types.String           `tfsdk:"state"`
+	Endpoints             []endpoint             `tfsdk:"endpoints"`
+	TiProxySetting        *tiProxySetting        `tfsdk:"tiproxy_setting"`
+	PublicEndpointSetting *publicEndpointSetting `tfsdk:"public_endpoint_setting"`
 }
 
 var _ datasource.DataSource = &dedicatedNodeGroupsDataSource{}
@@ -131,6 +132,21 @@ func (d *dedicatedNodeGroupsDataSource) Schema(_ context.Context, _ datasource.S
 								},
 							},
 						},
+						"public_endpoint_setting": schema.SingleNestedAttribute{
+							MarkdownDescription: "Settings for public endpoints.",
+							Computed:            true,
+							Attributes: map[string]schema.Attribute{
+								"enabled": schema.BoolAttribute{
+									MarkdownDescription: "Whether public endpoints are enabled.",
+									Computed:            true,
+								},
+								"ip_access_list": schema.ListAttribute{
+									MarkdownDescription: "IP access list for the public endpoint.",
+									Computed:            true,
+									ElementType:         types.ObjectType{AttrTypes: ipAccessListItemAttrTypes},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -173,15 +189,22 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 				NodeCount: types.Int32Value(*nodeGroup.TiproxySetting.NodeCount.Get()),
 			}
 		}
+		publicEndpointSetting, err := d.provider.DedicatedClient.GetPublicEndpoint(ctx, data.ClusterId.ValueString(), *nodeGroup.TidbNodeGroupId)
+		if err != nil {
+			resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetPublicEndpoint, got error: %s", err))
+			return
+		}
+
 		items = append(items, nodeGroupItems{
-			NodeCount:           types.Int32Value(nodeGroup.NodeCount),
-			NodeGroupId:         types.StringValue(*nodeGroup.TidbNodeGroupId),
-			DisplayName:         types.StringValue(*nodeGroup.DisplayName),
-			NodeSpecDisplayName: types.StringValue(*nodeGroup.NodeSpecDisplayName),
-			IsDefaultGroup:      types.BoolValue(*nodeGroup.IsDefaultGroup),
-			State:               types.StringValue(string(*nodeGroup.State)),
-			Endpoints:           endpoints,
-			TiProxySetting:      &tiProxy,
+			NodeCount:             types.Int32Value(nodeGroup.NodeCount),
+			NodeGroupId:           types.StringValue(*nodeGroup.TidbNodeGroupId),
+			DisplayName:           types.StringValue(*nodeGroup.DisplayName),
+			NodeSpecDisplayName:   types.StringValue(*nodeGroup.NodeSpecDisplayName),
+			IsDefaultGroup:        types.BoolValue(*nodeGroup.IsDefaultGroup),
+			State:                 types.StringValue(string(*nodeGroup.State)),
+			Endpoints:             endpoints,
+			TiProxySetting:        &tiProxy,
+			PublicEndpointSetting: convertDedicatedPublicEndpointSetting(publicEndpointSetting),
 		})
 	}
 	data.NodeGroups = items
