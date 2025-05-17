@@ -41,6 +41,7 @@ resource "tidbcloud_dedicated_node_group" "example_group" {
 
 ### Optional
 
+- `public_endpoint_setting` (Attributes) Settings for public endpoints. (see [below for nested schema](#nestedatt--public_endpoint_setting))
 - `tiproxy_setting` (Attributes) Settings for TiProxy nodes. (see [below for nested schema](#nestedatt--tiproxy_setting))
 
 ### Read-Only
@@ -51,6 +52,24 @@ resource "tidbcloud_dedicated_node_group" "example_group" {
 - `node_spec_display_name` (String) The display name of the node spec.
 - `node_spec_key` (String) The key of the node spec.
 - `state` (String) The state of the node group.
+
+<a id="nestedatt--public_endpoint_setting"></a>
+### Nested Schema for `public_endpoint_setting`
+
+Optional:
+
+- `enabled` (Boolean) Whether public endpoints are enabled.
+- `ip_access_list` (List of Object) IP access list for the public endpoint. (see [below for nested schema](#nestedatt--public_endpoint_setting--ip_access_list))
+
+<a id="nestedatt--public_endpoint_setting--ip_access_list"></a>
+### Nested Schema for `public_endpoint_setting.ip_access_list`
+
+Optional:
+
+- `cidr_notation` (String)
+- `description` (String)
+
+
 
 <a id="nestedatt--tiproxy_setting"></a>
 ### Nested Schema for `tiproxy_setting`

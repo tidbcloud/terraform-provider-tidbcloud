@@ -45,8 +45,11 @@ func TestUTDedicatedClustersDataSource(t *testing.T) {
 
 	var resp dedicated.TidbCloudOpenApidedicatedv1beta1ListClustersResponse
 	resp.UnmarshalJSON([]byte(testUTTidbCloudOpenApidedicatedv1beta1ListClustersResponse))
+    publicEndpointResp := dedicated.V1beta1PublicEndpointSetting{}
+	publicEndpointResp.UnmarshalJSON([]byte(testUTV1beta1PublicEndpointSetting()))
 
 	s.EXPECT().ListClusters(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(&resp, nil).AnyTimes()
+	s.EXPECT().GetPublicEndpoint(gomock.Any(), gomock.Any(), gomock.Any()).Return(&publicEndpointResp, nil).AnyTimes()
 
 	testUTDedicatedClustersDataSource(t)
 }

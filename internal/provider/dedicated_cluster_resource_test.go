@@ -77,6 +77,8 @@ func TestUTDedicatedClusterResource(t *testing.T) {
 	getClusterAfterUpdateResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApidedicatedv1beta1Cluster(clusterId, "test-tf2", string(dedicated.COMMONV1BETA1CLUSTERSTATE_ACTIVE), updatedNodeSpec, updatedNodeSpecDisplayName)))
 	updateClusterSuccessResp := dedicated.TidbCloudOpenApidedicatedv1beta1Cluster{}
 	updateClusterSuccessResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApidedicatedv1beta1Cluster(clusterId, "test-tf2", string(dedicated.COMMONV1BETA1CLUSTERSTATE_MODIFYING), updatedNodeSpec, updatedNodeSpecDisplayName)))
+	publicEndpointResp := dedicated.V1beta1PublicEndpointSetting{}
+	publicEndpointResp.UnmarshalJSON([]byte(testUTV1beta1PublicEndpointSetting()))
 
 	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil)
 	gomock.InOrder(
@@ -86,6 +88,9 @@ func TestUTDedicatedClusterResource(t *testing.T) {
 	s.EXPECT().UpdateCluster(gomock.Any(), gomock.Any(), gomock.Any()).Return(&updateClusterSuccessResp, nil)
 
 	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil)
+
+	s.EXPECT().GetPublicEndpoint(gomock.Any(), clusterId, gomock.Any()).Return(&publicEndpointResp, nil).AnyTimes()
+	s.EXPECT().UpdatePublicEndpoint(gomock.Any(), clusterId, gomock.Any(), gomock.Any()).Return(&publicEndpointResp, nil).AnyTimes()
 
 	testDedicatedClusterResource(t)
 }

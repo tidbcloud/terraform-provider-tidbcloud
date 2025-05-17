@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -22,16 +23,17 @@ import (
 )
 
 type dedicatedNodeGroupResourceData struct {
-	ClusterId           types.String    `tfsdk:"cluster_id"`
-	NodeSpecKey         types.String    `tfsdk:"node_spec_key"`
-	NodeCount           types.Int32     `tfsdk:"node_count"`
-	NodeGroupId         types.String    `tfsdk:"node_group_id"`
-	DisplayName         types.String    `tfsdk:"display_name"`
-	NodeSpecDisplayName types.String    `tfsdk:"node_spec_display_name"`
-	IsDefaultGroup      types.Bool      `tfsdk:"is_default_group"`
-	State               types.String    `tfsdk:"state"`
-	Endpoints           []endpoint      `tfsdk:"endpoints"`
-	TiProxySetting      *tiProxySetting `tfsdk:"tiproxy_setting"`
+	ClusterId             types.String           `tfsdk:"cluster_id"`
+	NodeSpecKey           types.String           `tfsdk:"node_spec_key"`
+	NodeCount             types.Int32            `tfsdk:"node_count"`
+	NodeGroupId           types.String           `tfsdk:"node_group_id"`
+	DisplayName           types.String           `tfsdk:"display_name"`
+	NodeSpecDisplayName   types.String           `tfsdk:"node_spec_display_name"`
+	IsDefaultGroup        types.Bool             `tfsdk:"is_default_group"`
+	State                 types.String           `tfsdk:"state"`
+	Endpoints             []endpoint             `tfsdk:"endpoints"`
+	TiProxySetting        *tiProxySetting        `tfsdk:"tiproxy_setting"`
+	PublicEndpointSetting *publicEndpointSetting `tfsdk:"public_endpoint_setting"`
 }
 
 type dedicatedNodeGroupResource struct {
@@ -149,6 +151,33 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 					},
 				},
 			},
+			"public_endpoint_setting": schema.SingleNestedAttribute{
+				MarkdownDescription: "Settings for public endpoints.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"enabled": schema.BoolAttribute{
+						MarkdownDescription: "Whether public endpoints are enabled.",
+						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
+					},
+					"ip_access_list": schema.ListAttribute{
+						MarkdownDescription: "IP access list for the public endpoint.",
+						Optional:            true,
+						Computed:            true,
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
+						ElementType: types.ObjectType{AttrTypes: ipAccessListItemAttrTypes},
+					},
+				},
+			},
 		},
 	}
 }
@@ -192,7 +221,17 @@ func (r dedicatedNodeGroupResource) Create(ctx context.Context, req resource.Cre
 		)
 		return
 	}
+
 	refreshDedicatedNodeGroupResourceData(nodeGroup, &data)
+
+	// using tidb node group api create public endpoint setting
+	tflog.Debug(ctx, fmt.Sprintf("\n\n\n\n\n\n\ncreate dedicated_node_group_resource cluster_id: %s", data.PublicEndpointSetting))
+	pes, err := updatePublicEndpointSetting(ctx, r.provider.DedicatedClient, data.ClusterId.ValueString(), data.NodeGroupId.ValueString(), data.PublicEndpointSetting)
+	if err != nil {
+		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdatePublicEndpoint, got error: %s", err))
+		return
+	}
+	data.PublicEndpointSetting = pes
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -217,6 +256,14 @@ func (r dedicatedNodeGroupResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 	refreshDedicatedNodeGroupResourceData(nodeGroup, &data)
+
+	// using tidb node group api get public endpoint setting
+	publicEndpointSetting, err := r.provider.DedicatedClient.GetPublicEndpoint(ctx, data.ClusterId.ValueString(), data.NodeGroupId.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetPublicEndpoint, got error: %s", err))
+		return
+	}
+	data.PublicEndpointSetting = convertDedicatedPublicEndpointSetting(publicEndpointSetting)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -290,7 +337,16 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 		)
 		return
 	}
+
 	refreshDedicatedNodeGroupResourceData(nodeGroup, &state)
+
+	// using tidb node group api update public endpoint setting
+	pes, err := updatePublicEndpointSetting(ctx, r.provider.DedicatedClient, state.ClusterId.ValueString(), state.NodeGroupId.ValueString(), plan.PublicEndpointSetting)
+	if err != nil {
+		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdatePublicEndpoint, got error: %s", err))
+		return
+	}
+	state.PublicEndpointSetting = pes
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)

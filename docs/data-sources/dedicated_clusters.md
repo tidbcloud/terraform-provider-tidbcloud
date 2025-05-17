@@ -77,6 +77,7 @@ Read-Only:
 - `node_group_id` (String) The ID of the default node group.
 - `node_spec_display_name` (String) The display name of the node spec.
 - `node_spec_key` (String) The key of the node spec.
+- `public_endpoint_setting` (Attributes) Settings for public endpoints. (see [below for nested schema](#nestedatt--clusters--tidb_node_setting--public_endpoint_setting))
 - `state` (String) The state of the node group.
 - `tiproxy_setting` (Attributes) Settings for TiProxy nodes. (see [below for nested schema](#nestedatt--clusters--tidb_node_setting--tiproxy_setting))
 
@@ -88,6 +89,24 @@ Read-Only:
 - `connection_type` (String) The connection type of the endpoint.
 - `host` (String) The host of the endpoint.
 - `port` (Number) The port of the endpoint.
+
+
+<a id="nestedatt--clusters--tidb_node_setting--public_endpoint_setting"></a>
+### Nested Schema for `clusters.tidb_node_setting.public_endpoint_setting`
+
+Read-Only:
+
+- `enabled` (Boolean) Whether public endpoints are enabled.
+- `ip_access_list` (List of Object) IP access list for the public endpoint. (see [below for nested schema](#nestedatt--clusters--tidb_node_setting--public_endpoint_setting--ip_access_list))
+
+<a id="nestedatt--clusters--tidb_node_setting--public_endpoint_setting--ip_access_list"></a>
+### Nested Schema for `clusters.tidb_node_setting.public_endpoint_setting.ip_access_list`
+
+Read-Only:
+
+- `cidr_notation` (String)
+- `description` (String)
+
 
 
 <a id="nestedatt--clusters--tidb_node_setting--tiproxy_setting"></a>

@@ -45,6 +45,8 @@ type TiDBCloudDedicatedClient interface {
 	DeleteVPCPeering(ctx context.Context, vpcPeeringId string) error
 	GetVPCPeering(ctx context.Context, vpcPeeringId string) (*dedicated.Dedicatedv1beta1VpcPeering, error)
 	ListVPCPeerings(ctx context.Context, projectId string, cloudProvider string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse, error)
+	UpdatePublicEndpoint(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdatePublicEndpointSettingRequest) (*dedicated.V1beta1PublicEndpointSetting, error)
+	GetPublicEndpoint(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.V1beta1PublicEndpointSetting, error)
 }
 
 func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userAgent string) (*dedicated.APIClient, error) {
@@ -316,6 +318,20 @@ func (d *DedicatedClientDelegate) ListVPCPeerings(ctx context.Context, projectId
 		r = r.PageToken(*pageToken)
 	}
 	resp, h, err := r.Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) UpdatePublicEndpoint(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdatePublicEndpointSettingRequest) (*dedicated.V1beta1PublicEndpointSetting, error) {
+	r := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceUpdatePublicEndpointSetting(ctx, clusterId, nodeGroupId)
+	if body != nil {
+		r = r.PublicEndpointSetting(*body)
+	}
+	c, h, err := r.Execute()
+	return c, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) GetPublicEndpoint(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.V1beta1PublicEndpointSetting, error) {
+	resp, h, err := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceGetPublicEndpointSetting(ctx, clusterId, nodeGroupId).Execute()
 	return resp, parseError(err, h)
 }
 
