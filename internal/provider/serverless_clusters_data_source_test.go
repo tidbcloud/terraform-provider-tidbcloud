@@ -62,7 +62,7 @@ func testUTServerlessClustersDataSource(t *testing.T) {
 			{
 				Config: testUTServerlessClustersConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(serverlessClustersDataSourceName, "serverless_clusters.#", "0"),
+					resource.TestCheckResourceAttr(serverlessClustersDataSourceName, "serverless_clusters.#", "1"),
 				),
 			},
 		},
@@ -85,6 +85,7 @@ data "tidbcloud_serverless_clusters" "test" {}
 `
 
 const testUTTidbCloudOpenApiserverlessv1beta1ListClustersResponse = `
+{
 	"clusters": [
         {
             "name": "clusters/xxxxxxxxx",
@@ -146,4 +147,5 @@ const testUTTidbCloudOpenApiserverlessv1beta1ListClustersResponse = `
             }
         }
 	]
+}
 `

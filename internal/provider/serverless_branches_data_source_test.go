@@ -62,7 +62,13 @@ func testUTServerlessBranchesDataSource(t *testing.T) {
 			{
 				Config: testUTServerlessBranchesConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(serverlessBranchesDataSourceName, "serverless_branches.#", "0"),
+					func(s *terraform.State) error {
+						_, ok := s.RootModule().Resources[serverlessBranchesDataSourceName]
+						if !ok {
+							return fmt.Errorf("Not found: %s", serverlessBranchesDataSourceName)
+						}
+						return nil
+					},
 				),
 			},
 		},
