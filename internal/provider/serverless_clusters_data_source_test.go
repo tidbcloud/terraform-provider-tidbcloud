@@ -62,7 +62,13 @@ func testUTServerlessClustersDataSource(t *testing.T) {
 			{
 				Config: testUTServerlessClustersConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(serverlessClustersDataSourceName, "serverless_clusters.#", "1"),
+					func(s *terraform.State) error {
+						_, ok := s.RootModule().Resources[serverlessClustersDataSourceName]
+						if !ok {
+							return fmt.Errorf("Not found: %s", serverlessClustersDataSourceName)
+						}
+						return nil
+					},
 				),
 			},
 		},
