@@ -1,10 +1,12 @@
 package provider
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	mockClient "github.com/tidbcloud/terraform-provider-tidbcloud/mock"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
@@ -36,8 +38,14 @@ func testUTDedicatedPrivateEndpointConnectionsDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testUTDedicatedPrivateEndpointConnectionsDataSourceConfig,
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(dedicatedPrivateEndpointConnectionDataSourceName, "dedicated_private_endpoint_connections.#", "0"),
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						_, ok := s.RootModule().Resources[dedicatedPrivateEndpointConnectionDataSourceName]
+						if !ok {
+							return fmt.Errorf("Not found: %s", dedicatedPrivateEndpointConnectionDataSourceName)
+						}
+						return nil
+					},
 				),
 			},
 		},

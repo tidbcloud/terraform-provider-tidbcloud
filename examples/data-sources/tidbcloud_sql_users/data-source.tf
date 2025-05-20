@@ -3,10 +3,10 @@ variable "cluster_id" {
   nullable = false
 }
 
-data "tidbcloud_serverless_sql_users" "example" {
+data "tidbcloud_sql_users" "example" {
   cluster_id = var.cluster_id
 }
 
 output "output" {
-  value = data.tidbcloud_serverless_sql_users.example
+  value = data.tidbcloud_sql_users.example
 }

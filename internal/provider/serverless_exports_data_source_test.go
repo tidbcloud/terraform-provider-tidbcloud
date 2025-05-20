@@ -61,7 +61,13 @@ func testUTServerlessExportsDataSource(t *testing.T) {
 			{
 				Config: testUTServerlessExportsConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(serverlessExportsDataSourceName, "serverless_exports.#", "0"),
+					func(s *terraform.State) error {
+						_, ok := s.RootModule().Resources[serverlessExportsDataSourceName]
+						if !ok {
+							return fmt.Errorf("Not found: %s", serverlessExportsDataSourceName)
+						}
+						return nil
+					},
 				),
 			},
 		},

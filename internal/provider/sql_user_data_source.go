@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type serverlessSQLUser struct {
+type sqlUser struct {
 	ClusterId   types.String `tfsdk:"cluster_id"`
 	AuthMethod  types.String `tfsdk:"auth_method"`
 	UserName    types.String `tfsdk:"user_name"`
@@ -18,21 +18,21 @@ type serverlessSQLUser struct {
 	CustomRoles types.List   `tfsdk:"custom_roles"`
 }
 
-var _ datasource.DataSource = &serverlessSQLUserDataSource{}
+var _ datasource.DataSource = &sqlUserDataSource{}
 
-type serverlessSQLUserDataSource struct {
+type sqlUserDataSource struct {
 	provider *tidbcloudProvider
 }
 
-func NewServerlessSQLUserDataSource() datasource.DataSource {
-	return &serverlessSQLUserDataSource{}
+func NewSQLUserDataSource() datasource.DataSource {
+	return &sqlUserDataSource{}
 }
 
-func (d *serverlessSQLUserDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_serverless_sql_user"
+func (d *sqlUserDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_sql_user"
 }
 
-func (d *serverlessSQLUserDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *sqlUserDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -43,9 +43,9 @@ func (d *serverlessSQLUserDataSource) Configure(_ context.Context, req datasourc
 	}
 }
 
-func (d *serverlessSQLUserDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *sqlUserDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "serverless sql user data source",
+		MarkdownDescription: "sql user data source",
 		Attributes: map[string]schema.Attribute{
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
@@ -72,15 +72,15 @@ func (d *serverlessSQLUserDataSource) Schema(_ context.Context, _ datasource.Sch
 	}
 }
 
-func (d *serverlessSQLUserDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data serverlessSQLUser
+func (d *sqlUserDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data sqlUser
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tflog.Trace(ctx, "read serverless sql user data source")
+	tflog.Trace(ctx, "read sql user data source")
 	sqlUser, err := d.provider.IAMClient.GetSQLUser(ctx, data.ClusterId.ValueString(), data.UserName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetSQLUser, got error: %s", err))

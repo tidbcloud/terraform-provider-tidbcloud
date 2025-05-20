@@ -21,7 +21,7 @@ const (
 	MYSQLNATIVEPASSWORD = "mysql_native_password"
 )
 
-type serverlessSQLUserResourceData struct {
+type sqlUserResourceData struct {
 	ClusterId   types.String `tfsdk:"cluster_id"`
 	AuthMethod  types.String `tfsdk:"auth_method"`
 	UserName    types.String `tfsdk:"user_name"`
@@ -30,19 +30,19 @@ type serverlessSQLUserResourceData struct {
 	Password    types.String `tfsdk:"password"`
 }
 
-type serverlessSQLUserResource struct {
+type sqlUserResource struct {
 	provider *tidbcloudProvider
 }
 
-func NewServerlessSQLUserResource() resource.Resource {
-	return &serverlessSQLUserResource{}
+func NewSQLUserResource() resource.Resource {
+	return &sqlUserResource{}
 }
 
-func (r *serverlessSQLUserResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_serverless_sql_user"
+func (r *sqlUserResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_sql_user"
 }
 
-func (r *serverlessSQLUserResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *sqlUserResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -55,9 +55,9 @@ func (r *serverlessSQLUserResource) Configure(_ context.Context, req resource.Co
 	}
 }
 
-func (r *serverlessSQLUserResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *sqlUserResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "serverless cluster resource",
+		MarkdownDescription: "sql user resource",
 		Attributes: map[string]schema.Attribute{
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
@@ -75,7 +75,7 @@ func (r *serverlessSQLUserResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 			},
 			"user_name": schema.StringAttribute{
-				MarkdownDescription: "The name of the user.",
+				MarkdownDescription: "The name of the user. The user name must start with user_prefix for serverless cluster",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -102,7 +102,7 @@ func (r *serverlessSQLUserResource) Schema(_ context.Context, _ resource.SchemaR
 	}
 }
 
-func (r serverlessSQLUserResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r sqlUserResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	if !r.provider.configured {
 		resp.Diagnostics.AddError(
 			"Provider not configured",
@@ -112,15 +112,15 @@ func (r serverlessSQLUserResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// get data from config
-	var data serverlessSQLUserResourceData
+	var data sqlUserResourceData
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tflog.Trace(ctx, "create serverless_sql_user_resource")
-	body, err := buildCreateServerlessSQLUserBody(ctx, data)
+	tflog.Trace(ctx, "create sql_user_resource")
+	body, err := buildCreateSQLUserBody(ctx, data)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to build CreateSQLUser body, got error: %s", err))
 		return
@@ -136,18 +136,18 @@ func (r serverlessSQLUserResource) Create(ctx context.Context, req resource.Crea
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r serverlessSQLUserResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r sqlUserResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// get data from state
-	var data serverlessSQLUserResourceData
+	var data sqlUserResourceData
 	diags := req.State.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Debug(ctx, fmt.Sprintf("read serverless_sql_user_resource clusterid: %s", data.ClusterId.ValueString()))
+	tflog.Debug(ctx, fmt.Sprintf("read sql_user_resource clusterid: %s", data.ClusterId.ValueString()))
 
 	// call read api
-	tflog.Trace(ctx, "read serverless_sql_user_resource")
+	tflog.Trace(ctx, "read sql_user_resource")
 	sqlUser, err := r.provider.IAMClient.GetSQLUser(ctx, data.ClusterId.ValueString(), data.UserName.ValueString())
 	if err != nil {
 		tflog.Error(ctx, fmt.Sprintf("Unable to call CetSQLUser, error: %s", err))
@@ -164,7 +164,7 @@ func (r serverlessSQLUserResource) Read(ctx context.Context, req resource.ReadRe
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r serverlessSQLUserResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r sqlUserResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var clusterId string
 	var userName string
 
@@ -174,7 +174,7 @@ func (r serverlessSQLUserResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	tflog.Trace(ctx, "delete serverless_sql_user_resource")
+	tflog.Trace(ctx, "delete sql_user_resource")
 	_, err := r.provider.IAMClient.DeleteSQLUser(ctx, clusterId, userName)
 	if err != nil {
 		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteCluster, got error: %s", err))
@@ -182,16 +182,16 @@ func (r serverlessSQLUserResource) Delete(ctx context.Context, req resource.Dele
 	}
 }
 
-func (r serverlessSQLUserResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r sqlUserResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// get plan
-	var plan serverlessSQLUserResourceData
+	var plan sqlUserResourceData
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	// get state
-	var state serverlessSQLUserResourceData
+	var state sqlUserResourceData
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -212,7 +212,7 @@ func (r serverlessSQLUserResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	// call update api
-	tflog.Trace(ctx, "update serverless_sql_user_resource")
+	tflog.Trace(ctx, "update sql_user_resource")
 	_, err := r.provider.IAMClient.UpdateSQLUser(ctx, state.ClusterId.ValueString(), state.UserName.ValueString(), body)
 	if err != nil {
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateSQLUser, got error: %s", err))
@@ -228,7 +228,7 @@ func (r serverlessSQLUserResource) Update(ctx context.Context, req resource.Upda
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r serverlessSQLUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r sqlUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, ",")
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
@@ -243,7 +243,7 @@ func (r serverlessSQLUserResource) ImportState(ctx context.Context, req resource
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_name"), idParts[1])...)
 }
 
-func buildCreateServerlessSQLUserBody(ctx context.Context, data serverlessSQLUserResourceData) (iam.ApiCreateSqlUserReq, error) {
+func buildCreateSQLUserBody(ctx context.Context, data sqlUserResourceData) (iam.ApiCreateSqlUserReq, error) {
 	userName := data.UserName.ValueString()
 	var authMethod string
 	if data.AuthMethod.IsUnknown() || data.AuthMethod.IsNull() {
