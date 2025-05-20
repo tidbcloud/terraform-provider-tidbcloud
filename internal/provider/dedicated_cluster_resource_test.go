@@ -82,7 +82,7 @@ func TestUTDedicatedClusterResource(t *testing.T) {
 
 	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil)
 	gomock.InOrder(
-		s.EXPECT().GetCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil).Times(3),
+		s.EXPECT().GetCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil).Times(4),
 		s.EXPECT().GetCluster(gomock.Any(), clusterId).Return(&getClusterAfterUpdateResp, nil).AnyTimes(),
 	)
 	s.EXPECT().UpdateCluster(gomock.Any(), gomock.Any(), gomock.Any()).Return(&updateClusterSuccessResp, nil)

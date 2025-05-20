@@ -65,7 +65,7 @@ type tidbNodeSetting struct {
 	NodeSpecDisplayName   types.String           `tfsdk:"node_spec_display_name"`
 	IsDefaultGroup        types.Bool             `tfsdk:"is_default_group"`
 	State                 types.String           `tfsdk:"state"`
-	Endpoints             []endpoint             `tfsdk:"endpoints"`
+	Endpoints             types.List             `tfsdk:"endpoints"`
 	TiProxySetting        *tiProxySetting        `tfsdk:"tiproxy_setting"`
 	PublicEndpointSetting *publicEndpointSetting `tfsdk:"public_endpoint_setting"`
 }
@@ -94,6 +94,12 @@ type endpoint struct {
 	Host           types.String `tfsdk:"host"`
 	Port           types.Int32  `tfsdk:"port"`
 	ConnectionType types.String `tfsdk:"connection_type"`
+}
+
+var endpointItemAttrTypes = map[string]attr.Type{
+	"host":            types.StringType,
+	"port":            types.Int32Type,
+	"connection_type": types.StringType,
 }
 
 type tikvNodeSetting struct {
@@ -292,37 +298,10 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "The state of the node group.",
 						Computed:            true,
 					},
-					"endpoints": schema.ListNestedAttribute{
+					"endpoints": schema.ListAttribute{
 						MarkdownDescription: "The endpoints of the node group.",
 						Computed:            true,
-						PlanModifiers: []planmodifier.List{
-							listplanmodifier.UseStateForUnknown(),
-						},
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"host": schema.StringAttribute{
-									MarkdownDescription: "The host of the endpoint.",
-									Computed:            true,
-									PlanModifiers: []planmodifier.String{
-										stringplanmodifier.UseStateForUnknown(),
-									},
-								},
-								"port": schema.Int32Attribute{
-									MarkdownDescription: "The port of the endpoint.",
-									Computed:            true,
-									PlanModifiers: []planmodifier.Int32{
-										int32planmodifier.UseStateForUnknown(),
-									},
-								},
-								"connection_type": schema.StringAttribute{
-									MarkdownDescription: "The connection type of the endpoint.",
-									Computed:            true,
-									PlanModifiers: []planmodifier.String{
-										stringplanmodifier.UseStateForUnknown(),
-									},
-								},
-							},
-						},
+						ElementType:         types.ObjectType{AttrTypes: endpointItemAttrTypes},
 					},
 					"tiproxy_setting": schema.SingleNestedAttribute{
 						MarkdownDescription: "Settings for TiProxy nodes.",
@@ -341,7 +320,7 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						},
 					},
 					"public_endpoint_setting": schema.SingleNestedAttribute{
-						MarkdownDescription: "Settings for public endpoints.",
+						MarkdownDescription: "Settings for public endpoint.",
 						Optional:            true,
 						Computed:            true,
 						PlanModifiers: []planmodifier.Object{
@@ -349,7 +328,7 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						},
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
-								MarkdownDescription: "Whether public endpoints are enabled.",
+								MarkdownDescription: "Whether public endpoint are enabled.",
 								Optional:            true,
 								Computed:            true,
 								PlanModifiers: []planmodifier.Bool{
@@ -363,7 +342,7 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 								PlanModifiers: []planmodifier.List{
 									listplanmodifier.UseStateForUnknown(),
 								},
-								ElementType:         types.ObjectType{AttrTypes: ipAccessListItemAttrTypes},
+								ElementType: types.ObjectType{AttrTypes: ipAccessListItemAttrTypes},
 							},
 						},
 					},
@@ -488,7 +467,6 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 		)
 		return
 	}
-
 	refreshDedicatedClusterResourceData(ctx, cluster, &data)
 
 	// using tidb node group api create public endpoint setting
@@ -499,6 +477,15 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 	}
 	data.TiDBNodeSetting.PublicEndpointSetting = pes
 
+	// sleep 1 minute to wait the endpoints updated, then get cluster to refresh the endpoints
+	time.Sleep(1 * time.Minute)
+	cluster, err = r.provider.DedicatedClient.GetCluster(ctx, clusterId)
+	if err != nil {
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetCluster, got error: %s", err))
+		return
+	}
+
+	refreshDedicatedClusterResourceData(ctx, cluster, &data)
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -570,14 +557,24 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	// tidb node setting
 	for _, group := range resp.TidbNodeSetting.TidbNodeGroups {
 		if *group.IsDefaultGroup {
-			var endpoints []endpoint
+			var endpoints []attr.Value
 			for _, e := range group.Endpoints {
-				endpoints = append(endpoints, endpoint{
-					Host:           types.StringValue(*e.Host),
-					Port:           types.Int32Value(*e.Port),
-					ConnectionType: types.StringValue(string(*e.ConnectionType)),
-				})
+				endpointObj, objDiags := types.ObjectValue(
+					endpointItemAttrTypes,
+					map[string]attr.Value{
+						"host":            types.StringValue(*e.Host),
+						"port":            types.Int32Value(*e.Port),
+						"connection_type": types.StringValue(string(*e.ConnectionType)),
+					},
+				)
+				diags.Append(objDiags...)
+				endpoints = append(endpoints, endpointObj)
 			}
+			endpointsList, listDiags := types.ListValue(types.ObjectType{
+				AttrTypes: endpointItemAttrTypes,
+			}, endpoints)
+			diags.Append(listDiags...)
+
 			data.TiDBNodeSetting.NodeSpecKey = types.StringValue(*group.NodeSpecKey)
 			data.TiDBNodeSetting.NodeCount = types.Int32Value(group.NodeCount)
 			data.TiDBNodeSetting.NodeGroupId = types.StringValue(*group.TidbNodeGroupId)
@@ -585,7 +582,7 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 			data.TiDBNodeSetting.NodeSpecDisplayName = types.StringValue(*group.NodeSpecDisplayName)
 			data.TiDBNodeSetting.IsDefaultGroup = types.BoolValue(*group.IsDefaultGroup)
 			data.TiDBNodeSetting.State = types.StringValue(string(*group.State))
-			data.TiDBNodeSetting.Endpoints = endpoints
+			data.TiDBNodeSetting.Endpoints = endpointsList
 		}
 	}
 
@@ -726,6 +723,16 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 			}
 		}
 
+		if isPublicEndpointSettingChanging {
+			// using tidb node group api update public endpoint setting
+			pes, err := updatePublicEndpointSetting(ctx, r.provider.DedicatedClient, state.ClusterId.ValueString(), state.TiDBNodeSetting.NodeGroupId.ValueString(), plan.TiDBNodeSetting.PublicEndpointSetting)
+			if err != nil {
+				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdatePublicEndpoint, got error: %s", err))
+				return
+			}
+			state.TiDBNodeSetting.PublicEndpointSetting = pes
+		}
+
 		body := &dedicated.ClusterServiceUpdateClusterRequest{}
 		// components change
 		// tidb
@@ -791,7 +798,6 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 			return
 		}
 	}
-
 	tflog.Info(ctx, "wait cluster ready")
 	cluster, err := WaitDedicatedClusterReady(ctx, clusterUpdateTimeout, clusterUpdateInterval, state.ClusterId.ValueString(), r.provider.DedicatedClient)
 	if err != nil {
@@ -805,14 +811,6 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 	refreshDedicatedClusterResourceData(ctx, cluster, &state)
 	state.Paused = plan.Paused
 	state.RootPassword = plan.RootPassword
-
-	// using tidb node group api update public endpoint setting
-	pes, err := updatePublicEndpointSetting(ctx, r.provider.DedicatedClient, state.ClusterId.ValueString(), state.TiDBNodeSetting.NodeGroupId.ValueString(), plan.TiDBNodeSetting.PublicEndpointSetting)
-	if err != nil {
-		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdatePublicEndpoint, got error: %s", err))
-		return
-	}
-	state.TiDBNodeSetting.PublicEndpointSetting = pes
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)
@@ -992,7 +990,6 @@ func updatePublicEndpointSetting(ctx context.Context, client tidbcloud.TiDBCloud
 		return nil, nil
 	}
 	req := dedicated.TidbNodeGroupServiceUpdatePublicEndpointSettingRequest{}
-	enabled := data.Enabled.ValueBool()
 	ipAccessList := make([]dedicated.PublicEndpointSettingIpAccessList, 0)
 	if IsKnown(data.IPAccessList) {
 		for _, v := range data.IPAccessList.Elements() {
@@ -1005,7 +1002,10 @@ func updatePublicEndpointSetting(ctx context.Context, client tidbcloud.TiDBCloud
 			})
 		}
 	}
-	req.Enabled = *dedicated.NewNullableBool(&enabled)
+	if IsKnown(data.Enabled) {
+		enabled := data.Enabled.ValueBool()
+		req.Enabled = *dedicated.NewNullableBool(&enabled)
+	}
 	req.IpAccessList = ipAccessList
 	publicEndpoint, err := client.UpdatePublicEndpoint(ctx, clusterId, nodeGroupId, &req)
 	if err != nil {

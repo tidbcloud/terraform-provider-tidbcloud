@@ -44,7 +44,7 @@ output "output" {
 ### Read-Only
 
 - `display_name` (String) The display name of the node group.
-- `endpoints` (Attributes List) The endpoints of the node group. (see [below for nested schema](#nestedatt--endpoints))
+- `endpoints` (List of Object) The endpoints of the node group. (see [below for nested schema](#nestedatt--endpoints))
 - `is_default_group` (Boolean) Indicates if this is the default group.
 - `node_count` (Number) The number of nodes in the node group.
 - `node_spec_display_name` (String) The display name of the node spec.
@@ -58,9 +58,9 @@ output "output" {
 
 Read-Only:
 
-- `connection_type` (String) The connection type of the endpoint.
-- `host` (String) The host of the endpoint.
-- `port` (Number) The port of the endpoint.
+- `connection_type` (String)
+- `host` (String)
+- `port` (Number)
 
 
 <a id="nestedatt--public_endpoint_setting"></a>

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -323,14 +324,23 @@ func (d *dedicatedClustersDataSource) Read(ctx context.Context, req datasource.R
 		// tidb node setting
 		for _, group := range cluster.TidbNodeSetting.TidbNodeGroups {
 			if *group.IsDefaultGroup {
-				var endpoints []endpoint
+				var endpoints []attr.Value
 				for _, e := range group.Endpoints {
-					endpoints = append(endpoints, endpoint{
-						Host:           types.StringValue(*e.Host),
-						Port:           types.Int32Value(*e.Port),
-						ConnectionType: types.StringValue(string(*e.ConnectionType)),
-					})
+					endpointObj, objDiags := types.ObjectValue(
+						endpointItemAttrTypes,
+						map[string]attr.Value{
+							"host":            types.StringValue(*e.Host),
+							"port":            types.Int32Value(*e.Port),
+							"connection_type": types.StringValue(string(*e.ConnectionType)),
+						},
+					)
+					diags.Append(objDiags...)
+					endpoints = append(endpoints, endpointObj)
 				}
+				endpointsList, listDiags := types.ListValue(types.ObjectType{
+					AttrTypes: endpointItemAttrTypes,
+				}, endpoints)
+				diags.Append(listDiags...)
 				defaultTiProxySetting := tiProxySetting{}
 				if group.TiproxySetting != nil {
 					defaultTiProxySetting = tiProxySetting{
@@ -353,7 +363,7 @@ func (d *dedicatedClustersDataSource) Read(ctx context.Context, req datasource.R
 					NodeSpecDisplayName:   types.StringValue(*group.NodeSpecDisplayName),
 					IsDefaultGroup:        types.BoolValue(*group.IsDefaultGroup),
 					State:                 types.StringValue(string(*group.State)),
-					Endpoints:             endpoints,
+					Endpoints:             endpointsList,
 					TiProxySetting:        &defaultTiProxySetting,
 					PublicEndpointSetting: convertDedicatedPublicEndpointSetting(publicEndpointSetting),
 				}

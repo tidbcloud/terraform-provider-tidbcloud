@@ -46,7 +46,7 @@ resource "tidbcloud_dedicated_node_group" "example_group" {
 
 ### Read-Only
 
-- `endpoints` (Attributes List) The endpoints of the node group. (see [below for nested schema](#nestedatt--endpoints))
+- `endpoints` (List of Object) The endpoints of the node group. (see [below for nested schema](#nestedatt--endpoints))
 - `is_default_group` (Boolean) Whether the node group is the default group.
 - `node_group_id` (String) The ID of the node group.
 - `node_spec_display_name` (String) The display name of the node spec.
@@ -85,6 +85,6 @@ Optional:
 
 Read-Only:
 
-- `connection_type` (String) The connection type of the endpoint.
-- `host` (String) The host of the endpoint.
-- `port` (Number) The port of the endpoint.
+- `connection_type` (String)
+- `host` (String)
+- `port` (Number)

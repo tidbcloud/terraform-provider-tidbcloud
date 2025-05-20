@@ -6,11 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -31,7 +32,7 @@ type dedicatedNodeGroupResourceData struct {
 	NodeSpecDisplayName   types.String           `tfsdk:"node_spec_display_name"`
 	IsDefaultGroup        types.Bool             `tfsdk:"is_default_group"`
 	State                 types.String           `tfsdk:"state"`
-	Endpoints             []endpoint             `tfsdk:"endpoints"`
+	Endpoints             types.List             `tfsdk:"endpoints"`
 	TiProxySetting        *tiProxySetting        `tfsdk:"tiproxy_setting"`
 	PublicEndpointSetting *publicEndpointSetting `tfsdk:"public_endpoint_setting"`
 }
@@ -103,37 +104,10 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 				MarkdownDescription: "The state of the node group.",
 				Computed:            true,
 			},
-			"endpoints": schema.ListNestedAttribute{
+			"endpoints": schema.ListAttribute{
 				MarkdownDescription: "The endpoints of the node group.",
 				Computed:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"host": schema.StringAttribute{
-							MarkdownDescription: "The host of the endpoint.",
-							Computed:            true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
-						},
-						"port": schema.Int32Attribute{
-							MarkdownDescription: "The port of the endpoint.",
-							Computed:            true,
-							PlanModifiers: []planmodifier.Int32{
-								int32planmodifier.UseStateForUnknown(),
-							},
-						},
-						"connection_type": schema.StringAttribute{
-							MarkdownDescription: "The connection type of the endpoint.",
-							Computed:            true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
-						},
-					},
-				},
+				ElementType:         types.ObjectType{AttrTypes: endpointItemAttrTypes},
 			},
 			"tiproxy_setting": schema.SingleNestedAttribute{
 				MarkdownDescription: "Settings for TiProxy nodes.",
@@ -222,16 +196,22 @@ func (r dedicatedNodeGroupResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	refreshDedicatedNodeGroupResourceData(nodeGroup, &data)
-
 	// using tidb node group api create public endpoint setting
-	tflog.Debug(ctx, fmt.Sprintf("\n\n\n\n\n\n\ncreate dedicated_node_group_resource cluster_id: %s", data.PublicEndpointSetting))
-	pes, err := updatePublicEndpointSetting(ctx, r.provider.DedicatedClient, data.ClusterId.ValueString(), data.NodeGroupId.ValueString(), data.PublicEndpointSetting)
+	pes, err := updatePublicEndpointSetting(ctx, r.provider.DedicatedClient, data.ClusterId.ValueString(), nodeGroupId, data.PublicEndpointSetting)
 	if err != nil {
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdatePublicEndpoint, got error: %s", err))
 		return
 	}
 	data.PublicEndpointSetting = pes
+
+	// sleep 1 minute to wait the endpoints updated, then get cluster to refresh the endpoints
+	time.Sleep(1 * time.Minute)
+	nodeGroup, err = r.provider.DedicatedClient.GetTiDBNodeGroup(ctx, data.ClusterId.ValueString(), nodeGroupId)
+	if err != nil {
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetCluster, got error: %s", err))
+		return
+	}
+	refreshDedicatedNodeGroupResourceData(nodeGroup, &data)
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &data)
@@ -304,6 +284,27 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
+	isPublicEndpointSettingChanging := false
+	if plan.PublicEndpointSetting != nil && state.PublicEndpointSetting != nil {
+		isPublicEndpointSettingChanging = plan.PublicEndpointSetting.Enabled.Equal(state.PublicEndpointSetting.Enabled) ||
+			plan.PublicEndpointSetting.IPAccessList.Equal(state.PublicEndpointSetting.IPAccessList)
+	} else if plan.PublicEndpointSetting != nil {
+		isPublicEndpointSettingChanging = true
+	} else if state.PublicEndpointSetting != nil {
+		isPublicEndpointSettingChanging = true
+	}
+	if isPublicEndpointSettingChanging {
+		// using tidb node group api update public endpoint setting
+		pes, err := updatePublicEndpointSetting(ctx, r.provider.DedicatedClient, state.ClusterId.ValueString(), state.NodeGroupId.ValueString(), plan.PublicEndpointSetting)
+		if err != nil {
+			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdatePublicEndpoint, got error: %s", err))
+			return
+		}
+		state.PublicEndpointSetting = pes
+		// sleep 1 minute to wait the endpoints updated
+		time.Sleep(1 * time.Minute)
+	}
+
 	newDisplayName := plan.DisplayName.ValueString()
 	newNodeCount := int32(plan.NodeCount.ValueInt32())
 	body := dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest{
@@ -339,14 +340,6 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	refreshDedicatedNodeGroupResourceData(nodeGroup, &state)
-
-	// using tidb node group api update public endpoint setting
-	pes, err := updatePublicEndpointSetting(ctx, r.provider.DedicatedClient, state.ClusterId.ValueString(), state.NodeGroupId.ValueString(), plan.PublicEndpointSetting)
-	if err != nil {
-		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdatePublicEndpoint, got error: %s", err))
-		return
-	}
-	state.PublicEndpointSetting = pes
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)
@@ -396,15 +389,25 @@ func refreshDedicatedNodeGroupResourceData(resp *dedicated.Dedicatedv1beta1TidbN
 	data.State = types.StringValue(string(*resp.State))
 	data.NodeCount = types.Int32Value(resp.NodeCount)
 	data.NodeSpecKey = types.StringValue(*resp.NodeSpecKey)
-	var endpoints []endpoint
+	var diags diag.Diagnostics
+	var endpoints []attr.Value
 	for _, e := range resp.Endpoints {
-		endpoints = append(endpoints, endpoint{
-			Host:           types.StringValue(*e.Host),
-			Port:           types.Int32Value(*e.Port),
-			ConnectionType: types.StringValue(string(*e.ConnectionType)),
-		})
+		endpointObj, objDiags := types.ObjectValue(
+			endpointItemAttrTypes,
+			map[string]attr.Value{
+				"host":            types.StringValue(*e.Host),
+				"port":            types.Int32Value(*e.Port),
+				"connection_type": types.StringValue(string(*e.ConnectionType)),
+			},
+		)
+		diags.Append(objDiags...)
+		endpoints = append(endpoints, endpointObj)
 	}
-	data.Endpoints = endpoints
+	endpointsList, listDiags := types.ListValue(types.ObjectType{
+		AttrTypes: endpointItemAttrTypes,
+	}, endpoints)
+	diags.Append(listDiags...)
+	data.Endpoints = endpointsList
 }
 
 func WaitDedicatedNodeGroupReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string, nodeGroupId string,

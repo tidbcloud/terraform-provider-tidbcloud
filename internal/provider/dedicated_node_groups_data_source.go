@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -25,7 +26,7 @@ type nodeGroupItems struct {
 	NodeSpecDisplayName   types.String           `tfsdk:"node_spec_display_name"`
 	IsDefaultGroup        types.Bool             `tfsdk:"is_default_group"`
 	State                 types.String           `tfsdk:"state"`
-	Endpoints             []endpoint             `tfsdk:"endpoints"`
+	Endpoints             types.List             `tfsdk:"endpoints"`
 	TiProxySetting        *tiProxySetting        `tfsdk:"tiproxy_setting"`
 	PublicEndpointSetting *publicEndpointSetting `tfsdk:"public_endpoint_setting"`
 }
@@ -174,14 +175,24 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 			data.NodeSpecKey = types.StringValue(*nodeGroup.NodeSpecKey)
 		}
 
-		var endpoints []endpoint
+		var endpoints []attr.Value
 		for _, e := range nodeGroup.Endpoints {
-			endpoints = append(endpoints, endpoint{
-				Host:           types.StringValue(*e.Host),
-				Port:           types.Int32Value(*e.Port),
-				ConnectionType: types.StringValue(string(*e.ConnectionType)),
-			})
+			endpointObj, objDiags := types.ObjectValue(
+				endpointItemAttrTypes,
+				map[string]attr.Value{
+					"host":            types.StringValue(*e.Host),
+					"port":            types.Int32Value(*e.Port),
+					"connection_type": types.StringValue(string(*e.ConnectionType)),
+				},
+			)
+			diags.Append(objDiags...)
+			endpoints = append(endpoints, endpointObj)
 		}
+		endpointsList, listDiags := types.ListValue(types.ObjectType{
+			AttrTypes: endpointItemAttrTypes,
+		}, endpoints)
+		diags.Append(listDiags...)
+
 		tiProxy := tiProxySetting{}
 		if nodeGroup.TiproxySetting != nil {
 			tiProxy = tiProxySetting{
@@ -202,7 +213,7 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 			NodeSpecDisplayName:   types.StringValue(*nodeGroup.NodeSpecDisplayName),
 			IsDefaultGroup:        types.BoolValue(*nodeGroup.IsDefaultGroup),
 			State:                 types.StringValue(string(*nodeGroup.State)),
-			Endpoints:             endpoints,
+			Endpoints:             endpointsList,
 			TiProxySetting:        &tiProxy,
 			PublicEndpointSetting: convertDedicatedPublicEndpointSetting(publicEndpointSetting),
 		})
