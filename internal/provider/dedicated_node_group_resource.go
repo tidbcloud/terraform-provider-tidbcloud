@@ -126,7 +126,7 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			"public_endpoint_setting": schema.SingleNestedAttribute{
-				MarkdownDescription: "Settings for public endpoints.",
+				MarkdownDescription: "Settings for public endpoint.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Object{
@@ -134,7 +134,7 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 				},
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
-						MarkdownDescription: "Whether public endpoints are enabled.",
+						MarkdownDescription: "Whether public endpoint is enabled.",
 						Optional:            true,
 						Computed:            true,
 						PlanModifiers: []planmodifier.Bool{

@@ -108,11 +108,11 @@ func (d *dedicatedNodeGroupDataSource) Schema(_ context.Context, _ datasource.Sc
 				},
 			},
 			"public_endpoint_setting": schema.SingleNestedAttribute{
-				MarkdownDescription: "Settings for public endpoints.",
+				MarkdownDescription: "Settings for public endpoint.",
 				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
-						MarkdownDescription: "Whether public endpoints are enabled.",
+						MarkdownDescription: "Whether public endpoint is enabled.",
 						Computed:            true,
 					},
 					"ip_access_list": schema.ListAttribute{

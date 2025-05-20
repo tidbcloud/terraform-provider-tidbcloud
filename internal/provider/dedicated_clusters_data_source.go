@@ -160,25 +160,10 @@ func (d *dedicatedClustersDataSource) Schema(_ context.Context, _ datasource.Sch
 									MarkdownDescription: "The state of the node group.",
 									Computed:            true,
 								},
-								"endpoints": schema.ListNestedAttribute{
+								"endpoints": schema.ListAttribute{
 									MarkdownDescription: "The endpoints of the node group.",
 									Computed:            true,
-									NestedObject: schema.NestedAttributeObject{
-										Attributes: map[string]schema.Attribute{
-											"host": schema.StringAttribute{
-												MarkdownDescription: "The host of the endpoint.",
-												Computed:            true,
-											},
-											"port": schema.Int32Attribute{
-												MarkdownDescription: "The port of the endpoint.",
-												Computed:            true,
-											},
-											"connection_type": schema.StringAttribute{
-												MarkdownDescription: "The connection type of the endpoint.",
-												Computed:            true,
-											},
-										},
-									},
+									ElementType:         types.ObjectType{AttrTypes: endpointItemAttrTypes},
 								},
 								"tiproxy_setting": schema.SingleNestedAttribute{
 									MarkdownDescription: "Settings for TiProxy nodes.",
@@ -197,11 +182,11 @@ func (d *dedicatedClustersDataSource) Schema(_ context.Context, _ datasource.Sch
 									},
 								},
 								"public_endpoint_setting": schema.SingleNestedAttribute{
-									MarkdownDescription: "Settings for public endpoints.",
+									MarkdownDescription: "Settings for public endpoint.",
 									Computed:            true,
 									Attributes: map[string]schema.Attribute{
 										"enabled": schema.BoolAttribute{
-											MarkdownDescription: "Whether public endpoints are enabled.",
+											MarkdownDescription: "Whether public endpoint is enabled.",
 											Computed:            true,
 										},
 										"ip_access_list": schema.ListAttribute{

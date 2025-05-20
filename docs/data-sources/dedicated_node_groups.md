@@ -45,12 +45,12 @@ output "output" {
 Read-Only:
 
 - `display_name` (String) The display name of the region.
-- `endpoints` (Attributes List) The endpoints of the node group. (see [below for nested schema](#nestedatt--node_groups--endpoints))
+- `endpoints` (List of Object) The endpoints of the node group. (see [below for nested schema](#nestedatt--node_groups--endpoints))
 - `is_default_group` (Boolean) Indicates if this is the default group.
 - `node_count` (Number) The number of nodes in the node group.
 - `node_group_id` (String) The ID of the node group.
 - `node_spec_display_name` (String) The display name of the node spec.
-- `public_endpoint_setting` (Attributes) Settings for public endpoints. (see [below for nested schema](#nestedatt--node_groups--public_endpoint_setting))
+- `public_endpoint_setting` (Attributes) Settings for public endpoint. (see [below for nested schema](#nestedatt--node_groups--public_endpoint_setting))
 - `state` (String) The state of the node group.
 - `tiproxy_setting` (Attributes) Settings for TiProxy nodes. (see [below for nested schema](#nestedatt--node_groups--tiproxy_setting))
 
@@ -59,9 +59,9 @@ Read-Only:
 
 Read-Only:
 
-- `connection_type` (String) The connection type of the endpoint.
-- `host` (String) The host of the endpoint.
-- `port` (Number) The port of the endpoint.
+- `connection_type` (String)
+- `host` (String)
+- `port` (Number)
 
 
 <a id="nestedatt--node_groups--public_endpoint_setting"></a>
@@ -69,7 +69,7 @@ Read-Only:
 
 Read-Only:
 
-- `enabled` (Boolean) Whether public endpoints are enabled.
+- `enabled` (Boolean) Whether public endpoint is enabled.
 - `ip_access_list` (List of Object) IP access list for the public endpoint. (see [below for nested schema](#nestedatt--node_groups--public_endpoint_setting--ip_access_list))
 
 <a id="nestedatt--node_groups--public_endpoint_setting--ip_access_list"></a>

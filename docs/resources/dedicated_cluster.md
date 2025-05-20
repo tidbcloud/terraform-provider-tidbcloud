@@ -105,7 +105,7 @@ Read-Only:
 
 Optional:
 
-- `enabled` (Boolean) Whether public endpoint are enabled.
+- `enabled` (Boolean) Whether public endpoint is enabled.
 - `ip_access_list` (List of Object) IP access list for the public endpoint. (see [below for nested schema](#nestedatt--tidb_node_setting--public_endpoint_setting--ip_access_list))
 
 <a id="nestedatt--tidb_node_setting--public_endpoint_setting--ip_access_list"></a>

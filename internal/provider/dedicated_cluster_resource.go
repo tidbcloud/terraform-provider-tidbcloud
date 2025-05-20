@@ -90,12 +90,6 @@ type tiProxySetting struct {
 	NodeCount types.Int32  `tfsdk:"node_count"`
 }
 
-type endpoint struct {
-	Host           types.String `tfsdk:"host"`
-	Port           types.Int32  `tfsdk:"port"`
-	ConnectionType types.String `tfsdk:"connection_type"`
-}
-
 var endpointItemAttrTypes = map[string]attr.Type{
 	"host":            types.StringType,
 	"port":            types.Int32Type,
@@ -328,7 +322,7 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						},
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
-								MarkdownDescription: "Whether public endpoint are enabled.",
+								MarkdownDescription: "Whether public endpoint is enabled.",
 								Optional:            true,
 								Computed:            true,
 								PlanModifiers: []planmodifier.Bool{
@@ -592,12 +586,6 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 	// tiflash node setting
 	if resp.TiflashNodeSetting != nil {
 		if data.TiFlashNodeSetting == nil {
-			data.TiFlashNodeSetting.NodeSpecKey = types.StringValue(resp.TiflashNodeSetting.NodeSpecKey)
-			data.TiFlashNodeSetting.NodeCount = types.Int32Value(resp.TiflashNodeSetting.NodeCount)
-			data.TiFlashNodeSetting.StorageSizeGi = types.Int32Value(resp.TiflashNodeSetting.StorageSizeGi)
-			data.TiFlashNodeSetting.StorageType = types.StringValue(string(*resp.TiflashNodeSetting.StorageType))
-			data.TiFlashNodeSetting.NodeSpecDisplayName = types.StringValue(*resp.TiflashNodeSetting.NodeSpecDisplayName)
-		} else {
 			data.TiFlashNodeSetting = &tiflashNodeSetting{
 				NodeSpecKey:         types.StringValue(resp.TiflashNodeSetting.NodeSpecKey),
 				NodeCount:           types.Int32Value(resp.TiflashNodeSetting.NodeCount),
@@ -605,6 +593,12 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 				StorageType:         types.StringValue(string(*resp.TiflashNodeSetting.StorageType)),
 				NodeSpecDisplayName: types.StringValue(*resp.TiflashNodeSetting.NodeSpecDisplayName),
 			}
+		} else {
+			data.TiFlashNodeSetting.NodeSpecKey = types.StringValue(resp.TiflashNodeSetting.NodeSpecKey)
+			data.TiFlashNodeSetting.NodeCount = types.Int32Value(resp.TiflashNodeSetting.NodeCount)
+			data.TiFlashNodeSetting.StorageSizeGi = types.Int32Value(resp.TiflashNodeSetting.StorageSizeGi)
+			data.TiFlashNodeSetting.StorageType = types.StringValue(string(*resp.TiflashNodeSetting.StorageType))
+			data.TiFlashNodeSetting.NodeSpecDisplayName = types.StringValue(*resp.TiflashNodeSetting.NodeSpecDisplayName)
 		}
 	}
 
