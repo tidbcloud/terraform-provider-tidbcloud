@@ -80,7 +80,7 @@ func (d *sqlUserDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	tflog.Trace(ctx, "read serverless sql user data source")
+	tflog.Trace(ctx, "read sql user data source")
 	sqlUser, err := d.provider.IAMClient.GetSQLUser(ctx, data.ClusterId.ValueString(), data.UserName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetSQLUser, got error: %s", err))
