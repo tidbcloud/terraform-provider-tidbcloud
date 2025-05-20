@@ -164,6 +164,10 @@ func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Res
 		NewBackupResource,
 		NewRestoreResource,
 		NewImportResource,
+		
+		// new version with openapi v1beta1
+		NewSQLUserResource,
+
 		NewDedicatedClusterResource,
 		NewDedicatedNodeGroupResource,
 		NewDedicatedPrivateEndpointConnectionResource,
@@ -172,7 +176,6 @@ func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Res
 
 		NewServerlessClusterResource,
 		NewServerlessExportResource,
-		NewServerlessSQLUserResource,
 		NewServerlessBranchResource,
 	}
 }
@@ -184,6 +187,10 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 		NewBackupsDataSource,
 		NewRestoresDataSource,
 		NewClustersDataSource,
+
+		// new version with openapi v1beta1
+		NewSQLUsersDataSource,
+		NewSQLUserDataSource,
 
 		NewDedicatedRegionsDataSource,
 		NewDedicatedRegionDataSource,
@@ -204,8 +211,6 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 		NewServerlessRegionsDataSource,
 		NewServerlessExportDataSource,
 		NewServerlessExportsDataSource,
-		NewServerlessSQLUsersDataSource,
-		NewServerlessSQLUserDataSource,
 		NewServerlessBranchDataSource,
 		NewServerlessBranchesDataSource,
 	}

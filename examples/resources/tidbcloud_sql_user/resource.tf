@@ -23,7 +23,7 @@ variable "custom_roles" {
   nullable = false
 }
 
-resource "tidbcloud_serverless_sql_user" "example" {
+resource "tidbcloud_sql_user" "example" {
   cluster_id   = var.cluster_id
   user_name    = var.user_name
   password     = var.password

@@ -12,32 +12,32 @@ import (
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/iam"
 )
 
-func TestAccServerlessSQLUserResource(t *testing.T) {
-	serverlessSQLUserResourceName := "tidbcloud_serverless_sql_user.test"
+func TestAccSQLUserResource(t *testing.T) {
+	sqlUserResourceName := "tidbcloud_sql_user.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccServerlessSQLUserResourceConfig,
+				Config: testAccSQLUserResourceConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(serverlessSQLUserResourceName, "user_name", "test"),
-					resource.TestCheckResourceAttr(serverlessSQLUserResourceName, "builtin_role", "role_admin"),
+					resource.TestCheckResourceAttr(sqlUserResourceName, "user_name", "test"),
+					resource.TestCheckResourceAttr(sqlUserResourceName, "builtin_role", "role_admin"),
 				),
 			},
 			// Update testing
 			{
-				Config: testAccServerlessSQLUserResourceUpdateConfig,
+				Config: testAccSQLUserResourceUpdateConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("tidbcloud_serverless_sql_user.test", "password"),
+					resource.TestCheckResourceAttrSet("tidbcloud_sql_user.test", "password"),
 				),
 			},
 		},
 	})
 }
 
-func TestUTServerlessSQLUserResource(t *testing.T) {
+func TestUTSQLUserResource(t *testing.T) {
 	setupTestEnv()
 
 	ctrl := gomock.NewController(t)
@@ -71,11 +71,11 @@ func TestUTServerlessSQLUserResource(t *testing.T) {
 	s.EXPECT().UpdateSQLUser(gomock.Any(), clusterId, fullName, gomock.Any()).Return(&getUserAfterUpdateResp, nil)
 	s.EXPECT().DeleteSQLUser(gomock.Any(), clusterId, fullName).Return(nil, nil)
 
-	testServerlessSQLUserResource(t, clusterId, fullName, password, builtinRole, customRolesStr)
+	testSQLUserResource(t, clusterId, fullName, password, builtinRole, customRolesStr)
 }
 
-func testServerlessSQLUserResource(t *testing.T, clusterId, userName, password, builtinRole, customRoles string) {
-	serverlessSQLUserResourceName := "tidbcloud_serverless_sql_user.test"
+func testSQLUserResource(t *testing.T, clusterId, userName, password, builtinRole, customRoles string) {
+	sqlUserResourceName := "tidbcloud_sql_user.test"
 	resource.Test(t, resource.TestCase{
 		IsUnitTest:               true,
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -83,18 +83,18 @@ func testServerlessSQLUserResource(t *testing.T, clusterId, userName, password, 
 		Steps: []resource.TestStep{
 			// Create and Read serverless SQL User resource
 			{
-				Config:             testUTServerlessSQLUserResourceConfig(clusterId, userName, password, builtinRole),
+				Config:             testUTSQLUserResourceConfig(clusterId, userName, password, builtinRole),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(serverlessSQLUserResourceName, "user_name", userName),
-					resource.TestCheckResourceAttr(serverlessSQLUserResourceName, "password", password),
-					resource.TestCheckResourceAttr(serverlessSQLUserResourceName, "builtin_role", builtinRole),
+					resource.TestCheckResourceAttr(sqlUserResourceName, "user_name", userName),
+					resource.TestCheckResourceAttr(sqlUserResourceName, "password", password),
+					resource.TestCheckResourceAttr(sqlUserResourceName, "builtin_role", builtinRole),
 				),
 			},
 			// // Update correctly
 			{
-				Config:             testUTServerlessSQLUserResourceUpdateConfig(clusterId, userName, password, builtinRole, customRoles),
+				Config:             testUTSQLUserResourceUpdateConfig(clusterId, userName, password, builtinRole, customRoles),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(serverlessSQLUserResourceName, "custom_roles.#"),
+					resource.TestCheckResourceAttrSet(sqlUserResourceName, "custom_roles.#"),
 				),
 			},
 			// Delete testing automatically occurs in TestCase
@@ -102,7 +102,7 @@ func testServerlessSQLUserResource(t *testing.T, clusterId, userName, password, 
 	})
 }
 
-const testAccServerlessSQLUserResourceConfig = `
+const testAccSQLUserResourceConfig = `
 resource "tidbcloud_serverless_cluster" "example" {
    display_name = "test-tf"
    region = {
@@ -110,7 +110,7 @@ resource "tidbcloud_serverless_cluster" "example" {
    }
 }
 
-resource "tidbcloud_serverless_sql_user" "test" {
+resource "tidbcloud_sql_user" "test" {
 	cluster_id = tidbcloud_serverless_cluster.example.cluster_id	
 	user_name    = "${tidbcloud_serverless_cluster.example.user_prefix}.test"
 	password     = "123456"
@@ -118,7 +118,7 @@ resource "tidbcloud_serverless_sql_user" "test" {
 }
 `
 
-const testAccServerlessSQLUserResourceUpdateConfig = `
+const testAccSQLUserResourceUpdateConfig = `
 resource "tidbcloud_serverless_cluster" "example" {
    display_name = "test-tf"
    region = {
@@ -126,7 +126,7 @@ resource "tidbcloud_serverless_cluster" "example" {
    }
 }
 
-resource "tidbcloud_serverless_sql_user" "test" {
+resource "tidbcloud_sql_user" "test" {
 	cluster_id = tidbcloud_serverless_cluster.example.cluster_id	
 	user_name    = "${tidbcloud_serverless_cluster.example.user_prefix}.test"
 	password     = "456789"
@@ -134,9 +134,9 @@ resource "tidbcloud_serverless_sql_user" "test" {
 }	
 `
 
-func testUTServerlessSQLUserResourceConfig(clusterId, userName, password, builtinRole string) string {
+func testUTSQLUserResourceConfig(clusterId, userName, password, builtinRole string) string {
 	return fmt.Sprintf(`
-resource "tidbcloud_serverless_sql_user" "test" {
+resource "tidbcloud_sql_user" "test" {
 	cluster_id   = "%s"
 	user_name    = "%s"
 	password     = "%s"
@@ -145,9 +145,9 @@ resource "tidbcloud_serverless_sql_user" "test" {
 `, clusterId, userName, password, builtinRole)
 }
 
-func testUTServerlessSQLUserResourceUpdateConfig(clusterId, fullName, password, builtinRole, customRoles string) string {
+func testUTSQLUserResourceUpdateConfig(clusterId, fullName, password, builtinRole, customRoles string) string {
 	return fmt.Sprintf(`
-resource "tidbcloud_serverless_sql_user" "test" {
+resource "tidbcloud_sql_user" "test" {
 	cluster_id   = "%s"
 	user_name    = "%s"
 	password     = "%s"
