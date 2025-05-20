@@ -301,7 +301,7 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 			return
 		}
 		state.PublicEndpointSetting = pes
-		// sleep 1 minute to wait the endpoints updated
+		// because update public endpoint doesn't change the state of the cluster, sleep 1 minute to wait the endpoints updated
 		time.Sleep(1 * time.Minute)
 	}
 

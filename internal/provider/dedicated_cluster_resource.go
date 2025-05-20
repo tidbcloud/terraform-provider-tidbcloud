@@ -455,10 +455,6 @@ func (r dedicatedClusterResource) Create(ctx context.Context, req resource.Creat
 	clusterId := *cluster.ClusterId
 	data.ClusterId = types.StringValue(clusterId)
 	tflog.Info(ctx, "wait dedicated cluster ready")
-
-	// it's a workaround, the OpenAPI GET cluster is not fully compatible with freshly created clusters
-	time.Sleep(1 * time.Minute)
-
 	cluster, err = WaitDedicatedClusterReady(ctx, clusterCreateTimeout, clusterCreateInterval, clusterId, r.provider.DedicatedClient)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -731,6 +727,8 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 				return
 			}
 			state.TiDBNodeSetting.PublicEndpointSetting = pes
+			// because update public endpoint doesn't change the state of the cluster, sleep 1 minute to wait the endpoints updated
+			time.Sleep(1 * time.Minute)
 		}
 
 		body := &dedicated.ClusterServiceUpdateClusterRequest{}

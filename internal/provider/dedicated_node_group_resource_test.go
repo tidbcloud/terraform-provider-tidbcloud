@@ -63,7 +63,7 @@ func TestUTDedicatedNodeGroupResource(t *testing.T) {
 
 	s.EXPECT().CreateTiDBNodeGroup(gomock.Any(), clusterId, gomock.Any()).Return(&createNodeGroupResp, nil)
 	gomock.InOrder(
-		s.EXPECT().GetTiDBNodeGroup(gomock.Any(), clusterId, nodeGroupId).Return(&getNodeGroupResp, nil).Times(3),
+		s.EXPECT().GetTiDBNodeGroup(gomock.Any(), clusterId, nodeGroupId).Return(&getNodeGroupResp, nil).Times(4),
 		s.EXPECT().GetTiDBNodeGroup(gomock.Any(), clusterId, nodeGroupId).Return(&getNodeGroupAfterUpdateResp, nil).Times(2),
 	)
 	s.EXPECT().UpdateTiDBNodeGroup(gomock.Any(), clusterId, nodeGroupId, gomock.Any()).Return(&updateNodeGroupSuccessResp, nil)
