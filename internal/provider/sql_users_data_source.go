@@ -12,33 +12,33 @@ import (
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/iam"
 )
 
-type serverlessSQLUsersDataSourceData struct {
+type sqlUsersDataSourceData struct {
 	ClusterId types.String            `tfsdk:"cluster_id"`
-	SQLUsers  []serverlessSQLUserItem `tfsdk:"sql_users"`
+	SQLUsers  []sqlUserItem `tfsdk:"sql_users"`
 }
 
-type serverlessSQLUserItem struct {
+type sqlUserItem struct {
 	AuthMethod  types.String `tfsdk:"auth_method"`
 	UserName    types.String `tfsdk:"user_name"`
 	BuiltinRole types.String `tfsdk:"builtin_role"`
 	CustomRoles types.List   `tfsdk:"custom_roles"`
 }
 
-var _ datasource.DataSource = &serverlessSQLUsersDataSource{}
+var _ datasource.DataSource = &sqlUsersDataSource{}
 
-type serverlessSQLUsersDataSource struct {
+type sqlUsersDataSource struct {
 	provider *tidbcloudProvider
 }
 
-func NewServerlessSQLUsersDataSource() datasource.DataSource {
-	return &serverlessSQLUsersDataSource{}
+func NewSQLUsersDataSource() datasource.DataSource {
+	return &sqlUsersDataSource{}
 }
 
-func (d *serverlessSQLUsersDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_serverless_sql_users"
+func (d *sqlUsersDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_sql_users"
 }
 
-func (d *serverlessSQLUsersDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *sqlUsersDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -49,9 +49,9 @@ func (d *serverlessSQLUsersDataSource) Configure(_ context.Context, req datasour
 	}
 }
 
-func (d *serverlessSQLUsersDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *sqlUsersDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "serverless sql users data source",
+		MarkdownDescription: "sql users data source",
 		Attributes: map[string]schema.Attribute{
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The id of the cluster where the users are.",
@@ -86,23 +86,23 @@ func (d *serverlessSQLUsersDataSource) Schema(_ context.Context, _ datasource.Sc
 	}
 }
 
-func (d *serverlessSQLUsersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data serverlessSQLUsersDataSourceData
+func (d *sqlUsersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data sqlUsersDataSourceData
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tflog.Trace(ctx, "read serverless sql users data source")
+	tflog.Trace(ctx, "read sql users data source")
 	users, err := d.RetrieveSQLUsers(ctx, data.ClusterId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call ListClusters, got error: %s", err))
 		return
 	}
-	var items []serverlessSQLUserItem
+	var items []sqlUserItem
 	for _, user := range users {
-		var u serverlessSQLUserItem
+		var u sqlUserItem
 		customRoles, diags := types.ListValueFrom(ctx, types.StringType, user.CustomRoles)
 		if diags.HasError() {
 			return
@@ -119,7 +119,7 @@ func (d *serverlessSQLUsersDataSource) Read(ctx context.Context, req datasource.
 	resp.Diagnostics.Append(diags...)
 }
 
-func (d *serverlessSQLUsersDataSource) RetrieveSQLUsers(ctx context.Context, clusterId string) ([]iam.ApiSqlUser, error) {
+func (d *sqlUsersDataSource) RetrieveSQLUsers(ctx context.Context, clusterId string) ([]iam.ApiSqlUser, error) {
 	var items []iam.ApiSqlUser
 
 	pageSizeInt32 := int32(DefaultPageSize)

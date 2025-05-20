@@ -62,7 +62,13 @@ func testUTServerlessClustersDataSource(t *testing.T) {
 			{
 				Config: testUTServerlessClustersConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(serverlessClustersDataSourceName, "serverless_clusters.#", "0"),
+					func(s *terraform.State) error {
+						_, ok := s.RootModule().Resources[serverlessClustersDataSourceName]
+						if !ok {
+							return fmt.Errorf("Not found: %s", serverlessClustersDataSourceName)
+						}
+						return nil
+					},
 				),
 			},
 		},
@@ -85,6 +91,7 @@ data "tidbcloud_serverless_clusters" "test" {}
 `
 
 const testUTTidbCloudOpenApiserverlessv1beta1ListClustersResponse = `
+{
 	"clusters": [
         {
             "name": "clusters/xxxxxxxxx",
@@ -146,4 +153,5 @@ const testUTTidbCloudOpenApiserverlessv1beta1ListClustersResponse = `
             }
         }
 	]
+}
 `

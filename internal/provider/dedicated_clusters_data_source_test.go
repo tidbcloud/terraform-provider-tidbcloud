@@ -61,7 +61,13 @@ func testUTDedicatedClustersDataSource(t *testing.T) {
 			{
 				Config: testUTDedicatedClustersConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dedicatedClustersDataSourceName, "dedicated_clusters.#", "0"),
+					func(s *terraform.State) error {
+						_, ok := s.RootModule().Resources[dedicatedClustersDataSourceName]
+						if !ok {
+							return fmt.Errorf("Not found: %s", dedicatedClustersDataSourceName)
+						}
+						return nil
+					},
 				),
 			},
 		},

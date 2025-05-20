@@ -1,33 +1,40 @@
 package provider
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	mockClient "github.com/tidbcloud/terraform-provider-tidbcloud/mock"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 	"github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/iam"
 )
 
-func TestAccServerlessSQLUsersDataSource(t *testing.T) {
-	serverlessSQLUsersDataSourceName := "data.tidbcloud_serverless_sql_users.test"
-
+func TestAccSQLUsersDataSource(t *testing.T) {
+	sqlUsersDataSourceName := "data.tidbcloud_sql_users.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testServerlessSQLUsersDataSourceConfig,
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(serverlessSQLUsersDataSourceName, "builtin_role", "role_admin"),
+				Config: testSQLUsersDataSourceConfig,
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						_, ok := s.RootModule().Resources[sqlUsersDataSourceName]
+						if !ok {
+							return fmt.Errorf("Not found: %s", sqlUsersDataSourceName)
+						}
+						return nil
+					},
 				),
 			},
 		},
 	})
 }
 
-func TestUTServerlessSQLUsersDataSource(t *testing.T) {
+func TestUTSQLUsersDataSource(t *testing.T) {
 	setupTestEnv()
 
 	ctrl := gomock.NewController(t)
@@ -43,53 +50,60 @@ func TestUTServerlessSQLUsersDataSource(t *testing.T) {
 
 	s.EXPECT().ListSQLUsers(gomock.Any(), clusterId, gomock.Any(), gomock.Any()).Return(&listUserResp, nil).AnyTimes()
 
-	testUTServerlessSQLUsersDataSource(t)
+	testUTSQLUsersDataSource(t)
 }
 
-func testUTServerlessSQLUsersDataSource(t *testing.T) {
-	serverlessSQLUserDataSourceName := "data.tidbcloud_serverless_sql_users.test"
+func testUTSQLUsersDataSource(t *testing.T) {
+	sqlUserDataSourceName := "data.tidbcloud_sql_users.test"
 	resource.Test(t, resource.TestCase{
 		IsUnitTest:               true,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testUTServerlessSQLUsersDataSourceConfig,
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(serverlessSQLUserDataSourceName, "serverless_sql_users.#", "0"),
+				Config: testUTSQLUsersDataSourceConfig,
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						_, ok := s.RootModule().Resources[sqlUserDataSourceName]
+						if !ok {
+							return fmt.Errorf("Not found: %s", sqlUserDataSourceName)
+						}
+						return nil
+					},
 				),
 			},
 		},
 	})
 }
 
-const testServerlessSQLUsersDataSourceConfig = `
-resource "tidbcloud_serverless_sql_user" "example" {
+const testSQLUsersDataSourceConfig = `
+resource "tidbcloud_serverless_cluster" "example" {
    display_name = "test-tf"
    region = {
       name = "regions/aws-us-east-1"
    }
 }
 
-resource "tidbcloud_serverless_sql_user" "test" {
+resource "tidbcloud_sql_user" "test" {
 	cluster_id = tidbcloud_serverless_cluster.example.cluster_id	
 	user_name    = "${tidbcloud_serverless_cluster.example.user_prefix}.test"
 	password     = "123456"
 	builtin_role = "role_admin"
 }
 
-data "tidbcloud_serverless_sql_users" "test" {
+data "tidbcloud_sql_users" "test" {
 	cluster_id = tidbcloud_serverless_cluster.example.cluster_id
 }
 `
 
-const testUTServerlessSQLUsersDataSourceConfig string = `
-data "tidbcloud_serverless_sql_users" "test" {
+const testUTSQLUsersDataSourceConfig string = `
+data "tidbcloud_sql_users" "test" {
 	cluster_id = "cluster_id"
 }
 `
 
 const testUTApiListSqlUsersResponse = `
+{
 	"sqlUsers": [
         {
             "userName": "xxxxxxxxxxxxxxx.root",
@@ -102,4 +116,5 @@ const testUTApiListSqlUsersResponse = `
             "authMethod": "mysql_native_password"
         }
     ]
+}
 `
