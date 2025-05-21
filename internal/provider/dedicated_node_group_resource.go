@@ -286,8 +286,8 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 
 	isPublicEndpointSettingChanging := false
 	if plan.PublicEndpointSetting != nil && state.PublicEndpointSetting != nil {
-		isPublicEndpointSettingChanging = plan.PublicEndpointSetting.Enabled.Equal(state.PublicEndpointSetting.Enabled) ||
-			plan.PublicEndpointSetting.IPAccessList.Equal(state.PublicEndpointSetting.IPAccessList)
+		isPublicEndpointSettingChanging = !plan.PublicEndpointSetting.Enabled.Equal(state.PublicEndpointSetting.Enabled) ||
+			!plan.PublicEndpointSetting.IPAccessList.Equal(state.PublicEndpointSetting.IPAccessList)
 	} else if plan.PublicEndpointSetting != nil {
 		isPublicEndpointSettingChanging = true
 	} else if state.PublicEndpointSetting != nil {
