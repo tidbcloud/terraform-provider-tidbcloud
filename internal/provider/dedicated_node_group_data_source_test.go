@@ -39,8 +39,11 @@ func TestUTDedicatedNodeGroupDataSource(t *testing.T) {
 
 	getNodeGroupResp := dedicated.Dedicatedv1beta1TidbNodeGroup{}
 	getNodeGroupResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApidedicatedv1beta1NodeGroup("cluster_id", "test_group", string(dedicated.DEDICATEDV1BETA1TIDBNODEGROUPSTATE_ACTIVE), 1)))
+	publicEndpointResp := dedicated.V1beta1PublicEndpointSetting{}
+	publicEndpointResp.UnmarshalJSON([]byte(testUTV1beta1PublicEndpointSetting()))
 
 	s.EXPECT().GetTiDBNodeGroup(gomock.Any(), gomock.Any(), nodeGroupId).Return(&getNodeGroupResp, nil).AnyTimes()
+	s.EXPECT().GetPublicEndpoint(gomock.Any(), gomock.Any(), gomock.Any()).Return(&publicEndpointResp, nil).AnyTimes()
 
 	testUTDedicatedNodeGroupDataSource(t)
 }

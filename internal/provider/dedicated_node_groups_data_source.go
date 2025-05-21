@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -19,14 +20,15 @@ type dedicatedNodeGroupsDataSourceData struct {
 }
 
 type nodeGroupItems struct {
-	NodeCount           types.Int32     `tfsdk:"node_count"`
-	NodeGroupId         types.String    `tfsdk:"node_group_id"`
-	DisplayName         types.String    `tfsdk:"display_name"`
-	NodeSpecDisplayName types.String    `tfsdk:"node_spec_display_name"`
-	IsDefaultGroup      types.Bool      `tfsdk:"is_default_group"`
-	State               types.String    `tfsdk:"state"`
-	Endpoints           []endpoint      `tfsdk:"endpoints"`
-	TiProxySetting      *tiProxySetting `tfsdk:"tiproxy_setting"`
+	NodeCount             types.Int32            `tfsdk:"node_count"`
+	NodeGroupId           types.String           `tfsdk:"node_group_id"`
+	DisplayName           types.String           `tfsdk:"display_name"`
+	NodeSpecDisplayName   types.String           `tfsdk:"node_spec_display_name"`
+	IsDefaultGroup        types.Bool             `tfsdk:"is_default_group"`
+	State                 types.String           `tfsdk:"state"`
+	Endpoints             types.List             `tfsdk:"endpoints"`
+	TiProxySetting        *tiProxySetting        `tfsdk:"tiproxy_setting"`
+	PublicEndpointSetting *publicEndpointSetting `tfsdk:"public_endpoint_setting"`
 }
 
 var _ datasource.DataSource = &dedicatedNodeGroupsDataSource{}
@@ -95,25 +97,10 @@ func (d *dedicatedNodeGroupsDataSource) Schema(_ context.Context, _ datasource.S
 							MarkdownDescription: "The state of the node group.",
 							Computed:            true,
 						},
-						"endpoints": schema.ListNestedAttribute{
+						"endpoints": schema.ListAttribute{
 							MarkdownDescription: "The endpoints of the node group.",
 							Computed:            true,
-							NestedObject: schema.NestedAttributeObject{
-								Attributes: map[string]schema.Attribute{
-									"host": schema.StringAttribute{
-										MarkdownDescription: "The host of the endpoint.",
-										Computed:            true,
-									},
-									"port": schema.Int32Attribute{
-										MarkdownDescription: "The port of the endpoint.",
-										Computed:            true,
-									},
-									"connection_type": schema.StringAttribute{
-										MarkdownDescription: "The connection type of the endpoint.",
-										Computed:            true,
-									},
-								},
-							},
+							ElementType:         types.ObjectType{AttrTypes: endpointItemAttrTypes},
 						},
 						"tiproxy_setting": schema.SingleNestedAttribute{
 							MarkdownDescription: "Settings for TiProxy nodes.",
@@ -128,6 +115,21 @@ func (d *dedicatedNodeGroupsDataSource) Schema(_ context.Context, _ datasource.S
 								"node_count": schema.Int32Attribute{
 									MarkdownDescription: "The number of TiProxy nodes.",
 									Computed:            true,
+								},
+							},
+						},
+						"public_endpoint_setting": schema.SingleNestedAttribute{
+							MarkdownDescription: "Settings for public endpoint.",
+							Computed:            true,
+							Attributes: map[string]schema.Attribute{
+								"enabled": schema.BoolAttribute{
+									MarkdownDescription: "Whether public endpoint is enabled.",
+									Computed:            true,
+								},
+								"ip_access_list": schema.ListAttribute{
+									MarkdownDescription: "IP access list for the public endpoint.",
+									Computed:            true,
+									ElementType:         types.ObjectType{AttrTypes: ipAccessListItemAttrTypes},
 								},
 							},
 						},
@@ -158,14 +160,24 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 			data.NodeSpecKey = types.StringValue(*nodeGroup.NodeSpecKey)
 		}
 
-		var endpoints []endpoint
+		var endpoints []attr.Value
 		for _, e := range nodeGroup.Endpoints {
-			endpoints = append(endpoints, endpoint{
-				Host:           types.StringValue(*e.Host),
-				Port:           types.Int32Value(*e.Port),
-				ConnectionType: types.StringValue(string(*e.ConnectionType)),
-			})
+			endpointObj, objDiags := types.ObjectValue(
+				endpointItemAttrTypes,
+				map[string]attr.Value{
+					"host":            types.StringValue(*e.Host),
+					"port":            types.Int32Value(*e.Port),
+					"connection_type": types.StringValue(string(*e.ConnectionType)),
+				},
+			)
+			diags.Append(objDiags...)
+			endpoints = append(endpoints, endpointObj)
 		}
+		endpointsList, listDiags := types.ListValue(types.ObjectType{
+			AttrTypes: endpointItemAttrTypes,
+		}, endpoints)
+		diags.Append(listDiags...)
+
 		tiProxy := tiProxySetting{}
 		if nodeGroup.TiproxySetting != nil {
 			tiProxy = tiProxySetting{
@@ -173,15 +185,22 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 				NodeCount: types.Int32Value(*nodeGroup.TiproxySetting.NodeCount.Get()),
 			}
 		}
+		publicEndpointSetting, err := d.provider.DedicatedClient.GetPublicEndpoint(ctx, data.ClusterId.ValueString(), *nodeGroup.TidbNodeGroupId)
+		if err != nil {
+			resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetPublicEndpoint, got error: %s", err))
+			return
+		}
+
 		items = append(items, nodeGroupItems{
-			NodeCount:           types.Int32Value(nodeGroup.NodeCount),
-			NodeGroupId:         types.StringValue(*nodeGroup.TidbNodeGroupId),
-			DisplayName:         types.StringValue(*nodeGroup.DisplayName),
-			NodeSpecDisplayName: types.StringValue(*nodeGroup.NodeSpecDisplayName),
-			IsDefaultGroup:      types.BoolValue(*nodeGroup.IsDefaultGroup),
-			State:               types.StringValue(string(*nodeGroup.State)),
-			Endpoints:           endpoints,
-			TiProxySetting:      &tiProxy,
+			NodeCount:             types.Int32Value(nodeGroup.NodeCount),
+			NodeGroupId:           types.StringValue(*nodeGroup.TidbNodeGroupId),
+			DisplayName:           types.StringValue(*nodeGroup.DisplayName),
+			NodeSpecDisplayName:   types.StringValue(*nodeGroup.NodeSpecDisplayName),
+			IsDefaultGroup:        types.BoolValue(*nodeGroup.IsDefaultGroup),
+			State:                 types.StringValue(string(*nodeGroup.State)),
+			Endpoints:             endpointsList,
+			TiProxySetting:        &tiProxy,
+			PublicEndpointSetting: convertDedicatedPublicEndpointSetting(publicEndpointSetting),
 		})
 	}
 	data.NodeGroups = items

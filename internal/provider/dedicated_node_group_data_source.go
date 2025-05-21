@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -11,16 +12,17 @@ import (
 )
 
 type dedicatedNodeGroupDataSourceData struct {
-	ClusterId           types.String    `tfsdk:"cluster_id"`
-	NodeSpecKey         types.String    `tfsdk:"node_spec_key"`
-	NodeCount           types.Int64     `tfsdk:"node_count"`
-	NodeGroupId         types.String    `tfsdk:"node_group_id"`
-	DisplayName         types.String    `tfsdk:"display_name"`
-	NodeSpecDisplayName types.String    `tfsdk:"node_spec_display_name"`
-	IsDefaultGroup      types.Bool      `tfsdk:"is_default_group"`
-	State               types.String    `tfsdk:"state"`
-	Endpoints           []endpoint      `tfsdk:"endpoints"`
-	TiProxySetting      *tiProxySetting `tfsdk:"tiproxy_setting"`
+	ClusterId             types.String           `tfsdk:"cluster_id"`
+	NodeSpecKey           types.String           `tfsdk:"node_spec_key"`
+	NodeCount             types.Int64            `tfsdk:"node_count"`
+	NodeGroupId           types.String           `tfsdk:"node_group_id"`
+	DisplayName           types.String           `tfsdk:"display_name"`
+	NodeSpecDisplayName   types.String           `tfsdk:"node_spec_display_name"`
+	IsDefaultGroup        types.Bool             `tfsdk:"is_default_group"`
+	State                 types.String           `tfsdk:"state"`
+	Endpoints             types.List             `tfsdk:"endpoints"`
+	TiProxySetting        *tiProxySetting        `tfsdk:"tiproxy_setting"`
+	PublicEndpointSetting *publicEndpointSetting `tfsdk:"public_endpoint_setting"`
 }
 
 var _ datasource.DataSource = &dedicatedNodeGroupDataSource{}
@@ -84,25 +86,10 @@ func (d *dedicatedNodeGroupDataSource) Schema(_ context.Context, _ datasource.Sc
 				MarkdownDescription: "The state of the node group.",
 				Computed:            true,
 			},
-			"endpoints": schema.ListNestedAttribute{
+			"endpoints": schema.ListAttribute{
 				MarkdownDescription: "The endpoints of the node group.",
 				Computed:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"host": schema.StringAttribute{
-							MarkdownDescription: "The host of the endpoint.",
-							Computed:            true,
-						},
-						"port": schema.Int32Attribute{
-							MarkdownDescription: "The port of the endpoint.",
-							Computed:            true,
-						},
-						"connection_type": schema.StringAttribute{
-							MarkdownDescription: "The connection type of the endpoint.",
-							Computed:            true,
-						},
-					},
-				},
+				ElementType:         types.ObjectType{AttrTypes: endpointItemAttrTypes},
 			},
 			"tiproxy_setting": schema.SingleNestedAttribute{
 				MarkdownDescription: "Settings for TiProxy nodes.",
@@ -117,6 +104,21 @@ func (d *dedicatedNodeGroupDataSource) Schema(_ context.Context, _ datasource.Sc
 					"node_count": schema.Int32Attribute{
 						MarkdownDescription: "The number of TiProxy nodes.",
 						Computed:            true,
+					},
+				},
+			},
+			"public_endpoint_setting": schema.SingleNestedAttribute{
+				MarkdownDescription: "Settings for public endpoint.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"enabled": schema.BoolAttribute{
+						MarkdownDescription: "Whether public endpoint is enabled.",
+						Computed:            true,
+					},
+					"ip_access_list": schema.ListAttribute{
+						MarkdownDescription: "IP access list for the public endpoint.",
+						Computed:            true,
+						ElementType:         types.ObjectType{AttrTypes: ipAccessListItemAttrTypes},
 					},
 				},
 			},
@@ -138,6 +140,11 @@ func (d *dedicatedNodeGroupDataSource) Read(ctx context.Context, req datasource.
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetRTiDBNodeGroup, got error: %s", err))
 		return
 	}
+	publicEndpointSetting, err := d.provider.DedicatedClient.GetPublicEndpoint(ctx, data.ClusterId.ValueString(), data.NodeGroupId.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetPublicEndpoint, got error: %s", err))
+		return
+	}
 
 	data.NodeSpecKey = types.StringValue(string(*nodeGroup.NodeSpecKey))
 	data.NodeCount = types.Int64Value(int64(nodeGroup.NodeCount))
@@ -145,15 +152,24 @@ func (d *dedicatedNodeGroupDataSource) Read(ctx context.Context, req datasource.
 	data.NodeSpecDisplayName = types.StringValue(string(*nodeGroup.NodeSpecDisplayName))
 	data.IsDefaultGroup = types.BoolValue(bool(*nodeGroup.IsDefaultGroup))
 	data.State = types.StringValue(string(*nodeGroup.State))
-	var endpoints []endpoint
+	var endpoints []attr.Value
 	for _, e := range nodeGroup.Endpoints {
-		endpoints = append(endpoints, endpoint{
-			Host:           types.StringValue(*e.Host),
-			Port:           types.Int32Value(*e.Port),
-			ConnectionType: types.StringValue(string(*e.ConnectionType)),
-		})
+		endpointObj, objDiags := types.ObjectValue(
+			endpointItemAttrTypes,
+			map[string]attr.Value{
+				"host":            types.StringValue(*e.Host),
+				"port":            types.Int32Value(*e.Port),
+				"connection_type": types.StringValue(string(*e.ConnectionType)),
+			},
+		)
+		diags.Append(objDiags...)
+		endpoints = append(endpoints, endpointObj)
 	}
-	data.Endpoints = endpoints
+	endpointsList, listDiags := types.ListValue(types.ObjectType{
+		AttrTypes: endpointItemAttrTypes,
+	}, endpoints)
+	diags.Append(listDiags...)
+	data.Endpoints = endpointsList
 	if nodeGroup.TiproxySetting != nil {
 		tiProxy := tiProxySetting{
 			Type:      types.StringValue(string(*nodeGroup.TiproxySetting.Type)),
@@ -161,6 +177,7 @@ func (d *dedicatedNodeGroupDataSource) Read(ctx context.Context, req datasource.
 		}
 		data.TiProxySetting = &tiProxy
 	}
+	data.PublicEndpointSetting = convertDedicatedPublicEndpointSetting(publicEndpointSetting)
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)

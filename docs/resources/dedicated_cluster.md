@@ -88,16 +88,35 @@ Required:
 
 Optional:
 
+- `public_endpoint_setting` (Attributes) Settings for public endpoint. (see [below for nested schema](#nestedatt--tidb_node_setting--public_endpoint_setting))
 - `tiproxy_setting` (Attributes) Settings for TiProxy nodes. (see [below for nested schema](#nestedatt--tidb_node_setting--tiproxy_setting))
 
 Read-Only:
 
-- `endpoints` (Attributes List) The endpoints of the node group. (see [below for nested schema](#nestedatt--tidb_node_setting--endpoints))
+- `endpoints` (List of Object) The endpoints of the node group. (see [below for nested schema](#nestedatt--tidb_node_setting--endpoints))
 - `is_default_group` (Boolean) Indicates if this is the default group.
 - `node_group_display_name` (String) The display name of the default node group.
 - `node_group_id` (String) The ID of the default node group.
 - `node_spec_display_name` (String) The display name of the node spec.
 - `state` (String) The state of the node group.
+
+<a id="nestedatt--tidb_node_setting--public_endpoint_setting"></a>
+### Nested Schema for `tidb_node_setting.public_endpoint_setting`
+
+Optional:
+
+- `enabled` (Boolean) Whether public endpoint is enabled.
+- `ip_access_list` (List of Object) IP access list for the public endpoint. (see [below for nested schema](#nestedatt--tidb_node_setting--public_endpoint_setting--ip_access_list))
+
+<a id="nestedatt--tidb_node_setting--public_endpoint_setting--ip_access_list"></a>
+### Nested Schema for `tidb_node_setting.public_endpoint_setting.ip_access_list`
+
+Required:
+
+- `cidr_notation` (String)
+- `description` (String)
+
+
 
 <a id="nestedatt--tidb_node_setting--tiproxy_setting"></a>
 ### Nested Schema for `tidb_node_setting.tiproxy_setting`
@@ -111,11 +130,11 @@ Optional:
 <a id="nestedatt--tidb_node_setting--endpoints"></a>
 ### Nested Schema for `tidb_node_setting.endpoints`
 
-Read-Only:
+Required:
 
-- `connection_type` (String) The connection type of the endpoint.
-- `host` (String) The host of the endpoint.
-- `port` (Number) The port of the endpoint.
+- `connection_type` (String)
+- `host` (String)
+- `port` (Number)
 
 
 

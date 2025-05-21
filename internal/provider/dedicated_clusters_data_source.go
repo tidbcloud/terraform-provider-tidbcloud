@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -159,25 +160,10 @@ func (d *dedicatedClustersDataSource) Schema(_ context.Context, _ datasource.Sch
 									MarkdownDescription: "The state of the node group.",
 									Computed:            true,
 								},
-								"endpoints": schema.ListNestedAttribute{
+								"endpoints": schema.ListAttribute{
 									MarkdownDescription: "The endpoints of the node group.",
 									Computed:            true,
-									NestedObject: schema.NestedAttributeObject{
-										Attributes: map[string]schema.Attribute{
-											"host": schema.StringAttribute{
-												MarkdownDescription: "The host of the endpoint.",
-												Computed:            true,
-											},
-											"port": schema.Int32Attribute{
-												MarkdownDescription: "The port of the endpoint.",
-												Computed:            true,
-											},
-											"connection_type": schema.StringAttribute{
-												MarkdownDescription: "The connection type of the endpoint.",
-												Computed:            true,
-											},
-										},
-									},
+									ElementType:         types.ObjectType{AttrTypes: endpointItemAttrTypes},
 								},
 								"tiproxy_setting": schema.SingleNestedAttribute{
 									MarkdownDescription: "Settings for TiProxy nodes.",
@@ -192,6 +178,21 @@ func (d *dedicatedClustersDataSource) Schema(_ context.Context, _ datasource.Sch
 										"node_count": schema.Int32Attribute{
 											MarkdownDescription: "The number of TiProxy nodes.",
 											Computed:            true,
+										},
+									},
+								},
+								"public_endpoint_setting": schema.SingleNestedAttribute{
+									MarkdownDescription: "Settings for public endpoint.",
+									Computed:            true,
+									Attributes: map[string]schema.Attribute{
+										"enabled": schema.BoolAttribute{
+											MarkdownDescription: "Whether public endpoint is enabled.",
+											Computed:            true,
+										},
+										"ip_access_list": schema.ListAttribute{
+											MarkdownDescription: "IP access list for the public endpoint.",
+											Computed:            true,
+											ElementType:         types.ObjectType{AttrTypes: ipAccessListItemAttrTypes},
 										},
 									},
 								},
@@ -308,14 +309,23 @@ func (d *dedicatedClustersDataSource) Read(ctx context.Context, req datasource.R
 		// tidb node setting
 		for _, group := range cluster.TidbNodeSetting.TidbNodeGroups {
 			if *group.IsDefaultGroup {
-				var endpoints []endpoint
+				var endpoints []attr.Value
 				for _, e := range group.Endpoints {
-					endpoints = append(endpoints, endpoint{
-						Host:           types.StringValue(*e.Host),
-						Port:           types.Int32Value(*e.Port),
-						ConnectionType: types.StringValue(string(*e.ConnectionType)),
-					})
+					endpointObj, objDiags := types.ObjectValue(
+						endpointItemAttrTypes,
+						map[string]attr.Value{
+							"host":            types.StringValue(*e.Host),
+							"port":            types.Int32Value(*e.Port),
+							"connection_type": types.StringValue(string(*e.ConnectionType)),
+						},
+					)
+					diags.Append(objDiags...)
+					endpoints = append(endpoints, endpointObj)
 				}
+				endpointsList, listDiags := types.ListValue(types.ObjectType{
+					AttrTypes: endpointItemAttrTypes,
+				}, endpoints)
+				diags.Append(listDiags...)
 				defaultTiProxySetting := tiProxySetting{}
 				if group.TiproxySetting != nil {
 					defaultTiProxySetting = tiProxySetting{
@@ -323,16 +333,24 @@ func (d *dedicatedClustersDataSource) Read(ctx context.Context, req datasource.R
 						NodeCount: types.Int32Value(*group.TiproxySetting.NodeCount.Get()),
 					}
 				}
+
+				publicEndpointSetting, err := d.provider.DedicatedClient.GetPublicEndpoint(ctx, c.ClusterId.ValueString(), *group.TidbNodeGroupId)
+				if err != nil {
+					resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetPublicEndpoint, got error: %s", err))
+					return
+				}
+
 				c.TiDBNodeSetting = &tidbNodeSetting{
-					NodeSpecKey:          types.StringValue(*group.NodeSpecKey),
-					NodeCount:            types.Int32Value(group.NodeCount),
-					NodeGroupId:          types.StringValue(*group.TidbNodeGroupId),
-					NodeGroupDisplayName: types.StringValue(*group.DisplayName),
-					NodeSpecDisplayName:  types.StringValue(*group.NodeSpecDisplayName),
-					IsDefaultGroup:       types.BoolValue(*group.IsDefaultGroup),
-					State:                types.StringValue(string(*group.State)),
-					Endpoints:            endpoints,
-					TiProxySetting:       &defaultTiProxySetting,
+					NodeSpecKey:           types.StringValue(*group.NodeSpecKey),
+					NodeCount:             types.Int32Value(group.NodeCount),
+					NodeGroupId:           types.StringValue(*group.TidbNodeGroupId),
+					NodeGroupDisplayName:  types.StringValue(*group.DisplayName),
+					NodeSpecDisplayName:   types.StringValue(*group.NodeSpecDisplayName),
+					IsDefaultGroup:        types.BoolValue(*group.IsDefaultGroup),
+					State:                 types.StringValue(string(*group.State)),
+					Endpoints:             endpointsList,
+					TiProxySetting:        &defaultTiProxySetting,
+					PublicEndpointSetting: convertDedicatedPublicEndpointSetting(publicEndpointSetting),
 				}
 			}
 		}
