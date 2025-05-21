@@ -59,7 +59,6 @@ resource "tidbcloud_serverless_cluster" "example" {
 - `labels` (Map of String) The labels of the cluster.
 - `state` (String) The state of the cluster.
 - `update_time` (String) The time the cluster was last updated.
-- `usage` (Attributes) The usage of the cluster. (see [below for nested schema](#nestedatt--usage))
 - `user_prefix` (String) The unique prefix in SQL user name.
 - `version` (String) The version of the cluster.
 
@@ -147,13 +146,3 @@ Read-Only:
 Optional:
 
 - `monthly` (Number) Maximum monthly spending limit in USD cents.
-
-
-<a id="nestedatt--usage"></a>
-### Nested Schema for `usage`
-
-Read-Only:
-
-- `columnar_storage` (Number) The columnar storage of the cluster.
-- `request_unit` (String) The request unit of the cluster.
-- `row_based_storage` (Number) The row-based storage of the cluster.

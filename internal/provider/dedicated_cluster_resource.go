@@ -75,11 +75,6 @@ type publicEndpointSetting struct {
 	IPAccessList types.List `tfsdk:"ip_access_list"`
 }
 
-type ipAccessListItem struct {
-	CIDRNotation types.String `tfsdk:"cidr_notation"`
-	Description  types.String `tfsdk:"description"`
-}
-
 var ipAccessListItemAttrTypes = map[string]attr.Type{
 	"cidr_notation": types.StringType,
 	"description":   types.StringType,

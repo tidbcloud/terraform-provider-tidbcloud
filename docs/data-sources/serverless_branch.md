@@ -53,7 +53,6 @@ output "output" {
 - `parent_timestamp` (String) The timestamp of the parent. (RFC3339 format, e.g., 2024-01-01T00:00:00Z)
 - `state` (String) The state of the branch.
 - `update_time` (String) The time the branch was last updated.
-- `usage` (Attributes) The usage of the branch. (see [below for nested schema](#nestedatt--usage))
 - `user_prefix` (String) The unique prefix in SQL user name.
 
 <a id="nestedatt--endpoints"></a>
@@ -91,14 +90,3 @@ Read-Only:
 - `disabled` (Boolean) Whether the public endpoint is disabled.
 - `host` (String) The host of the public endpoint.
 - `port` (Number) The port of the public endpoint.
-
-
-
-<a id="nestedatt--usage"></a>
-### Nested Schema for `usage`
-
-Read-Only:
-
-- `columnar_storage` (Number) The columnar storage of the branch.
-- `request_unit` (String) The request unit of the branch.
-- `row_based_storage` (Number) The row-based storage of the branch.

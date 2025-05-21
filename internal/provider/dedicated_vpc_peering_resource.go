@@ -220,7 +220,6 @@ func (r *DedicatedVpcPeeringResource) Read(ctx context.Context, req resource.Rea
 
 func (r *DedicatedVpcPeeringResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	resp.Diagnostics.AddError("Update Error", "Update is not supported for dedicated vpc peering")
-	return
 }
 
 func (r *DedicatedVpcPeeringResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

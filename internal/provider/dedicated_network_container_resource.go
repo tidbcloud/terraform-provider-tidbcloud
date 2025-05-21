@@ -176,7 +176,6 @@ func (r *DedicatedNetworkContainerResource) Read(ctx context.Context, req resour
 
 func (r *DedicatedNetworkContainerResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	resp.Diagnostics.AddError("Update Error", "Update is not supported for dedicated network container")
-	return
 }
 
 func (r *DedicatedNetworkContainerResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -193,8 +192,6 @@ func (r *DedicatedNetworkContainerResource) Delete(ctx context.Context, req reso
 		tflog.Error(ctx, fmt.Sprintf("Unable to call DeleteNetworkContainer, error: %s", err))
 		resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Unable to call DeleteNetworkContainer, got error: %s", err))
 	}
-
-	return
 }
 
 func (r *DedicatedNetworkContainerResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

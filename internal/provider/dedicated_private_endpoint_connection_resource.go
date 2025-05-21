@@ -270,7 +270,6 @@ func (r dedicatedPrivateEndpointConnectionResource) Delete(ctx context.Context, 
 // NOTICE: update is not supported for dedicated private endpoint connection
 func (r dedicatedPrivateEndpointConnectionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	resp.Diagnostics.AddError("Update Error", "Update is not supported for dedicated private endpoint connection")
-	return
 }
 
 func (r dedicatedPrivateEndpointConnectionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

@@ -26,7 +26,6 @@ type serverlessCluster struct {
 	UpdateTime            types.String           `tfsdk:"update_time"`
 	UserPrefix            types.String           `tfsdk:"user_prefix"`
 	State                 types.String           `tfsdk:"state"`
-	Usage                 *usage                 `tfsdk:"usage"`
 	Labels                types.Map              `tfsdk:"labels"`
 	Annotations           types.Map              `tfsdk:"annotations"`
 }
@@ -201,24 +200,6 @@ func (d *serverlessClusterDataSource) Schema(_ context.Context, _ datasource.Sch
 				MarkdownDescription: "The state of the cluster.",
 				Computed:            true,
 			},
-			"usage": schema.SingleNestedAttribute{
-				MarkdownDescription: "The usage of the cluster.",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"request_unit": schema.StringAttribute{
-						MarkdownDescription: "The request unit of the cluster.",
-						Computed:            true,
-					},
-					"row_based_storage": schema.Float64Attribute{
-						MarkdownDescription: "The row-based storage of the cluster.",
-						Computed:            true,
-					},
-					"columnar_storage": schema.Float64Attribute{
-						MarkdownDescription: "The columnar storage of the cluster.",
-						Computed:            true,
-					},
-				},
-			},
 			"labels": schema.MapAttribute{
 				MarkdownDescription: "The labels of the cluster.",
 				Computed:            true,
@@ -317,14 +298,6 @@ func (d *serverlessClusterDataSource) Read(ctx context.Context, req datasource.R
 	data.UpdateTime = types.StringValue(cluster.UpdateTime.Format(time.RFC3339))
 	data.UserPrefix = types.StringValue(*cluster.UserPrefix)
 	data.State = types.StringValue(string(*cluster.State))
-
-	u := cluster.Usage
-	data.Usage = &usage{
-		RequestUnit:     types.StringValue(*u.RequestUnit),
-		RowBasedStorage: types.Float64Value(*u.RowBasedStorage),
-		ColumnarStorage: types.Float64Value(*u.ColumnarStorage),
-	}
-
 	data.Labels = labels
 	data.Annotations = annotations
 
