@@ -187,7 +187,7 @@ func (r dedicatedNodeGroupResource) Create(ctx context.Context, req resource.Cre
 	// it's a workaround, tidb node group state is active at the beginning, so we need to wait for it to be modifying
 	time.Sleep(1 * time.Minute)
 
-	nodeGroup, err = WaitDedicatedNodeGroupReady(ctx, clusterCreateTimeout, clusterCreateInterval, data.ClusterId.ValueString(), nodeGroupId, r.provider.DedicatedClient)
+	_, err = WaitDedicatedNodeGroupReady(ctx, clusterCreateTimeout, clusterCreateInterval, data.ClusterId.ValueString(), nodeGroupId, r.provider.DedicatedClient)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Node group creation failed",
