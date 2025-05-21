@@ -34,7 +34,6 @@ type serverlessBranchResourceData struct {
 	Endpoints         *endpoints   `tfsdk:"endpoints"`
 	State             types.String `tfsdk:"state"`
 	UserPrefix        types.String `tfsdk:"user_prefix"`
-	Usage             *usage       `tfsdk:"usage"`
 	CreatedBy         types.String `tfsdk:"created_by"`
 	CreateTime        types.String `tfsdk:"create_time"`
 	UpdateTime        types.String `tfsdk:"update_time"`
@@ -189,27 +188,6 @@ func (r *serverlessBranchResource) Schema(_ context.Context, _ resource.SchemaRe
 			"state": schema.StringAttribute{
 				MarkdownDescription: "The state of the branch.",
 				Computed:            true,
-			},
-			"usage": schema.SingleNestedAttribute{
-				MarkdownDescription: "The usage of the branch.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
-				Attributes: map[string]schema.Attribute{
-					"request_unit": schema.StringAttribute{
-						MarkdownDescription: "The request unit of the branch.",
-						Computed:            true,
-					},
-					"row_based_storage": schema.Float64Attribute{
-						MarkdownDescription: "The row-based storage of the branch.",
-						Computed:            true,
-					},
-					"columnar_storage": schema.Float64Attribute{
-						MarkdownDescription: "The columnar storage of the branch.",
-						Computed:            true,
-					},
-				},
 			},
 			"parent_display_name": schema.StringAttribute{
 				MarkdownDescription: "The display name of the parent.",
@@ -421,14 +399,6 @@ func refreshServerlessBranchResourceData(ctx context.Context, resp *branchV1beta
 	data.UpdateTime = types.StringValue(resp.UpdateTime.Format(time.RFC3339))
 	data.UserPrefix = types.StringValue(*resp.UserPrefix.Get())
 	data.State = types.StringValue(string(*resp.State))
-
-	u := resp.Usage
-	data.Usage = &usage{
-		RequestUnit:     types.StringValue(*u.RequestUnit),
-		RowBasedStorage: types.Float64Value(*u.RowStorage),
-		ColumnarStorage: types.Float64Value(*u.ColumnarStorage),
-	}
-
 	data.Annotations = annotations
 	return nil
 }

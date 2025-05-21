@@ -57,7 +57,6 @@ type serverlessClusterResourceData struct {
 	UpdateTime            types.String           `tfsdk:"update_time"`
 	UserPrefix            types.String           `tfsdk:"user_prefix"`
 	State                 types.String           `tfsdk:"state"`
-	Usage                 types.Object           `tfsdk:"usage"`
 	Labels                types.Map              `tfsdk:"labels"`
 	Annotations           types.Map              `tfsdk:"annotations"`
 }
@@ -106,18 +105,6 @@ type aws struct {
 
 type encryptionConfig struct {
 	EnhancedEncryptionEnabled types.Bool `tfsdk:"enhanced_encryption_enabled"`
-}
-
-type usage struct {
-	RequestUnit     types.String  `tfsdk:"request_unit"`
-	RowBasedStorage types.Float64 `tfsdk:"row_based_storage"`
-	ColumnarStorage types.Float64 `tfsdk:"columnar_storage"`
-}
-
-var usageAttrTypes = map[string]attr.Type{
-	"request_unit":      types.StringType,
-	"row_based_storage": types.Float64Type,
-	"columnar_storage":  types.Float64Type,
 }
 
 type serverlessClusterResource struct {
@@ -364,24 +351,6 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"state": schema.StringAttribute{
 				MarkdownDescription: "The state of the cluster.",
 				Computed:            true,
-			},
-			"usage": schema.SingleNestedAttribute{
-				MarkdownDescription: "The usage of the cluster.",
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"request_unit": schema.StringAttribute{
-						MarkdownDescription: "The request unit of the cluster.",
-						Computed:            true,
-					},
-					"row_based_storage": schema.Float64Attribute{
-						MarkdownDescription: "The row-based storage of the cluster.",
-						Computed:            true,
-					},
-					"columnar_storage": schema.Float64Attribute{
-						MarkdownDescription: "The columnar storage of the cluster.",
-						Computed:            true,
-					},
-				},
 			},
 			"labels": schema.MapAttribute{
 				MarkdownDescription: "The labels of the cluster.",
@@ -745,17 +714,6 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 	data.UpdateTime = types.StringValue(resp.UpdateTime.Format(time.RFC3339))
 	data.UserPrefix = types.StringValue(*resp.UserPrefix)
 	data.State = types.StringValue(string(*resp.State))
-
-	u := &usage{
-		RequestUnit:     types.StringValue(*resp.Usage.RequestUnit),
-		RowBasedStorage: types.Float64Value(*resp.Usage.RowBasedStorage),
-		ColumnarStorage: types.Float64Value(*resp.Usage.ColumnarStorage),
-	}
-	data.Usage, diags = types.ObjectValueFrom(ctx, usageAttrTypes, u)
-	if diags.HasError() {
-		return errors.New("unable to convert usage")
-	}
-
 	data.Labels = labels
 	data.Annotations = annotations
 	return nil
