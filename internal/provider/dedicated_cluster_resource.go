@@ -652,8 +652,8 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 
 	isPublicEndpointSettingChanging := false
 	if plan.TiDBNodeSetting.PublicEndpointSetting != nil && state.TiDBNodeSetting.PublicEndpointSetting != nil {
-		isPublicEndpointSettingChanging = plan.TiDBNodeSetting.PublicEndpointSetting.Enabled.Equal(state.TiDBNodeSetting.PublicEndpointSetting.Enabled) ||
-			plan.TiDBNodeSetting.PublicEndpointSetting.IPAccessList.Equal(state.TiDBNodeSetting.PublicEndpointSetting.IPAccessList)
+		isPublicEndpointSettingChanging = !plan.TiDBNodeSetting.PublicEndpointSetting.Enabled.Equal(state.TiDBNodeSetting.PublicEndpointSetting.Enabled) ||
+			!plan.TiDBNodeSetting.PublicEndpointSetting.IPAccessList.Equal(state.TiDBNodeSetting.PublicEndpointSetting.IPAccessList)
 	} else if plan.TiDBNodeSetting.PublicEndpointSetting != nil {
 		isPublicEndpointSettingChanging = true
 	} else if state.TiDBNodeSetting.PublicEndpointSetting != nil {
