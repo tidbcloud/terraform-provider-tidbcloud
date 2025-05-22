@@ -32,7 +32,9 @@ provider "tidbcloud" {
   private_key = "fake_private_key"
 }
 
-# If you want to create or update the cluster resource synchronously, set the sync to true
+# If you want to create or update the tidbcloud_cluster resource synchronously, set the sync to true.
+# For tidbcloud_serverless_cluster, tidbcloud_dedicated_cluster, tidbcloud_dedicated_node_group_resource,
+# they are always managed synchronously. sync won't take effect.
 provider "tidbcloud" {
   public_key  = "fake_public_key"
   private_key = "fake_private_key"

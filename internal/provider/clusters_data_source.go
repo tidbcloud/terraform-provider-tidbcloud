@@ -89,7 +89,7 @@ func (d *clustersDataSource) Configure(_ context.Context, req datasource.Configu
 
 func (d *clustersDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "clusters data source",
+		MarkdownDescription: "clusters data source(deprecated). Use serverless_clusters and dedicated_clusters data sources instead.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "data source ID.",

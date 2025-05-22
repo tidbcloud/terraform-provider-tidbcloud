@@ -122,7 +122,7 @@ func (r *clusterResource) Configure(_ context.Context, req resource.ConfigureReq
 
 func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "cluster resource",
+		MarkdownDescription: "cluster resource(deprecated). Use serverless_cluster and dedicated_cluster resources instead for more comprehensive functions",
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).",

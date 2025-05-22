@@ -3,12 +3,12 @@
 page_title: "tidbcloud_clusters Data Source - terraform-provider-tidbcloud"
 subcategory: ""
 description: |-
-  clusters data source
+  clusters data source(deprecated). Use serverless_clusters and dedicated_clusters data sources instead.
 ---
 
 # tidbcloud_clusters (Data Source)
 
-clusters data source
+clusters data source(deprecated). Use serverless_clusters and dedicated_clusters data sources instead.
 
 ## Example Usage
 
