@@ -41,10 +41,10 @@ const (
 )
 
 const (
-	clusterCreateTimeout            = time.Hour
-	clusterCreateInterval           = 60 * time.Second
-	clusterUpdateTimeout            = time.Hour
-	clusterUpdateInterval           = 20 * time.Second
+	clusterCreateTimeout  = time.Hour
+	clusterCreateInterval = 60 * time.Second
+	clusterUpdateTimeout  = time.Hour
+	clusterUpdateInterval = 20 * time.Second
 )
 
 type clusterResourceData struct {
