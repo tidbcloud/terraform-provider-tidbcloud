@@ -3,12 +3,12 @@
 page_title: "tidbcloud_cluster Resource - terraform-provider-tidbcloud"
 subcategory: ""
 description: |-
-  cluster resource
+  cluster resource(deprecated). Use serverless_cluster and dedicated_cluster resources instead for more comprehensive functions
 ---
 
 # tidbcloud_cluster (Resource)
 
-cluster resource
+cluster resource(deprecated). Use serverless_cluster and dedicated_cluster resources instead for more comprehensive functions
 
 ## Example Usage
 
