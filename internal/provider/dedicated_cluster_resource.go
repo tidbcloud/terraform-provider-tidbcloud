@@ -361,6 +361,9 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 							"- Plus: Data disk: io2; Raft log disk: none.",
 						Optional: true,
 						Computed: true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"node_spec_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the node spec.",
@@ -396,6 +399,9 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 							"- Plus: Data disk: io2; Raft log disk: none.",
 						Optional: true,
 						Computed: true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"node_spec_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the node spec.",
