@@ -155,6 +155,8 @@ func (r sqlUserResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	data.BuiltinRole = types.StringValue(*sqlUser.BuiltinRole)
 	data.CustomRoles, diags = types.ListValueFrom(ctx, types.StringType, sqlUser.CustomRoles)
+	data.AuthMethod = types.StringValue(*sqlUser.AuthMethod)
+
 	if diags.HasError() {
 		resp.Diagnostics.AddError("Read Error", "Unable to convert custom roles, got error")
 		return
