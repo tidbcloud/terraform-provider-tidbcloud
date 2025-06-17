@@ -26,7 +26,7 @@ type DedicatedNetworkContainerResourceData struct {
 	ProjectId          types.String `tfsdk:"project_id"`
 	NetworkContainerId types.String `tfsdk:"network_container_id"`
 	RegionId           types.String `tfsdk:"region_id"`
-	CidrNotion         types.String `tfsdk:"cidr_notion"`
+	CidrNotation       types.String `tfsdk:"cidr_notation"`
 	State              types.String `tfsdk:"state"`
 	CloudProvider      types.String `tfsdk:"cloud_provider"`
 	RegionDisplayName  types.String `tfsdk:"region_display_name"`
@@ -66,7 +66,7 @@ func (r *DedicatedNetworkContainerResource) Schema(_ context.Context, _ resource
 				Description: "The region ID for the network container",
 				Required:    true,
 			},
-			"cidr_notion": schema.StringAttribute{
+			"cidr_notation": schema.StringAttribute{
 				Description: "CIDR notation for the network container",
 				Required:    true,
 			},
@@ -200,15 +200,15 @@ func (r *DedicatedNetworkContainerResource) ImportState(ctx context.Context, req
 
 func buildCreateDedicatedNetworkContainerBody(data DedicatedNetworkContainerResourceData) (dedicated.V1beta1NetworkContainer, error) {
 	regionId := data.RegionId.ValueString()
-	cidrNotion := data.CidrNotion.ValueString()
+	cidrNotation := data.CidrNotation.ValueString()
 	labels := make(map[string]string)
 	if IsKnown(data.ProjectId) {
 		labels[LabelsKeyProjectId] = data.ProjectId.ValueString()
 	}
 	return dedicated.V1beta1NetworkContainer{
-		RegionId:   regionId,
-		CidrNotion: &cidrNotion,
-		Labels:     &labels,
+		RegionId:     regionId,
+		CidrNotation: &cidrNotation,
+		Labels:       &labels,
 	}, nil
 }
 

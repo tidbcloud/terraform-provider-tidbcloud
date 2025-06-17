@@ -63,7 +63,7 @@ func testUTDedicatedNetworkContainerResourceConfig() string {
 	return `
 resource "tidbcloud_dedicated_network_container" "test" {
 	region_id = "aws-ap-northeast-3"
-    cidr_notion = "172.16.0.0/21"
+    cidr_notation = "172.16.0.0/21"
 }
 `
 }
@@ -77,7 +77,7 @@ func testUTNetworkContainer(state string) string {
         "tidb.cloud/project": "300000"
     },
     "regionId": "aws-ap-northeast-3",
-    "cidrNotion": "172.16.0.0/21",
+    "cidrNotation": "172.16.0.0/21",
     "cloudProvider": "aws",
     "state": "%s",
     "regionDisplayName": "Osaka (ap-northeast-3)",

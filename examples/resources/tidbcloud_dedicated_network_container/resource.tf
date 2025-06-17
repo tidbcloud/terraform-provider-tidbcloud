@@ -8,13 +8,13 @@ variable "region_id" {
   nullable = false
 }
 
-variable "cidr_notion" {
+variable "cidr_notation" {
   type     = string
   nullable = false
 }
 
 resource "tidbcloud_dedicated_network_container" "example" {
-  project_id  = var.project_id
-  region_id   = var.region_id
-  cidr_notion = var.cidr_notion
+  project_id    = var.project_id
+  region_id     = var.region_id
+  cidr_notation = var.cidr_notation
 }

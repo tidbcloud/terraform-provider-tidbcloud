@@ -20,7 +20,7 @@ type dedicatedNetworkContainersDataSourceData struct {
 type networkContainerItem struct {
 	NetworkContainerId types.String `tfsdk:"network_container_id"`
 	RegionId           types.String `tfsdk:"region_id"`
-	CidrNotion         types.String `tfsdk:"cidr_notion"`
+	CidrNotation       types.String `tfsdk:"cidr_notation"`
 	State              types.String `tfsdk:"state"`
 	CloudProvider      types.String `tfsdk:"cloud_provider"`
 	RegionDisplayName  types.String `tfsdk:"region_display_name"`
@@ -74,7 +74,7 @@ func (d *dedicatedNetworkContainersDataSource) Schema(_ context.Context, _ datas
 							Description: "The region ID for the network container",
 							Computed:    true,
 						},
-						"cidr_notion": schema.StringAttribute{
+						"cidr_notation": schema.StringAttribute{
 							Description: "CIDR notation for the network container",
 							Computed:    true,
 						},
@@ -130,7 +130,7 @@ func (d *dedicatedNetworkContainersDataSource) Read(ctx context.Context, req dat
 		items = append(items, networkContainerItem{
 			NetworkContainerId: types.StringValue(*networkContainer.NetworkContainerId),
 			RegionId:           types.StringValue(networkContainer.RegionId),
-			CidrNotion:         types.StringValue(*networkContainer.CidrNotion),
+			CidrNotation:       types.StringValue(*networkContainer.CidrNotation),
 			State:              types.StringValue(string(*networkContainer.State)),
 			CloudProvider:      types.StringValue(string(*networkContainer.CloudProvider)),
 			RegionDisplayName:  types.StringValue(*networkContainer.RegionDisplayName),
