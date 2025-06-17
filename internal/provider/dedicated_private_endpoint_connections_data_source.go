@@ -197,8 +197,8 @@ func (d *dedicatedPrivateEndpointConnectionsDataSource) Read(ctx context.Context
 	resp.Diagnostics.Append(diags...)
 }
 
-func (d dedicatedPrivateEndpointConnectionsDataSource) retrievePrivateEndpointConnections(ctx context.Context, clusterId, nodeGroupId string) ([]dedicated.V1beta1PrivateEndpointConnection, error) {
-	var items []dedicated.V1beta1PrivateEndpointConnection
+func (d dedicatedPrivateEndpointConnectionsDataSource) retrievePrivateEndpointConnections(ctx context.Context, clusterId, nodeGroupId string) ([]dedicated.Dedicatedv1beta1PrivateEndpointConnection, error) {
+	var items []dedicated.Dedicatedv1beta1PrivateEndpointConnection
 	pageSizeInt32 := int32(DefaultPageSize)
 	var pageToken *string
 	for {

@@ -66,7 +66,7 @@ const testUTV1beta1ListNetworkContainersResponse = `
                 "tidb.cloud/project": "310000"
             },
             "regionId": "azure-eastus2",
-            "cidrNotion": "172.16.32.0/19",
+            "cidrNotation": "172.16.32.0/19",
             "cloudProvider": "azure",
             "state": "INACTIVE",
             "regionDisplayName": "(US) East US 2",
@@ -79,7 +79,7 @@ const testUTV1beta1ListNetworkContainersResponse = `
                 "tidb.cloud/project": "310000"
             },
             "regionId": "aws-us-west-2",
-            "cidrNotion": "172.16.0.0/21",
+            "cidrNotation": "172.16.0.0/21",
             "cloudProvider": "aws",
             "state": "ACTIVE",
             "regionDisplayName": "Oregon (us-west-2)",

@@ -36,7 +36,7 @@ output "output" {
 
 ### Read-Only
 
-- `cidr_notion` (String) CIDR notation for the network container
+- `cidr_notation` (String) CIDR notation for the network container
 - `cloud_provider` (String) The cloud provider for the network container
 - `labels` (Map of String) The labels for the network container
 - `project_id` (String) The project ID for the network container

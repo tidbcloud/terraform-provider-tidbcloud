@@ -20,10 +20,10 @@ func TestUTDedicatedPrivateEndpointConnectionResource(t *testing.T) {
 		return s, nil
 	})()
 
-	createPrivateEndpointConnectionResp := dedicated.V1beta1PrivateEndpointConnection{}
-	createPrivateEndpointConnectionResp.UnmarshalJSON([]byte(testUTPrivateEndpointConnection(string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_PENDING))))
-	getPrivateEndpointConnectionResp := dedicated.V1beta1PrivateEndpointConnection{}
-	getPrivateEndpointConnectionResp.UnmarshalJSON([]byte(testUTPrivateEndpointConnection(string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_ACTIVE))))
+	createPrivateEndpointConnectionResp := dedicated.Dedicatedv1beta1PrivateEndpointConnection{}
+	createPrivateEndpointConnectionResp.UnmarshalJSON([]byte(testUTPrivateEndpointConnection(string(dedicated.DEDICATEDV1BETA1PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_PENDING))))
+	getPrivateEndpointConnectionResp := dedicated.Dedicatedv1beta1PrivateEndpointConnection{}
+	getPrivateEndpointConnectionResp.UnmarshalJSON([]byte(testUTPrivateEndpointConnection(string(dedicated.DEDICATEDV1BETA1PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_ACTIVE))))
 
 	s.EXPECT().CreatePrivateEndpointConnection(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&createPrivateEndpointConnectionResp, nil)
 	s.EXPECT().GetPrivateEndpointConnection(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&getPrivateEndpointConnectionResp, nil).AnyTimes()

@@ -36,7 +36,7 @@ func (m *MockTiDBCloudDedicatedClient) EXPECT() *MockTiDBCloudDedicatedClientMoc
 }
 
 // ChangeClusterRootPassword mocks base method.
-func (m *MockTiDBCloudDedicatedClient) ChangeClusterRootPassword(ctx context.Context, clusterId string, body *dedicated.ClusterServiceResetRootPasswordBody) error {
+func (m *MockTiDBCloudDedicatedClient) ChangeClusterRootPassword(ctx context.Context, clusterId string, body *dedicated.V1beta1ClusterServiceResetRootPasswordBody) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ChangeClusterRootPassword", ctx, clusterId, body)
 	ret0, _ := ret[0].(error)
@@ -80,10 +80,10 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreateNetworkContainer(ctx, 
 }
 
 // CreatePrivateEndpointConnection mocks base method.
-func (m *MockTiDBCloudDedicatedClient) CreatePrivateEndpointConnection(ctx context.Context, clusterId, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.V1beta1PrivateEndpointConnection, error) {
+func (m *MockTiDBCloudDedicatedClient) CreatePrivateEndpointConnection(ctx context.Context, clusterId, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.Dedicatedv1beta1PrivateEndpointConnection, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreatePrivateEndpointConnection", ctx, clusterId, nodeGroupId, body)
-	ret0, _ := ret[0].(*dedicated.V1beta1PrivateEndpointConnection)
+	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1PrivateEndpointConnection)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -226,10 +226,10 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetNetworkContainer(ctx, net
 }
 
 // GetPrivateEndpointConnection mocks base method.
-func (m *MockTiDBCloudDedicatedClient) GetPrivateEndpointConnection(ctx context.Context, clusterId, nodeGroupId, privateEndpointConnectionId string) (*dedicated.V1beta1PrivateEndpointConnection, error) {
+func (m *MockTiDBCloudDedicatedClient) GetPrivateEndpointConnection(ctx context.Context, clusterId, nodeGroupId, privateEndpointConnectionId string) (*dedicated.Dedicatedv1beta1PrivateEndpointConnection, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPrivateEndpointConnection", ctx, clusterId, nodeGroupId, privateEndpointConnectionId)
-	ret0, _ := ret[0].(*dedicated.V1beta1PrivateEndpointConnection)
+	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1PrivateEndpointConnection)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -346,10 +346,10 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListNetworkContainers(ctx, p
 }
 
 // ListPrivateEndpointConnections mocks base method.
-func (m *MockTiDBCloudDedicatedClient) ListPrivateEndpointConnections(ctx context.Context, clusterId, nodeGroupId string, pageSize *int32, pageToken *string) (*dedicated.V1beta1ListPrivateEndpointConnectionsResponse, error) {
+func (m *MockTiDBCloudDedicatedClient) ListPrivateEndpointConnections(ctx context.Context, clusterId, nodeGroupId string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListPrivateEndpointConnectionsResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPrivateEndpointConnections", ctx, clusterId, nodeGroupId, pageSize, pageToken)
-	ret0, _ := ret[0].(*dedicated.V1beta1ListPrivateEndpointConnectionsResponse)
+	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1ListPrivateEndpointConnectionsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

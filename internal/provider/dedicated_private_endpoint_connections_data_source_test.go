@@ -21,7 +21,7 @@ func TestUTDedicatedPrivateEndpointConnectionsDataSource(t *testing.T) {
 		return s, nil
 	})()
 
-	listResp := dedicated.V1beta1ListPrivateEndpointConnectionsResponse{}
+	listResp := dedicated.Dedicatedv1beta1ListPrivateEndpointConnectionsResponse{}
 	listResp.UnmarshalJSON([]byte(testUTListPrivateEndpointConnectionsResponse))
 
 	s.EXPECT().ListPrivateEndpointConnections(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&listResp, nil).AnyTimes()

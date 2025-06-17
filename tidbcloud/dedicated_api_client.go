@@ -27,16 +27,16 @@ type TiDBCloudDedicatedClient interface {
 	UpdateCluster(ctx context.Context, clusterId string, body *dedicated.ClusterServiceUpdateClusterRequest) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	PauseCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	ResumeCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
-	ChangeClusterRootPassword(ctx context.Context, clusterId string, body *dedicated.ClusterServiceResetRootPasswordBody) error
+	ChangeClusterRootPassword(ctx context.Context, clusterId string, body *dedicated.V1beta1ClusterServiceResetRootPasswordBody) error
 	CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.Required) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	DeleteTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) error
 	UpdateTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	GetTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	ListTiDBNodeGroups(ctx context.Context, clusterId string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListTidbNodeGroupsResponse, error)
-	CreatePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.V1beta1PrivateEndpointConnection, error)
+	CreatePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.Dedicatedv1beta1PrivateEndpointConnection, error)
 	DeletePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) error
-	GetPrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) (*dedicated.V1beta1PrivateEndpointConnection, error)
-	ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string, pageSize *int32, pageToken *string) (*dedicated.V1beta1ListPrivateEndpointConnectionsResponse, error)
+	GetPrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) (*dedicated.Dedicatedv1beta1PrivateEndpointConnection, error)
+	ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListPrivateEndpointConnectionsResponse, error)
 	CreateNetworkContainer(ctx context.Context, body *dedicated.V1beta1NetworkContainer) (*dedicated.V1beta1NetworkContainer, error)
 	DeleteNetworkContainer(ctx context.Context, networkContainerId string) error
 	GetNetworkContainer(ctx context.Context, networkContainerId string) (*dedicated.V1beta1NetworkContainer, error)
@@ -170,7 +170,7 @@ func (d *DedicatedClientDelegate) ResumeCluster(ctx context.Context, clusterId s
 	return &resp.Cluster, parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) ChangeClusterRootPassword(ctx context.Context, clusterId string, body *dedicated.ClusterServiceResetRootPasswordBody) error {
+func (d *DedicatedClientDelegate) ChangeClusterRootPassword(ctx context.Context, clusterId string, body *dedicated.V1beta1ClusterServiceResetRootPasswordBody) error {
 	r := d.dc.ClusterServiceAPI.ClusterServiceResetRootPassword(ctx, clusterId)
 	if body != nil {
 		r = r.Body(*body)
@@ -219,7 +219,7 @@ func (d *DedicatedClientDelegate) ListTiDBNodeGroups(ctx context.Context, cluste
 	return resp, parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) CreatePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.V1beta1PrivateEndpointConnection, error) {
+func (d *DedicatedClientDelegate) CreatePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.PrivateEndpointConnectionServiceCreatePrivateEndpointConnectionRequest) (*dedicated.Dedicatedv1beta1PrivateEndpointConnection, error) {
 	r := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceCreatePrivateEndpointConnection(ctx, clusterId, nodeGroupId)
 	if body != nil {
 		r = r.PrivateEndpointConnection(*body)
@@ -233,12 +233,12 @@ func (d *DedicatedClientDelegate) DeletePrivateEndpointConnection(ctx context.Co
 	return parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) GetPrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) (*dedicated.V1beta1PrivateEndpointConnection, error) {
+func (d *DedicatedClientDelegate) GetPrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) (*dedicated.Dedicatedv1beta1PrivateEndpointConnection, error) {
 	resp, h, err := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceGetPrivateEndpointConnection(ctx, clusterId, nodeGroupId, privateEndpointConnectionId).Execute()
 	return resp, parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string, pageSize *int32, pageToken *string) (*dedicated.V1beta1ListPrivateEndpointConnectionsResponse, error) {
+func (d *DedicatedClientDelegate) ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListPrivateEndpointConnectionsResponse, error) {
 	r := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceListPrivateEndpointConnections(ctx, clusterId, nodeGroupId)
 	if pageSize != nil {
 		r = r.PageSize(*pageSize)

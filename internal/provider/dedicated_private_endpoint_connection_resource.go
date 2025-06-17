@@ -298,7 +298,7 @@ func buildCreateDedicatedPrivateEndpointConnectionBody(data dedicatedPrivateEndp
 	}
 }
 
-func refreshDedicatedPrivateEndpointConnectionResourceData(ctx context.Context, resp *dedicated.V1beta1PrivateEndpointConnection, data *dedicatedPrivateEndpointConnectionResourceData) diag.Diagnostics {
+func refreshDedicatedPrivateEndpointConnectionResourceData(ctx context.Context, resp *dedicated.Dedicatedv1beta1PrivateEndpointConnection, data *dedicatedPrivateEndpointConnectionResourceData) diag.Diagnostics {
 	data.EndpointId = types.StringValue(resp.EndpointId)
 	if resp.PrivateIpAddress.IsSet() {
 		data.PrivateIpAddress = types.StringValue(*resp.PrivateIpAddress.Get())
@@ -325,16 +325,16 @@ func refreshDedicatedPrivateEndpointConnectionResourceData(ctx context.Context, 
 }
 
 func WaitDedicatedPrivateEndpointConnectionReady(ctx context.Context, timeout time.Duration, interval time.Duration, clusterId string, nodeGroupId string, privateEndpointConnectionId string,
-	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.V1beta1PrivateEndpointConnection, error) {
+	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.Dedicatedv1beta1PrivateEndpointConnection, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
-			string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_PENDING),
+			string(dedicated.DEDICATEDV1BETA1PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_PENDING),
 		},
 		Target: []string{
-			string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_ACTIVE),
-			string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_DELETING),
-			string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_FAILED),
-			string(dedicated.PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_DISCOVERED),
+			string(dedicated.DEDICATEDV1BETA1PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_ACTIVE),
+			string(dedicated.DEDICATEDV1BETA1PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_DELETING),
+			string(dedicated.DEDICATEDV1BETA1PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_FAILED),
+			string(dedicated.DEDICATEDV1BETA1PRIVATEENDPOINTCONNECTIONENDPOINTSTATE_DISCOVERED),
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,
@@ -344,7 +344,7 @@ func WaitDedicatedPrivateEndpointConnectionReady(ctx context.Context, timeout ti
 
 	outputRaw, err := stateConf.WaitForStateContext(ctx)
 
-	if output, ok := outputRaw.(*dedicated.V1beta1PrivateEndpointConnection); ok {
+	if output, ok := outputRaw.(*dedicated.Dedicatedv1beta1PrivateEndpointConnection); ok {
 		return output, err
 	}
 	return nil, err

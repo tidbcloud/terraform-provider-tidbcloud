@@ -705,7 +705,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		}
 	} else {
 		if plan.RootPassword != state.RootPassword {
-			err := r.provider.DedicatedClient.ChangeClusterRootPassword(ctx, state.ClusterId.ValueString(), &dedicated.ClusterServiceResetRootPasswordBody{
+			err := r.provider.DedicatedClient.ChangeClusterRootPassword(ctx, state.ClusterId.ValueString(), &dedicated.V1beta1ClusterServiceResetRootPasswordBody{
 				RootPassword: plan.RootPassword.ValueString(),
 			})
 			if err != nil {
@@ -983,13 +983,13 @@ func updatePublicEndpointSetting(ctx context.Context, client tidbcloud.TiDBCloud
 		return nil, nil
 	}
 	req := dedicated.TidbNodeGroupServiceUpdatePublicEndpointSettingRequest{}
-	ipAccessList := make([]dedicated.PublicEndpointSettingIpAccessList, 0)
+	ipAccessList := make([]dedicated.V1beta1PublicEndpointSettingIpAccessList, 0)
 	if IsKnown(data.IPAccessList) {
 		for _, v := range data.IPAccessList.Elements() {
 			obj := v.(types.Object)
 			cidr := obj.Attributes()["cidr_notation"].(types.String)
 			desc := obj.Attributes()["description"].(types.String)
-			ipAccessList = append(ipAccessList, dedicated.PublicEndpointSettingIpAccessList{
+			ipAccessList = append(ipAccessList, dedicated.V1beta1PublicEndpointSettingIpAccessList{
 				CidrNotation: cidr.ValueString(),
 				Description:  desc.ValueStringPointer(),
 			})
