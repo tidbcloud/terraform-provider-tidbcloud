@@ -37,6 +37,7 @@ output "output" {
 ### Read-Only
 
 - `annotations` (Map of String) The annotations of the cluster.
+- `auto_scaling` (Attributes) The auto scaling configuration of the cluster. (see [below for nested schema](#nestedatt--auto_scaling))
 - `automated_backup_policy` (Attributes) The automated backup policy of the cluster. (see [below for nested schema](#nestedatt--automated_backup_policy))
 - `create_time` (String) The time the cluster was created.
 - `created_by` (String) The email of the creator of the cluster.
@@ -50,6 +51,15 @@ output "output" {
 - `update_time` (String) The time the cluster was last updated.
 - `user_prefix` (String) The unique prefix in SQL user name.
 - `version` (String) The version of the cluster.
+
+<a id="nestedatt--auto_scaling"></a>
+### Nested Schema for `auto_scaling`
+
+Read-Only:
+
+- `max_rcu` (Number) The maximum RCU (Request Capacity Unit) of the cluster.
+- `min_rcu` (Number) The minimum RCU (Request Capacity Unit) of the cluster.
+
 
 <a id="nestedatt--automated_backup_policy"></a>
 ### Nested Schema for `automated_backup_policy`

@@ -36,6 +36,7 @@ const (
 	PublicEndpointDisabled        mutableField = "endpoints.public.disabled"
 	SpendingLimitMonthly          mutableField = "spendingLimit.monthly"
 	AutomatedBackupPolicySchedule mutableField = "automatedBackupPolicy.schedule"
+	AutoScaling                   mutableField = "autoScaling"
 )
 
 const (
@@ -48,6 +49,7 @@ type serverlessClusterResourceData struct {
 	DisplayName           types.String           `tfsdk:"display_name"`
 	Region                *region                `tfsdk:"region"`
 	SpendingLimit         types.Object           `tfsdk:"spending_limit"`
+	AutoScaling           types.Object           `tfsdk:"auto_scaling"`
 	AutomatedBackupPolicy *automatedBackupPolicy `tfsdk:"automated_backup_policy"`
 	Endpoints             *endpoints             `tfsdk:"endpoints"`
 	EncryptionConfig      *encryptionConfig      `tfsdk:"encryption_config"`
@@ -74,6 +76,16 @@ type spendingLimit struct {
 
 var spendingLimitAttrTypes = map[string]attr.Type{
 	"monthly": types.Int32Type,
+}
+
+type autoScaling struct {
+	MinRCU types.Int64 `tfsdk:"min_rcu"`
+	MaxRCU types.Int64 `tfsdk:"max_rcu"`
+}
+
+var autoScalingAttrTypes = map[string]attr.Type{
+	"min_rcu": types.Int64Type,
+	"max_rcu": types.Int64Type,
 }
 
 type automatedBackupPolicy struct {
@@ -202,6 +214,20 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 						MarkdownDescription: "Maximum monthly spending limit in USD cents.",
 						Optional:            true,
 						Computed:            true,
+					},
+				},
+			},
+			"auto_scaling": schema.SingleNestedAttribute{
+				MarkdownDescription: "The auto scaling config of the essential cluster.",
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"min_rcu": schema.Int64Attribute{
+						MarkdownDescription: "The minimum RCU (Request Capacity Unit) of the cluster.",
+						Required: true,
+					},
+					"max_rcu": schema.Int64Attribute{
+						MarkdownDescription: "The maximum RCU (Request Capacity Unit) of the cluster.",
+						Required: true,
 					},
 				},
 			},
@@ -516,6 +542,10 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	if IsKnown(plan.SpendingLimit) {
+		if IsKnown(plan.AutoScaling) || IsKnown(state.AutoScaling) {
+			resp.Diagnostics.AddError("Update Error", "Cannot set both spending limit and capacity for serverless cluster")
+			return
+		}
 		var planLimit spendingLimit
 		diags := plan.SpendingLimit.As(ctx, &planLimit, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -524,7 +554,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 		}
 
 		var stateLimit spendingLimit
-		if !state.SpendingLimit.IsNull() && !state.SpendingLimit.IsUnknown() {
+		if IsKnown(state.SpendingLimit) {
 			diags := state.SpendingLimit.As(ctx, &stateLimit, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
 				resp.Diagnostics.Append(diags...)
@@ -544,6 +574,45 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
 				return
 			}
+		}
+	}
+
+	if IsKnown(plan.AutoScaling) {
+		if IsKnown(plan.SpendingLimit) || IsKnown(state.SpendingLimit) {
+			resp.Diagnostics.AddError("Update Error", "Cannot set both spending limit and capacity for serverless cluster")
+			return
+		}
+		var planCap autoScaling
+		diags := plan.AutoScaling.As(ctx, &planCap, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			resp.Diagnostics.Append(diags...)
+			return
+		}
+		var stateCap autoScaling
+		if IsKnown(state.AutoScaling) {
+			diags := state.AutoScaling.As(ctx, &stateCap, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				resp.Diagnostics.Append(diags...)
+				return
+			}
+		}
+		if planCap.MinRCU.ValueInt64() != stateCap.MinRCU.ValueInt64() ||
+			planCap.MaxRCU.ValueInt64() != stateCap.MaxRCU.ValueInt64() {
+			minRCU := planCap.MinRCU.ValueInt64()
+			maxRCU := planCap.MaxRCU.ValueInt64()
+			body.Cluster.AutoScaling = &clusterV1beta1.V1beta1ClusterAutoScaling{
+				MinRcu: &minRCU,
+				MaxRcu: &maxRCU,
+			}
+			body.UpdateMask = string(AutoScaling)
+			tflog.Trace(ctx, fmt.Sprintf("update serverless_cluster_resource %s", AutoScaling))
+			_, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
+			if err != nil {
+				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
+				return
+			}
+			// wait for the auto scaling to be updated
+			time.Sleep(2 * time.Second)
 		}
 	}
 
@@ -600,15 +669,32 @@ func buildCreateServerlessClusterBody(ctx context.Context, data serverlessCluste
 	}
 
 	if IsKnown(data.SpendingLimit) {
+		if IsKnown(data.AutoScaling) {
+			return clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{},
+				errors.New("cannot set both spending limit and capacity for serverless cluster")
+		}
 		var limit spendingLimit
 		diags := data.SpendingLimit.As(ctx, &limit, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}, errors.New("unable to convert spending limit")
 		}
 		spendingLimit := limit.Monthly.ValueInt32()
-		spendingLimitInt32 := int32(spendingLimit)
 		body.SpendingLimit = &clusterV1beta1.ClusterSpendingLimit{
-			Monthly: &spendingLimitInt32,
+			Monthly: &spendingLimit,
+		}
+	}
+
+	if IsKnown(data.AutoScaling) {
+		var cap autoScaling
+		diags := data.AutoScaling.As(ctx, &cap, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return clusterV1beta1.TidbCloudOpenApiserverlessv1beta1Cluster{}, errors.New("unable to convert capacity")
+		}
+		minRCU := cap.MinRCU.ValueInt64()
+		maxRCU := cap.MaxRCU.ValueInt64()
+		body.AutoScaling = &clusterV1beta1.V1beta1ClusterAutoScaling{
+			MinRcu: &minRCU,
+			MaxRcu: &maxRCU,
 		}
 	}
 
@@ -663,12 +749,29 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 		DisplayName:   types.StringValue(*r.DisplayName),
 	}
 
-	s := spendingLimit{
-		Monthly: types.Int32Value(*resp.SpendingLimit.Monthly),
+	if resp.SpendingLimit != nil {
+		s := spendingLimit{
+			Monthly: types.Int32Value(*resp.SpendingLimit.Monthly),
+		}
+		data.SpendingLimit, diags = types.ObjectValueFrom(ctx, spendingLimitAttrTypes, s)
+		if diags.HasError() {
+			return errors.New("unable to convert spending limit")
+		}
+	} else {
+		data.SpendingLimit = types.ObjectNull(spendingLimitAttrTypes)
 	}
-	data.SpendingLimit, diags = types.ObjectValueFrom(ctx, spendingLimitAttrTypes, s)
-	if diags.HasError() {
-		return errors.New("unable to convert spending limit")
+
+	if resp.AutoScaling != nil {
+		as := autoScaling{
+			MinRCU: types.Int64Value(*resp.AutoScaling.MinRcu),
+			MaxRCU: types.Int64Value(*resp.AutoScaling.MaxRcu),
+		}
+		data.AutoScaling, diags = types.ObjectValueFrom(ctx, autoScalingAttrTypes, as)
+		if diags.HasError() {
+			return errors.New("unable to convert auto scaling")
+		}
+	} else {
+		data.AutoScaling = types.ObjectNull(autoScalingAttrTypes)
 	}
 
 	a := resp.AutomatedBackupPolicy
