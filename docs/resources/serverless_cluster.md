@@ -80,7 +80,7 @@ Read-Only:
 <a id="nestedatt--auto_scaling"></a>
 ### Nested Schema for `auto_scaling`
 
-Optional:
+Required:
 
 - `max_rcu` (Number) The maximum RCU (Request Capacity Unit) of the cluster.
 - `min_rcu` (Number) The minimum RCU (Request Capacity Unit) of the cluster.

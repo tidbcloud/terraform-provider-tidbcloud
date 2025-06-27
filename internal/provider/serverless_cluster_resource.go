@@ -220,17 +220,14 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"auto_scaling": schema.SingleNestedAttribute{
 				MarkdownDescription: "The auto scaling config of the essential cluster.",
 				Optional:            true,
-				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"min_rcu": schema.Int64Attribute{
 						MarkdownDescription: "The minimum RCU (Request Capacity Unit) of the cluster.",
-						Optional:            true,
-						Computed:            true,
+						Required: true,
 					},
 					"max_rcu": schema.Int64Attribute{
 						MarkdownDescription: "The maximum RCU (Request Capacity Unit) of the cluster.",
-						Optional:            true,
-						Computed:            true,
+						Required: true,
 					},
 				},
 			},
