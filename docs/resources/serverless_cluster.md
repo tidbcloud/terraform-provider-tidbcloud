@@ -44,6 +44,7 @@ resource "tidbcloud_serverless_cluster" "example" {
 
 ### Optional
 
+- `auto_scaling` (Attributes) The auto scaling config of the essential cluster. (see [below for nested schema](#nestedatt--auto_scaling))
 - `automated_backup_policy` (Attributes) The automated backup policy of the cluster. (see [below for nested schema](#nestedatt--automated_backup_policy))
 - `encryption_config` (Attributes) The encryption settings for the cluster. (see [below for nested schema](#nestedatt--encryption_config))
 - `endpoints` (Attributes) The endpoints for connecting to the cluster. (see [below for nested schema](#nestedatt--endpoints))
@@ -74,6 +75,15 @@ Read-Only:
 - `cloud_provider` (String) The cloud provider of the region.
 - `display_name` (String) The display name of the region.
 - `region_id` (String) The ID of the region.
+
+
+<a id="nestedatt--auto_scaling"></a>
+### Nested Schema for `auto_scaling`
+
+Optional:
+
+- `max_rcu` (Number) The maximum RCU (Request Capacity Unit) of the cluster.
+- `min_rcu` (Number) The minimum RCU (Request Capacity Unit) of the cluster.
 
 
 <a id="nestedatt--automated_backup_policy"></a>
