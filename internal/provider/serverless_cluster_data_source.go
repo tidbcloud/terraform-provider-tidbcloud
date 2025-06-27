@@ -17,6 +17,7 @@ type serverlessCluster struct {
 	DisplayName           types.String           `tfsdk:"display_name"`
 	Region                *region                `tfsdk:"region"`
 	SpendingLimit         *spendingLimit         `tfsdk:"spending_limit"`
+	AutoScaling           *autoScaling           `tfsdk:"auto_scaling"`
 	AutomatedBackupPolicy *automatedBackupPolicy `tfsdk:"automated_backup_policy"`
 	Endpoints             *endpoints             `tfsdk:"endpoints"`
 	EncryptionConfig      *encryptionConfig      `tfsdk:"encryption_config"`
@@ -95,6 +96,20 @@ func (d *serverlessClusterDataSource) Schema(_ context.Context, _ datasource.Sch
 				Attributes: map[string]schema.Attribute{
 					"monthly": schema.Int32Attribute{
 						MarkdownDescription: "Maximum monthly spending limit in USD cents.",
+						Computed:            true,
+					},
+				},
+			},
+			"auto_scaling": schema.SingleNestedAttribute{
+				MarkdownDescription: "The auto scaling configuration of the cluster.",
+				Computed:            true,
+				Attributes: map[string]schema.Attribute{
+					"min_rcu": schema.Int64Attribute{
+						MarkdownDescription: "The minimum RCU (Request Capacity Unit) of the cluster.",
+						Computed:            true,
+					},
+					"max_rcu": schema.Int64Attribute{
+						MarkdownDescription: "The maximum RCU (Request Capacity Unit) of the cluster.",
 						Computed:            true,
 					},
 				},
@@ -250,9 +265,17 @@ func (d *serverlessClusterDataSource) Read(ctx context.Context, req datasource.R
 		DisplayName:   types.StringValue(*r.DisplayName),
 	}
 
-	s := cluster.SpendingLimit
-	data.SpendingLimit = &spendingLimit{
-		Monthly: types.Int32Value(*s.Monthly),
+	if cluster.SpendingLimit != nil {
+		data.SpendingLimit = &spendingLimit{
+			Monthly: types.Int32Value(*cluster.SpendingLimit.Monthly),
+		}
+	}
+
+	if cluster.AutoScaling != nil {
+		data.AutoScaling = &autoScaling{
+			MinRCU: types.Int64Value(*cluster.AutoScaling.MinRcu),
+			MaxRCU: types.Int64Value(*cluster.AutoScaling.MaxRcu),
+		}
 	}
 
 	a := cluster.AutomatedBackupPolicy
