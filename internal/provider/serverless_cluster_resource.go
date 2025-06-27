@@ -614,6 +614,8 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
 				return
 			}
+			// wait for the auto scaling to be updated
+			time.Sleep(2 * time.Second)
 		}
 	}
 
@@ -750,21 +752,29 @@ func refreshServerlessClusterResourceData(ctx context.Context, resp *clusterV1be
 		DisplayName:   types.StringValue(*r.DisplayName),
 	}
 
-	s := spendingLimit{
-		Monthly: types.Int32Value(*resp.SpendingLimit.Monthly),
-	}
-	data.SpendingLimit, diags = types.ObjectValueFrom(ctx, spendingLimitAttrTypes, s)
-	if diags.HasError() {
-		return errors.New("unable to convert spending limit")
+	if resp.SpendingLimit != nil {
+		s := spendingLimit{
+			Monthly: types.Int32Value(*resp.SpendingLimit.Monthly),
+		}
+		data.SpendingLimit, diags = types.ObjectValueFrom(ctx, spendingLimitAttrTypes, s)
+		if diags.HasError() {
+			return errors.New("unable to convert spending limit")
+		}
+	} else {
+		data.SpendingLimit = types.ObjectNull(spendingLimitAttrTypes)
 	}
 
-	as := autoScaling{
-		MinRCU: types.Int64Value(*resp.AutoScaling.MinRcu),
-		MaxRCU: types.Int64Value(*resp.AutoScaling.MaxRcu),
-	}
-	data.AutoScaling, diags = types.ObjectValueFrom(ctx, autoScalingAttrTypes, as)
-	if diags.HasError() {
-		return errors.New("unable to convert auto scaling")
+	if resp.AutoScaling != nil {
+		as := autoScaling{
+			MinRCU: types.Int64Value(*resp.AutoScaling.MinRcu),
+			MaxRCU: types.Int64Value(*resp.AutoScaling.MaxRcu),
+		}
+		data.AutoScaling, diags = types.ObjectValueFrom(ctx, autoScalingAttrTypes, as)
+		if diags.HasError() {
+			return errors.New("unable to convert auto scaling")
+		}
+	} else {
+		data.AutoScaling = types.ObjectNull(autoScalingAttrTypes)
 	}
 
 	a := resp.AutomatedBackupPolicy
