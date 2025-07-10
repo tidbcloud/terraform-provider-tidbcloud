@@ -31,12 +31,12 @@ const (
 type mutableField string
 
 const (
-	DisplayName                   mutableField = "displayName"
-	Labels                        mutableField = "labels"
-	PublicEndpointDisabled        mutableField = "endpoints.public.disabled"
-	SpendingLimitMonthly          mutableField = "spendingLimit.monthly"
-	AutomatedBackupPolicySchedule mutableField = "automatedBackupPolicy.schedule"
-	AutoScaling                   mutableField = "autoScaling"
+	DisplayName            mutableField = "displayName"
+	Labels                 mutableField = "labels"
+	PublicEndpointDisabled mutableField = "endpoints.public.disabled"
+	SpendingLimitMonthly   mutableField = "spendingLimit.monthly"
+	AutomatedBackupPolicy  mutableField = "automatedBackupPolicy"
+	AutoScaling            mutableField = "autoScaling"
 )
 
 const (
@@ -223,11 +223,11 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				Attributes: map[string]schema.Attribute{
 					"min_rcu": schema.Int64Attribute{
 						MarkdownDescription: "The minimum RCU (Request Capacity Unit) of the cluster.",
-						Required: true,
+						Required:            true,
 					},
 					"max_rcu": schema.Int64Attribute{
 						MarkdownDescription: "The maximum RCU (Request Capacity Unit) of the cluster.",
-						Required: true,
+						Required:            true,
 					},
 				},
 			},
@@ -249,6 +249,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 					},
 					"retention_days": schema.Int32Attribute{
 						MarkdownDescription: "The number of days to retain automated backups.",
+						Optional:            true,
 						Computed:            true,
 						PlanModifiers: []planmodifier.Int32{
 							int32planmodifier.UseStateForUnknown(),
@@ -562,7 +563,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 			}
 		}
 		if planLimit.Monthly.ValueInt32() != stateLimit.Monthly.ValueInt32() {
-			spendingLimitInt32 := int32(planLimit.Monthly.ValueInt32())
+			spendingLimitInt32 := planLimit.Monthly.ValueInt32()
 			body.Cluster.SpendingLimit = &clusterV1beta1.ClusterSpendingLimit{
 				Monthly: &spendingLimitInt32,
 			}
@@ -617,13 +618,16 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	if plan.AutomatedBackupPolicy != nil {
-		if plan.AutomatedBackupPolicy.StartTime.ValueString() != state.AutomatedBackupPolicy.StartTime.ValueString() {
+		if plan.AutomatedBackupPolicy.StartTime.ValueString() != state.AutomatedBackupPolicy.StartTime.ValueString() ||
+			plan.AutomatedBackupPolicy.RetentionDays.ValueInt32() != state.AutomatedBackupPolicy.RetentionDays.ValueInt32() {
 			automatedBackupPolicyStartTime := plan.AutomatedBackupPolicy.StartTime.ValueString()
+			automatedBackupPolicyRetentionDays := plan.AutomatedBackupPolicy.RetentionDays.ValueInt32()
 			body.Cluster.AutomatedBackupPolicy = &clusterV1beta1.V1beta1ClusterAutomatedBackupPolicy{
-				StartTime: &automatedBackupPolicyStartTime,
+				StartTime:     &automatedBackupPolicyStartTime,
+				RetentionDays: &automatedBackupPolicyRetentionDays,
 			}
-			body.UpdateMask = string(AutomatedBackupPolicySchedule)
-			tflog.Trace(ctx, fmt.Sprintf("update serverless_cluster_resource %s", AutomatedBackupPolicySchedule))
+			body.UpdateMask = string(AutomatedBackupPolicy)
+			tflog.Trace(ctx, fmt.Sprintf("update serverless_cluster_resource %s", AutomatedBackupPolicy))
 			_, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
 			if err != nil {
 				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
@@ -702,10 +706,9 @@ func buildCreateServerlessClusterBody(ctx context.Context, data serverlessCluste
 		automatedBackupPolicy := data.AutomatedBackupPolicy
 		automatedBackupPolicyStartTime := automatedBackupPolicy.StartTime.ValueString()
 		automatedBackupPolicyRetentionDays := automatedBackupPolicy.RetentionDays.ValueInt32()
-		automatedBackupPolicyRetentionDaysInt32 := int32(automatedBackupPolicyRetentionDays)
 		body.AutomatedBackupPolicy = &clusterV1beta1.V1beta1ClusterAutomatedBackupPolicy{
 			StartTime:     &automatedBackupPolicyStartTime,
-			RetentionDays: &automatedBackupPolicyRetentionDaysInt32,
+			RetentionDays: &automatedBackupPolicyRetentionDays,
 		}
 	}
 

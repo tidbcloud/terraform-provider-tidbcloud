@@ -91,11 +91,8 @@ Required:
 
 Optional:
 
-- `start_time` (String) The UTC time of day in HH:mm format when the automated backup will start.
-
-Read-Only:
-
 - `retention_days` (Number) The number of days to retain automated backups.
+- `start_time` (String) The UTC time of day in HH:mm format when the automated backup will start.
 
 
 <a id="nestedatt--encryption_config"></a>
