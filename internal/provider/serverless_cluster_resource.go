@@ -563,7 +563,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 			}
 		}
 		if planLimit.Monthly.ValueInt32() != stateLimit.Monthly.ValueInt32() {
-			spendingLimitInt32 := int32(planLimit.Monthly.ValueInt32())
+			spendingLimitInt32 := planLimit.Monthly.ValueInt32()
 			body.Cluster.SpendingLimit = &clusterV1beta1.ClusterSpendingLimit{
 				Monthly: &spendingLimitInt32,
 			}
@@ -706,10 +706,9 @@ func buildCreateServerlessClusterBody(ctx context.Context, data serverlessCluste
 		automatedBackupPolicy := data.AutomatedBackupPolicy
 		automatedBackupPolicyStartTime := automatedBackupPolicy.StartTime.ValueString()
 		automatedBackupPolicyRetentionDays := automatedBackupPolicy.RetentionDays.ValueInt32()
-		automatedBackupPolicyRetentionDaysInt32 := int32(automatedBackupPolicyRetentionDays)
 		body.AutomatedBackupPolicy = &clusterV1beta1.V1beta1ClusterAutomatedBackupPolicy{
 			StartTime:     &automatedBackupPolicyStartTime,
-			RetentionDays: &automatedBackupPolicyRetentionDaysInt32,
+			RetentionDays: &automatedBackupPolicyRetentionDays,
 		}
 	}
 
