@@ -35,7 +35,7 @@ const (
 	Labels                        mutableField = "labels"
 	PublicEndpointDisabled        mutableField = "endpoints.public.disabled"
 	SpendingLimitMonthly          mutableField = "spendingLimit.monthly"
-	AutomatedBackupPolicySchedule mutableField = "automatedBackupPolicy.schedule"
+	AutomatedBackupPolicySchedule mutableField = "automatedBackupPolicy"
 	AutoScaling                   mutableField = "autoScaling"
 )
 
@@ -223,11 +223,11 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				Attributes: map[string]schema.Attribute{
 					"min_rcu": schema.Int64Attribute{
 						MarkdownDescription: "The minimum RCU (Request Capacity Unit) of the cluster.",
-						Required: true,
+						Required:            true,
 					},
 					"max_rcu": schema.Int64Attribute{
 						MarkdownDescription: "The maximum RCU (Request Capacity Unit) of the cluster.",
-						Required: true,
+						Required:            true,
 					},
 				},
 			},
@@ -249,6 +249,7 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 					},
 					"retention_days": schema.Int32Attribute{
 						MarkdownDescription: "The number of days to retain automated backups.",
+						Optional:            true,
 						Computed:            true,
 						PlanModifiers: []planmodifier.Int32{
 							int32planmodifier.UseStateForUnknown(),
@@ -617,10 +618,13 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	if plan.AutomatedBackupPolicy != nil {
-		if plan.AutomatedBackupPolicy.StartTime.ValueString() != state.AutomatedBackupPolicy.StartTime.ValueString() {
+		if plan.AutomatedBackupPolicy.StartTime.ValueString() != state.AutomatedBackupPolicy.StartTime.ValueString() ||
+			plan.AutomatedBackupPolicy.RetentionDays.ValueInt32() != state.AutomatedBackupPolicy.RetentionDays.ValueInt32() {
 			automatedBackupPolicyStartTime := plan.AutomatedBackupPolicy.StartTime.ValueString()
+			automatedBackupPolicyRetentionDays := plan.AutomatedBackupPolicy.RetentionDays.ValueInt32()
 			body.Cluster.AutomatedBackupPolicy = &clusterV1beta1.V1beta1ClusterAutomatedBackupPolicy{
-				StartTime: &automatedBackupPolicyStartTime,
+				StartTime:     &automatedBackupPolicyStartTime,
+				RetentionDays: &automatedBackupPolicyRetentionDays,
 			}
 			body.UpdateMask = string(AutomatedBackupPolicySchedule)
 			tflog.Trace(ctx, fmt.Sprintf("update serverless_cluster_resource %s", AutomatedBackupPolicySchedule))
