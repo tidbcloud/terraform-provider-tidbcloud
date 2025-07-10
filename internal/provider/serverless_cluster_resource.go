@@ -31,12 +31,12 @@ const (
 type mutableField string
 
 const (
-	DisplayName                   mutableField = "displayName"
-	Labels                        mutableField = "labels"
-	PublicEndpointDisabled        mutableField = "endpoints.public.disabled"
-	SpendingLimitMonthly          mutableField = "spendingLimit.monthly"
-	AutomatedBackupPolicySchedule mutableField = "automatedBackupPolicy"
-	AutoScaling                   mutableField = "autoScaling"
+	DisplayName            mutableField = "displayName"
+	Labels                 mutableField = "labels"
+	PublicEndpointDisabled mutableField = "endpoints.public.disabled"
+	SpendingLimitMonthly   mutableField = "spendingLimit.monthly"
+	AutomatedBackupPolicy  mutableField = "automatedBackupPolicy"
+	AutoScaling            mutableField = "autoScaling"
 )
 
 const (
@@ -626,8 +626,8 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 				StartTime:     &automatedBackupPolicyStartTime,
 				RetentionDays: &automatedBackupPolicyRetentionDays,
 			}
-			body.UpdateMask = string(AutomatedBackupPolicySchedule)
-			tflog.Trace(ctx, fmt.Sprintf("update serverless_cluster_resource %s", AutomatedBackupPolicySchedule))
+			body.UpdateMask = string(AutomatedBackupPolicy)
+			tflog.Trace(ctx, fmt.Sprintf("update serverless_cluster_resource %s", AutomatedBackupPolicy))
 			_, err := r.provider.ServerlessClient.PartialUpdateCluster(ctx, state.ClusterId.ValueString(), body)
 			if err != nil {
 				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateCluster, got error: %s", err))
