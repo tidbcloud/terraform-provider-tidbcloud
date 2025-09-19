@@ -433,7 +433,7 @@ func (r serverlessClusterResource) Create(ctx context.Context, req resource.Crea
 		)
 		return
 	}
-	cluster, err = r.provider.ServerlessClient.GetCluster(ctx, *cluster.ClusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
+	cluster, err = r.provider.ServerlessClient.GetCluster(ctx, *cluster.ClusterId, clusterV1beta1.CLUSTERSERVICEGETCLUSTERVIEWPARAMETER_FULL)
 	if err != nil {
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
 		return
@@ -461,7 +461,7 @@ func (r serverlessClusterResource) Read(ctx context.Context, req resource.ReadRe
 
 	// call read api
 	tflog.Trace(ctx, "read serverless_cluster_resource")
-	cluster, err := r.provider.ServerlessClient.GetCluster(ctx, clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
+	cluster, err := r.provider.ServerlessClient.GetCluster(ctx, clusterId, clusterV1beta1.CLUSTERSERVICEGETCLUSTERVIEWPARAMETER_FULL)
 	if err != nil {
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
 		return
@@ -510,8 +510,8 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	body := &clusterV1beta1.V1beta1ServerlessServicePartialUpdateClusterBody{
-		Cluster: &clusterV1beta1.RequiredTheClusterToBeUpdated{},
+	body := &clusterV1beta1.V1beta1ClusterServicePartialUpdateClusterBody{
+		Cluster: &clusterV1beta1.V1beta1ClusterServicePartialUpdateClusterBodyCluster{},
 	}
 
 	if plan.DisplayName.ValueString() != state.DisplayName.ValueString() {
@@ -637,7 +637,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	// because the update api does not return the annotations, we need to call the get api
-	cluster, err := r.provider.ServerlessClient.GetCluster(ctx, state.ClusterId.ValueString(), clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
+	cluster, err := r.provider.ServerlessClient.GetCluster(ctx, state.ClusterId.ValueString(), clusterV1beta1.CLUSTERSERVICEGETCLUSTERVIEWPARAMETER_FULL)
 	if err != nil {
 		tflog.Error(ctx, fmt.Sprintf("Unable to call GetCluster, error: %s", err))
 		return
@@ -854,7 +854,7 @@ func serverlessClusterStateRefreshFunc(ctx context.Context, clusterId string,
 	client tidbcloud.TiDBCloudServerlessClient) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		tflog.Trace(ctx, fmt.Sprintf("Waiting for serverless cluster %s ready", clusterId))
-		cluster, err := client.GetCluster(ctx, clusterId, clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_BASIC)
+		cluster, err := client.GetCluster(ctx, clusterId, clusterV1beta1.CLUSTERSERVICEGETCLUSTERVIEWPARAMETER_BASIC)
 		if err != nil {
 			return nil, "", err
 		}

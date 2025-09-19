@@ -95,7 +95,7 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreatePrivateEndpointConnect
 }
 
 // CreateTiDBNodeGroup mocks base method.
-func (m *MockTiDBCloudDedicatedClient) CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.Required) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+func (m *MockTiDBCloudDedicatedClient) CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateTiDBNodeGroup", ctx, clusterId, body)
 	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1TidbNodeGroup)
@@ -436,7 +436,7 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) ResumeCluster(ctx, clusterId
 }
 
 // UpdateCluster mocks base method.
-func (m *MockTiDBCloudDedicatedClient) UpdateCluster(ctx context.Context, clusterId string, body *dedicated.ClusterServiceUpdateClusterRequest) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+func (m *MockTiDBCloudDedicatedClient) UpdateCluster(ctx context.Context, clusterId string, body *dedicated.TheUpdatedClusterConfiguration) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateCluster", ctx, clusterId, body)
 	ret0, _ := ret[0].(*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster)

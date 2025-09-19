@@ -262,7 +262,7 @@ func (mr *MockTiDBCloudServerlessClientMockRecorder) GetBranch(ctx, clusterId, b
 }
 
 // GetCluster mocks base method.
-func (m *MockTiDBCloudServerlessClient) GetCluster(ctx context.Context, clusterId string, view cluster.ServerlessServiceGetClusterViewParameter) (*cluster.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
+func (m *MockTiDBCloudServerlessClient) GetCluster(ctx context.Context, clusterId string, view cluster.ClusterServiceGetClusterViewParameter) (*cluster.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCluster", ctx, clusterId, view)
 	ret0, _ := ret[0].(*cluster.TidbCloudOpenApiserverlessv1beta1Cluster)
@@ -412,7 +412,7 @@ func (mr *MockTiDBCloudServerlessClientMockRecorder) ListProviderRegions(ctx int
 }
 
 // PartialUpdateCluster mocks base method.
-func (m *MockTiDBCloudServerlessClient) PartialUpdateCluster(ctx context.Context, clusterId string, body *cluster.V1beta1ServerlessServicePartialUpdateClusterBody) (*cluster.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
+func (m *MockTiDBCloudServerlessClient) PartialUpdateCluster(ctx context.Context, clusterId string, body *cluster.V1beta1ClusterServicePartialUpdateClusterBody) (*cluster.TidbCloudOpenApiserverlessv1beta1Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PartialUpdateCluster", ctx, clusterId, body)
 	ret0, _ := ret[0].(*cluster.TidbCloudOpenApiserverlessv1beta1Cluster)

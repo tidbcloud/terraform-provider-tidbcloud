@@ -24,11 +24,11 @@ type TiDBCloudDedicatedClient interface {
 	GetCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	ListClusters(ctx context.Context, projectId string, pageSize *int32, pageToken *string) (*dedicated.TidbCloudOpenApidedicatedv1beta1ListClustersResponse, error)
 	DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
-	UpdateCluster(ctx context.Context, clusterId string, body *dedicated.ClusterServiceUpdateClusterRequest) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
+	UpdateCluster(ctx context.Context, clusterId string, body *dedicated.TheUpdatedClusterConfiguration) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	PauseCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	ResumeCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error)
 	ChangeClusterRootPassword(ctx context.Context, clusterId string, body *dedicated.V1beta1ClusterServiceResetRootPasswordBody) error
-	CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.Required) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
+	CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	DeleteTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) error
 	UpdateTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
 	GetTiDBNodeGroup(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error)
@@ -151,7 +151,7 @@ func (d *DedicatedClientDelegate) DeleteCluster(ctx context.Context, clusterId s
 	return resp, parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) UpdateCluster(ctx context.Context, clusterId string, body *dedicated.ClusterServiceUpdateClusterRequest) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
+func (d *DedicatedClientDelegate) UpdateCluster(ctx context.Context, clusterId string, body *dedicated.TheUpdatedClusterConfiguration) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	r := d.dc.ClusterServiceAPI.ClusterServiceUpdateCluster(ctx, clusterId)
 	if body != nil {
 		r = r.Cluster(*body)
@@ -179,7 +179,7 @@ func (d *DedicatedClientDelegate) ChangeClusterRootPassword(ctx context.Context,
 	return parseError(err, h)
 }
 
-func (d *DedicatedClientDelegate) CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.Required) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
+func (d *DedicatedClientDelegate) CreateTiDBNodeGroup(ctx context.Context, clusterId string, body *dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest) (*dedicated.Dedicatedv1beta1TidbNodeGroup, error) {
 	r := d.dc.TidbNodeGroupServiceAPI.TidbNodeGroupServiceCreateTidbNodeGroup(ctx, clusterId)
 	if body != nil {
 		r = r.TidbNodeGroup(*body)

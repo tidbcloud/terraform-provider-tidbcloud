@@ -106,14 +106,20 @@ func (d *dedicatedNodeGroupsDataSource) Schema(_ context.Context, _ datasource.S
 							MarkdownDescription: "Settings for TiProxy nodes.",
 							Computed:            true,
 							Attributes: map[string]schema.Attribute{
-								"type": schema.StringAttribute{
-									MarkdownDescription: "The type of TiProxy nodes." +
-										"- SMALL: Low performance instance with 2 vCPUs and 4 GiB memory. Max QPS: 30, Max Data Traffic: 90 MiB/s." +
-										"- LARGE: High performance instance with 8 vCPUs and 16 GiB memory. Max QPS: 100, Max Data Traffic: 300 MiB/s.",
-									Computed: true,
+								"node_spec_key": schema.StringAttribute{
+									MarkdownDescription: "The key of the node spec.",
+									Computed:            true,
+								},
+								"node_spec_version": schema.StringAttribute{
+									MarkdownDescription: "The node specification version.",
+									Computed:            true,
 								},
 								"node_count": schema.Int32Attribute{
 									MarkdownDescription: "The number of TiProxy nodes.",
+									Computed:            true,
+								},
+								"node_spec_display_name": schema.StringAttribute{
+									MarkdownDescription: "The display name of the node spec.",
 									Computed:            true,
 								},
 							},
@@ -181,8 +187,10 @@ func (d *dedicatedNodeGroupsDataSource) Read(ctx context.Context, req datasource
 		tiProxy := tiProxySetting{}
 		if nodeGroup.TiproxySetting != nil {
 			tiProxy = tiProxySetting{
-				Type:      types.StringValue(string(*nodeGroup.TiproxySetting.Type)),
-				NodeCount: types.Int32Value(*nodeGroup.TiproxySetting.NodeCount.Get()),
+				NodeSpecKey:         types.StringValue(nodeGroup.TiproxySetting.NodeSpecKey),
+				NodeSpecVersion:     types.StringValue(*nodeGroup.TiproxySetting.NodeSpecVersion),
+				NodeCount:           types.Int32Value(*nodeGroup.TiproxySetting.NodeCount.Get()),
+				NodeSpecDisplayName: types.StringValue(*nodeGroup.TiproxySetting.NodeSpecDisplayName),
 			}
 		}
 		publicEndpointSetting, err := d.provider.DedicatedClient.GetPublicEndpoint(ctx, data.ClusterId.ValueString(), *nodeGroup.TidbNodeGroupId)

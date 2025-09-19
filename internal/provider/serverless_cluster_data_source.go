@@ -238,7 +238,7 @@ func (d *serverlessClusterDataSource) Read(ctx context.Context, req datasource.R
 	}
 
 	tflog.Trace(ctx, "read serverless cluster data source")
-	cluster, err := d.provider.ServerlessClient.GetCluster(ctx, data.ClusterId.ValueString(), clusterV1beta1.SERVERLESSSERVICEGETCLUSTERVIEWPARAMETER_FULL)
+	cluster, err := d.provider.ServerlessClient.GetCluster(ctx, data.ClusterId.ValueString(), clusterV1beta1.CLUSTERSERVICEGETCLUSTERVIEWPARAMETER_FULL)
 	if err != nil {
 		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetCluster, got error: %s", err))
 		return

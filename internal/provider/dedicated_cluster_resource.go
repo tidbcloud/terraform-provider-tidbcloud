@@ -81,8 +81,10 @@ var ipAccessListItemAttrTypes = map[string]attr.Type{
 }
 
 type tiProxySetting struct {
-	Type      types.String `tfsdk:"type"`
-	NodeCount types.Int32  `tfsdk:"node_count"`
+	NodeSpecKey         types.String `tfsdk:"node_spec_key"`
+	NodeSpecVersion     types.String `tfsdk:"node_spec_version"`
+	NodeCount           types.Int32  `tfsdk:"node_count"`
+	NodeSpecDisplayName types.String `tfsdk:"node_spec_display_name"`
 }
 
 var endpointItemAttrTypes = map[string]attr.Type{
@@ -296,15 +298,21 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						MarkdownDescription: "Settings for TiProxy nodes.",
 						Optional:            true,
 						Attributes: map[string]schema.Attribute{
-							"type": schema.StringAttribute{
-								MarkdownDescription: "The type of TiProxy nodes." +
-									"- SMALL: Low performance instance with 2 vCPUs and 4 GiB memory. Max QPS: 30, Max Data Traffic: 90 MiB/s." +
-									"- LARGE: High performance instance with 8 vCPUs and 16 GiB memory. Max QPS: 100, Max Data Traffic: 300 MiB/s.",
-								Optional: true,
+							"node_spec_key": schema.StringAttribute{
+								MarkdownDescription: "The key of the node spec.",
+								Optional:            true,
+							},
+							"node_spec_version": schema.StringAttribute{
+								MarkdownDescription: "The node specification version.",
+								Computed:            true,
 							},
 							"node_count": schema.Int32Attribute{
 								MarkdownDescription: "The number of TiProxy nodes.",
 								Optional:            true,
+							},
+							"node_spec_display_name": schema.StringAttribute{
+								MarkdownDescription: "The display name of the node spec.",
+								Computed:            true,
 							},
 						},
 					},
@@ -565,6 +573,14 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 				AttrTypes: endpointItemAttrTypes,
 			}, endpoints)
 			diags.Append(listDiags...)
+			if group.TiproxySetting != nil {
+				data.TiDBNodeSetting.TiProxySetting = &tiProxySetting{
+					NodeSpecKey: 	   types.StringValue(group.TiproxySetting.NodeSpecKey),
+					NodeSpecVersion:  types.StringValue(*group.TiproxySetting.NodeSpecVersion),
+					NodeCount: 	  types.Int32Value(*group.TiproxySetting.NodeCount.Get()),
+					NodeSpecDisplayName: types.StringValue(*group.TiproxySetting.NodeSpecDisplayName),
+				}
+			}
 
 			data.TiDBNodeSetting.NodeSpecKey = types.StringValue(*group.NodeSpecKey)
 			data.TiDBNodeSetting.NodeCount = types.Int32Value(group.NodeCount)
@@ -726,7 +742,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 			time.Sleep(1 * time.Minute)
 		}
 
-		body := &dedicated.ClusterServiceUpdateClusterRequest{}
+		body := &dedicated.TheUpdatedClusterConfiguration{}
 		// components change
 		// tidb
 		defaultNodeGroup := dedicated.UpdateClusterRequestTidbNodeSettingTidbNodeGroup{}
@@ -735,9 +751,9 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		if plan.TiDBNodeSetting.TiProxySetting != nil {
 			tiProxySetting := dedicated.Dedicatedv1beta1TidbNodeGroupTiProxySetting{}
 			tiProxyNodeCount := plan.TiDBNodeSetting.TiProxySetting.NodeCount.ValueInt32()
-			tiProxyType := dedicated.TidbNodeGroupTiProxyType(plan.TiDBNodeSetting.TiProxySetting.Type.ValueString())
+			tiProxyNodeSpecKey := plan.TiDBNodeSetting.TiProxySetting.NodeSpecKey.ValueString()
 			tiProxySetting.NodeCount = *dedicated.NewNullableInt32(&tiProxyNodeCount)
-			tiProxySetting.Type = &tiProxyType
+			tiProxySetting.NodeSpecKey = tiProxyNodeSpecKey
 			defaultNodeGroup.TiproxySetting = &tiProxySetting
 		}
 		body.TidbNodeSetting = &dedicated.V1beta1UpdateClusterRequestTidbNodeSetting{
@@ -750,7 +766,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		// tikv
 		nodeCountInt32 := int32(plan.TiKVNodeSetting.NodeCount.ValueInt32())
 		storageSizeGiInt32 := int32(plan.TiKVNodeSetting.StorageSizeGi.ValueInt32())
-		storageType := dedicated.StorageNodeSettingStorageType(plan.TiKVNodeSetting.StorageType.ValueString())
+		storageType := dedicated.ClusterStorageNodeSettingStorageType(plan.TiKVNodeSetting.StorageType.ValueString())
 		body.TikvNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
 			NodeSpecKey:   plan.TiKVNodeSetting.NodeSpecKey.ValueStringPointer(),
 			NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
@@ -766,7 +782,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		if plan.TiFlashNodeSetting != nil {
 			nodeCountInt32 := int32(plan.TiFlashNodeSetting.NodeCount.ValueInt32())
 			storageSizeGiInt32 := int32(plan.TiFlashNodeSetting.StorageSizeGi.ValueInt32())
-			storageType := dedicated.StorageNodeSettingStorageType(plan.TiFlashNodeSetting.StorageType.ValueString())
+			storageType := dedicated.ClusterStorageNodeSettingStorageType(plan.TiFlashNodeSetting.StorageType.ValueString())
 			body.TiflashNodeSetting = &dedicated.V1beta1UpdateClusterRequestStorageNodeSetting{
 				NodeSpecKey:   plan.TiFlashNodeSetting.NodeSpecKey.ValueStringPointer(),
 				NodeCount:     *dedicated.NewNullableInt32(&nodeCountInt32),
@@ -909,9 +925,9 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 	if data.TiDBNodeSetting.TiProxySetting != nil {
 		tiProxySetting := dedicated.Dedicatedv1beta1TidbNodeGroupTiProxySetting{}
 		tiProxyNodeCount := data.TiDBNodeSetting.TiProxySetting.NodeCount.ValueInt32()
-		tiProxyType := dedicated.TidbNodeGroupTiProxyType(data.TiDBNodeSetting.TiProxySetting.Type.ValueString())
+		tiProxyNodeSpecKey := data.TiDBNodeSetting.TiProxySetting.NodeSpecKey.ValueString()
 		tiProxySetting.NodeCount = *dedicated.NewNullableInt32(&tiProxyNodeCount)
-		tiProxySetting.Type = &tiProxyType
+		tiProxySetting.NodeSpecKey = tiProxyNodeSpecKey
 		defaultNodeGroup.TiproxySetting = &tiProxySetting
 	}
 	nodeGroups := []dedicated.Dedicatedv1beta1TidbNodeGroup{
@@ -921,7 +937,7 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 	// tidb node setting
 	tidbNodeSpecKey := data.TiDBNodeSetting.NodeSpecKey.ValueString()
 	tidbNodeSetting := dedicated.V1beta1ClusterTidbNodeSetting{
-		NodeSpecKey:    tidbNodeSpecKey,
+		NodeSpecKey:    &tidbNodeSpecKey,
 		TidbNodeGroups: nodeGroups,
 	}
 
@@ -929,7 +945,7 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 	tikvNodeSpecKey := data.TiKVNodeSetting.NodeSpecKey.ValueString()
 	tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt32())
 	tikvStorageSizeGi := int32(data.TiKVNodeSetting.StorageSizeGi.ValueInt32())
-	tikvStorageType := dedicated.StorageNodeSettingStorageType(data.TiKVNodeSetting.StorageType.ValueString())
+	tikvStorageType := dedicated.ClusterStorageNodeSettingStorageType(data.TiKVNodeSetting.StorageType.ValueString())
 	tikvNodeSetting := dedicated.V1beta1ClusterStorageNodeSetting{
 		NodeSpecKey:   tikvNodeSpecKey,
 		NodeCount:     tikvNodeCount,
@@ -947,7 +963,7 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 		tiflashNodeSpecKey := data.TiFlashNodeSetting.NodeSpecKey.ValueString()
 		tikvNodeCount := int32(data.TiKVNodeSetting.NodeCount.ValueInt32())
 		tiflashStorageSizeGi := int32(data.TiFlashNodeSetting.StorageSizeGi.ValueInt32())
-		tiflashStorageType := dedicated.StorageNodeSettingStorageType(data.TiFlashNodeSetting.StorageType.ValueString())
+		tiflashStorageType := dedicated.ClusterStorageNodeSettingStorageType(data.TiFlashNodeSetting.StorageType.ValueString())
 		tiflashNodeSetting = &dedicated.V1beta1ClusterStorageNodeSetting{
 			NodeSpecKey:   tiflashNodeSpecKey,
 			NodeCount:     tikvNodeCount,
