@@ -19,7 +19,7 @@ type dedicatedClusterDataSourceData struct {
 	RegionId           types.String        `tfsdk:"region_id"`
 	Labels             types.Map           `tfsdk:"labels"`
 	Port               types.Int32         `tfsdk:"port"`
-	PausePlan          *pausePlan          `tfsdk:"pause_plan"`
+	PausePlan          types.Object        `tfsdk:"pause_plan"`
 	State              types.String        `tfsdk:"state"`
 	Version            types.String        `tfsdk:"version"`
 	CreatedBy          types.String        `tfsdk:"created_by"`
@@ -385,6 +385,17 @@ func (d *dedicatedClusterDataSource) Read(ctx context.Context, req datasource.Re
 		if cluster.TiflashNodeSetting.RaftStoreIops.IsSet() {
 			data.TiFlashNodeSetting.RaftStoreIOPS = types.Int32Value(*cluster.TiflashNodeSetting.RaftStoreIops.Get())
 		}
+	}
+	if cluster.PausePlan != nil {
+		p := pausePlan{
+			PauseType: types.StringValue(string(cluster.PausePlan.PauseType)),
+		}
+		if cluster.PausePlan.ScheduledResumeTime != nil {
+			p.ScheduledResumeTime = types.StringValue(cluster.PausePlan.ScheduledResumeTime.String())
+		}
+		data.PausePlan, diags = types.ObjectValueFrom(ctx, pausePlanAttrTypes, p)
+	} else {
+		data.PausePlan = types.ObjectNull(pausePlanAttrTypes)
 	}
 
 	diags = resp.State.Set(ctx, &data)

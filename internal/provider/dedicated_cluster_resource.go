@@ -621,8 +621,10 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 
 	if resp.PausePlan != nil {
 		p := pausePlan{
-			PauseType:           types.StringValue(string(resp.PausePlan.PauseType)),
-			ScheduledResumeTime: types.StringValue(resp.PausePlan.ScheduledResumeTime.String()),
+			PauseType: types.StringValue(string(resp.PausePlan.PauseType)),
+		}
+		if resp.PausePlan.ScheduledResumeTime != nil {
+			p.ScheduledResumeTime = types.StringValue(resp.PausePlan.ScheduledResumeTime.String())
 		}
 		data.PausePlan, diags = types.ObjectValueFrom(ctx, pausePlanAttrTypes, p)
 		if diags.HasError() {

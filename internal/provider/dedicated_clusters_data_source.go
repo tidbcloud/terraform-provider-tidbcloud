@@ -388,6 +388,18 @@ func (d *dedicatedClustersDataSource) Read(ctx context.Context, req datasource.R
 			}
 		}
 
+		if cluster.PausePlan != nil {
+			p := pausePlan{
+				PauseType: types.StringValue(string(cluster.PausePlan.PauseType)),
+			}
+			if cluster.PausePlan.ScheduledResumeTime != nil {
+				p.ScheduledResumeTime = types.StringValue(cluster.PausePlan.ScheduledResumeTime.String())
+			}
+			c.PausePlan, diags = types.ObjectValueFrom(ctx, pausePlanAttrTypes, p)
+		} else {
+			c.PausePlan = types.ObjectNull(pausePlanAttrTypes)
+		}
+
 		items = append(items, c)
 	}
 	data.Clusters = items
