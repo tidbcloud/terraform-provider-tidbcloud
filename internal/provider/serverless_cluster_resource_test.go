@@ -61,10 +61,10 @@ func TestUTServerlessClusterResource(t *testing.T) {
 	updateClusterSuccessResp.UnmarshalJSON([]byte(testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, "test-tf2", string(clusterV1beta1.COMMONV1BETA1CLUSTERSTATE_ACTIVE))))
 
 	s.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).Return(&createClusterResp, nil)
-	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSV1BETA1CLUSTERVIEW_BASIC).Return(&getClusterResp, nil).AnyTimes()
+	s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.CLUSTERSERVICEGETCLUSTERVIEWPARAMETER_BASIC).Return(&getClusterResp, nil).AnyTimes()
 	gomock.InOrder(
-		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSV1BETA1CLUSTERVIEW_FULL).Return(&getClusterResp, nil).Times(3),
-		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.SERVERLESSV1BETA1CLUSTERVIEW_FULL).Return(&getClusterAfterUpdateResp, nil).Times(2),
+		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.CLUSTERSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterResp, nil).Times(3),
+		s.EXPECT().GetCluster(gomock.Any(), clusterId, clusterV1beta1.CLUSTERSERVICEGETCLUSTERVIEWPARAMETER_FULL).Return(&getClusterAfterUpdateResp, nil).Times(2),
 	)
 	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil)
 	s.EXPECT().PartialUpdateCluster(gomock.Any(), clusterId, gomock.Any()).Return(&updateClusterSuccessResp, nil)
