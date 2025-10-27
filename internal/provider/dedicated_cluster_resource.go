@@ -300,7 +300,7 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 						Attributes: map[string]schema.Attribute{
 							"node_spec_key": schema.StringAttribute{
 								MarkdownDescription: "The key of the node spec.",
-								Optional:            true,
+								Required:            true,
 							},
 							"node_spec_version": schema.StringAttribute{
 								MarkdownDescription: "The node specification version.",
@@ -308,7 +308,7 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 							},
 							"node_count": schema.Int32Attribute{
 								MarkdownDescription: "The number of TiProxy nodes.",
-								Optional:            true,
+								Required:            true,
 							},
 							"node_spec_display_name": schema.StringAttribute{
 								MarkdownDescription: "The display name of the node spec.",
@@ -575,9 +575,9 @@ func refreshDedicatedClusterResourceData(ctx context.Context, resp *dedicated.Ti
 			diags.Append(listDiags...)
 			if group.TiproxySetting != nil {
 				data.TiDBNodeSetting.TiProxySetting = &tiProxySetting{
-					NodeSpecKey: 	   types.StringValue(group.TiproxySetting.NodeSpecKey),
-					NodeSpecVersion:  types.StringValue(*group.TiproxySetting.NodeSpecVersion),
-					NodeCount: 	  types.Int32Value(*group.TiproxySetting.NodeCount.Get()),
+					NodeSpecKey:         types.StringValue(group.TiproxySetting.NodeSpecKey),
+					NodeSpecVersion:     types.StringValue(*group.TiproxySetting.NodeSpecVersion),
+					NodeCount:           types.Int32Value(*group.TiproxySetting.NodeCount.Get()),
 					NodeSpecDisplayName: types.StringValue(*group.TiproxySetting.NodeSpecDisplayName),
 				}
 			}

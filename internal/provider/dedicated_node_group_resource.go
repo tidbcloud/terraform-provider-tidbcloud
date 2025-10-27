@@ -115,7 +115,7 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 				Attributes: map[string]schema.Attribute{
 					"node_spec_key": schema.StringAttribute{
 						MarkdownDescription: "The key of the node spec.",
-						Optional:            true,
+						Required:            true,
 					},
 					"node_spec_version": schema.StringAttribute{
 						MarkdownDescription: "The node specification version.",
@@ -123,7 +123,7 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 					},
 					"node_count": schema.Int32Attribute{
 						MarkdownDescription: "The number of TiProxy nodes.",
-						Optional:            true,
+						Required:            true,
 					},
 					"node_spec_display_name": schema.StringAttribute{
 						MarkdownDescription: "The display name of the node spec.",

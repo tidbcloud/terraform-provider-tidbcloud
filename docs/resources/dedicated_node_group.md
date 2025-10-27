@@ -74,7 +74,7 @@ Optional:
 <a id="nestedatt--tiproxy_setting"></a>
 ### Nested Schema for `tiproxy_setting`
 
-Optional:
+Required:
 
 - `node_count` (Number) The number of TiProxy nodes.
 - `node_spec_key` (String) The key of the node spec.
