@@ -121,10 +121,15 @@ Required:
 <a id="nestedatt--tidb_node_setting--tiproxy_setting"></a>
 ### Nested Schema for `tidb_node_setting.tiproxy_setting`
 
-Optional:
+Required:
 
 - `node_count` (Number) The number of TiProxy nodes.
-- `type` (String) The type of TiProxy nodes.- SMALL: Low performance instance with 2 vCPUs and 4 GiB memory. Max QPS: 30, Max Data Traffic: 90 MiB/s.- LARGE: High performance instance with 8 vCPUs and 16 GiB memory. Max QPS: 100, Max Data Traffic: 300 MiB/s.
+- `node_spec_key` (String) The key of the node spec.
+
+Read-Only:
+
+- `node_spec_display_name` (String) The display name of the node spec.
+- `node_spec_version` (String) The node specification version.
 
 
 <a id="nestedatt--tidb_node_setting--endpoints"></a>

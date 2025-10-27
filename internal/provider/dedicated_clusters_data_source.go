@@ -169,14 +169,20 @@ func (d *dedicatedClustersDataSource) Schema(_ context.Context, _ datasource.Sch
 									MarkdownDescription: "Settings for TiProxy nodes.",
 									Computed:            true,
 									Attributes: map[string]schema.Attribute{
-										"type": schema.StringAttribute{
-											MarkdownDescription: "The type of TiProxy nodes." +
-												"- SMALL: Low performance instance with 2 vCPUs and 4 GiB memory. Max QPS: 30, Max Data Traffic: 90 MiB/s." +
-												"- LARGE: High performance instance with 8 vCPUs and 16 GiB memory. Max QPS: 100, Max Data Traffic: 300 MiB/s.",
-											Computed: true,
+										"node_spec_key": schema.StringAttribute{
+											MarkdownDescription: "The key of the node spec.",
+											Computed:            true,
+										},
+										"node_spec_version": schema.StringAttribute{
+											MarkdownDescription: "The node specification version.",
+											Computed:            true,
 										},
 										"node_count": schema.Int32Attribute{
 											MarkdownDescription: "The number of TiProxy nodes.",
+											Computed:            true,
+										},
+										"node_spec_display_name": schema.StringAttribute{
+											MarkdownDescription: "The display name of the node spec.",
 											Computed:            true,
 										},
 									},
@@ -329,8 +335,10 @@ func (d *dedicatedClustersDataSource) Read(ctx context.Context, req datasource.R
 				defaultTiProxySetting := tiProxySetting{}
 				if group.TiproxySetting != nil {
 					defaultTiProxySetting = tiProxySetting{
-						Type:      types.StringValue(string(*group.TiproxySetting.Type)),
-						NodeCount: types.Int32Value(*group.TiproxySetting.NodeCount.Get()),
+						NodeSpecKey:         types.StringValue(group.TiproxySetting.NodeSpecKey),
+						NodeSpecVersion:     types.StringValue(*group.TiproxySetting.NodeSpecVersion),
+						NodeCount:           types.Int32Value(*group.TiproxySetting.NodeCount.Get()),
+						NodeSpecDisplayName: types.StringValue(*group.TiproxySetting.NodeSpecDisplayName),
 					}
 				}
 

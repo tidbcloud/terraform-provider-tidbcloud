@@ -113,15 +113,21 @@ func (r *dedicatedNodeGroupResource) Schema(_ context.Context, _ resource.Schema
 				MarkdownDescription: "Settings for TiProxy nodes.",
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
-					"type": schema.StringAttribute{
-						MarkdownDescription: "The type of TiProxy nodes." +
-							"- SMALL: Low performance instance with 2 vCPUs and 4 GiB memory. Max QPS: 30, Max Data Traffic: 90 MiB/s." +
-							"- LARGE: High performance instance with 8 vCPUs and 16 GiB memory. Max QPS: 100, Max Data Traffic: 300 MiB/s.",
-						Optional: true,
+					"node_spec_key": schema.StringAttribute{
+						MarkdownDescription: "The key of the node spec.",
+						Required:            true,
+					},
+					"node_spec_version": schema.StringAttribute{
+						MarkdownDescription: "The node specification version.",
+						Computed:            true,
 					},
 					"node_count": schema.Int32Attribute{
 						MarkdownDescription: "The number of TiProxy nodes.",
-						Optional:            true,
+						Required:            true,
+					},
+					"node_spec_display_name": schema.StringAttribute{
+						MarkdownDescription: "The display name of the node spec.",
+						Computed:            true,
 					},
 				},
 			},
@@ -315,9 +321,9 @@ func (r dedicatedNodeGroupResource) Update(ctx context.Context, req resource.Upd
 	if plan.TiProxySetting != nil {
 		tiProxySetting := dedicated.Dedicatedv1beta1TidbNodeGroupTiProxySetting{}
 		tiProxyNodeCount := plan.TiProxySetting.NodeCount.ValueInt32()
-		tiProxyType := dedicated.TidbNodeGroupTiProxyType(plan.TiProxySetting.Type.ValueString())
+		tiProxyNodeSpecKey := plan.TiProxySetting.NodeSpecKey.ValueString()
 		tiProxySetting.NodeCount = *dedicated.NewNullableInt32(&tiProxyNodeCount)
-		tiProxySetting.Type = &tiProxyType
+		tiProxySetting.NodeSpecKey = tiProxyNodeSpecKey
 		body.TiproxySetting = &tiProxySetting
 	}
 
@@ -362,10 +368,10 @@ func (r dedicatedNodeGroupResource) ImportState(ctx context.Context, req resourc
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("node_group_id"), idParts[1])...)
 }
 
-func buildCreateDedicatedNodeGroupBody(data dedicatedNodeGroupResourceData) dedicated.Required {
+func buildCreateDedicatedNodeGroupBody(data dedicatedNodeGroupResourceData) dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest {
 	displayName := data.DisplayName.ValueString()
-	nodeCount := int32(data.NodeCount.ValueInt32())
-	nodeGroup := dedicated.Required{
+	nodeCount := data.NodeCount.ValueInt32()
+	nodeGroup := dedicated.TidbNodeGroupServiceCreateTidbNodeGroupRequest{
 		DisplayName: &displayName,
 		NodeCount:   nodeCount,
 	}
@@ -373,9 +379,9 @@ func buildCreateDedicatedNodeGroupBody(data dedicatedNodeGroupResourceData) dedi
 	if data.TiProxySetting != nil {
 		tiProxySetting := dedicated.Dedicatedv1beta1TidbNodeGroupTiProxySetting{}
 		tiProxyNodeCount := data.TiProxySetting.NodeCount.ValueInt32()
-		tiProxyType := dedicated.TidbNodeGroupTiProxyType(data.TiProxySetting.Type.ValueString())
+		tiProxyNodeSpecKey := data.TiProxySetting.NodeSpecKey.ValueString()
 		tiProxySetting.NodeCount = *dedicated.NewNullableInt32(&tiProxyNodeCount)
-		tiProxySetting.Type = &tiProxyType
+		tiProxySetting.NodeSpecKey = tiProxyNodeSpecKey
 		nodeGroup.TiproxySetting = &tiProxySetting
 	}
 
@@ -406,6 +412,14 @@ func refreshDedicatedNodeGroupResourceData(resp *dedicated.Dedicatedv1beta1TidbN
 	endpointsList, listDiags := types.ListValue(types.ObjectType{
 		AttrTypes: endpointItemAttrTypes,
 	}, endpoints)
+	if resp.TiproxySetting != nil {
+		data.TiProxySetting = &tiProxySetting{
+			NodeSpecKey:         types.StringValue(resp.TiproxySetting.NodeSpecKey),
+			NodeSpecVersion:     types.StringValue(*resp.TiproxySetting.NodeSpecVersion),
+			NodeCount:           types.Int32Value(*resp.TiproxySetting.NodeCount.Get()),
+			NodeSpecDisplayName: types.StringValue(*resp.TiproxySetting.NodeSpecDisplayName),
+		}
+	}
 	diags.Append(listDiags...)
 	data.Endpoints = endpointsList
 }
