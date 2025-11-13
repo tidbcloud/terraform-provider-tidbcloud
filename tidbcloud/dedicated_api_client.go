@@ -37,6 +37,7 @@ type TiDBCloudDedicatedClient interface {
 	DeletePrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) error
 	GetPrivateEndpointConnection(ctx context.Context, clusterId string, nodeGroupId string, privateEndpointConnectionId string) (*dedicated.Dedicatedv1beta1PrivateEndpointConnection, error)
 	ListPrivateEndpointConnections(ctx context.Context, clusterId string, nodeGroupId string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListPrivateEndpointConnectionsResponse, error)
+	GetPrivateLinkService(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.Dedicatedv1beta1PrivateLinkService, error)
 	CreateNetworkContainer(ctx context.Context, body *dedicated.V1beta1NetworkContainer) (*dedicated.V1beta1NetworkContainer, error)
 	DeleteNetworkContainer(ctx context.Context, networkContainerId string) error
 	GetNetworkContainer(ctx context.Context, networkContainerId string) (*dedicated.V1beta1NetworkContainer, error)
@@ -247,6 +248,11 @@ func (d *DedicatedClientDelegate) ListPrivateEndpointConnections(ctx context.Con
 		r = r.PageToken(*pageToken)
 	}
 	resp, h, err := r.Execute()
+	return resp, parseError(err, h)
+}
+
+func (d *DedicatedClientDelegate) GetPrivateLinkService(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.Dedicatedv1beta1PrivateLinkService, error) {
+	resp, h, err := d.dc.PrivateEndpointConnectionServiceAPI.PrivateEndpointConnectionServiceGetPrivateLinkService(ctx, clusterId, nodeGroupId).Execute()
 	return resp, parseError(err, h)
 }
 

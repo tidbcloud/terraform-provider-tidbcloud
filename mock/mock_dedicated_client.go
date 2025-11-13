@@ -240,6 +240,21 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetPrivateEndpointConnection
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateEndpointConnection", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetPrivateEndpointConnection), ctx, clusterId, nodeGroupId, privateEndpointConnectionId)
 }
 
+// GetPrivateLinkService mocks base method.
+func (m *MockTiDBCloudDedicatedClient) GetPrivateLinkService(ctx context.Context, clusterId, nodeGroupId string) (*dedicated.Dedicatedv1beta1PrivateLinkService, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPrivateLinkService", ctx, clusterId, nodeGroupId)
+	ret0, _ := ret[0].(*dedicated.Dedicatedv1beta1PrivateLinkService)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPrivateLinkService indicates an expected call of GetPrivateLinkService.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetPrivateLinkService(ctx, clusterId, nodeGroupId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateLinkService", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetPrivateLinkService), ctx, clusterId, nodeGroupId)
+}
+
 // GetPublicEndpoint mocks base method.
 func (m *MockTiDBCloudDedicatedClient) GetPublicEndpoint(ctx context.Context, clusterId, nodeGroupId string) (*dedicated.V1beta1PublicEndpointSetting, error) {
 	m.ctrl.T.Helper()
