@@ -164,7 +164,7 @@ func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Res
 		NewBackupResource,
 		NewRestoreResource,
 		NewImportResource,
-		
+
 		// new version with openapi v1beta1
 		NewSQLUserResource,
 
@@ -199,6 +199,7 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 		NewDedicatedClustersDataSource,
 		NewDedicatedNodeGroupDataSource,
 		NewDedicatedNodeGroupsDataSource,
+		NewDedicatedPrivateLinkServiceDataSource,
 		NewDedicatedPrivateEndpointConnectionDataSource,
 		NewDedicatedPrivateEndpointConnectionsDataSource,
 		NewDedicatedNetworkContainerDataSource,
