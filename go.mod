@@ -15,7 +15,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.29.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.1
-	github.com/hashicorp/terraform-plugin-testing v1.13.3
+	github.com/hashicorp/terraform-plugin-testing v1.14.0
 	github.com/icholy/digest v1.1.0
 	github.com/juju/errors v1.0.0
 	github.com/tidbcloud/tidbcloud-cli/pkg v0.0.0-20250904033041-7509dcd391b2
