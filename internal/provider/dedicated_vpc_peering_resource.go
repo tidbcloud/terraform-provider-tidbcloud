@@ -265,6 +265,11 @@ func refreshDedicatedVpcPeeringResourceData(ctx context.Context, vpcPeering *ded
 	data.TiDBCloudVpcId = types.StringValue(*vpcPeering.TidbCloudVpcId)
 	data.TiDBCloudVpcCidr = types.StringValue(*vpcPeering.TidbCloudVpcCidr)
 	data.ProjectId = types.StringValue((*vpcPeering.Labels)[LabelsKeyProjectId])
+	data.TiDBCloudRegionId = types.StringValue(vpcPeering.TidbCloudRegionId)
+	data.CustomerRegionId = types.StringValue(*vpcPeering.CustomerRegionId)
+	data.CustomerAccountId = types.StringValue(vpcPeering.CustomerAccountId)
+	data.CustomerVpcId = types.StringValue(vpcPeering.CustomerVpcId)
+	data.CustomerVpcCidr = types.StringValue(vpcPeering.CustomerVpcCidr)
 	if vpcPeering.AwsVpcPeeringConnectionId.IsSet() {
 		data.AWSVpcPeeringConnectionId = types.StringValue(*vpcPeering.AwsVpcPeeringConnectionId.Get())
 	}
