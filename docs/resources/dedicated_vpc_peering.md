@@ -44,6 +44,12 @@ resource "tidbcloud_dedicated_vpc_peering" "example" {
   customer_account_id  = var.customer_account_id
   customer_vpc_id      = var.customer_vpc_id
   customer_vpc_cidr    = var.customer_vpc_cidr
+  # non-blocking by design
+}
+
+resource "aws_vpc_peering_connection_accepter" "peer" {
+  vpc_peering_connection_id = tidbcloud_dedicated_vpc_peering.example.aws_vpc_peering_connection_id
+  auto_accept               = true
 }
 ```
 

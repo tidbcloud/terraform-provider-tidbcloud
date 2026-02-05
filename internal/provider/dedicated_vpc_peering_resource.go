@@ -176,17 +176,15 @@ func (r *DedicatedVpcPeeringResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	VpcPeeringId := *VpcPeering.VpcPeeringId
-	data.VpcPeeringId = types.StringValue(VpcPeeringId)
-	tflog.Info(ctx, "wait dedicated vpc peering ready")
-	VpcPeering, err = WaitDedicatedVpcPeeringReady(ctx, clusterCreateTimeout, clusterCreateInterval, VpcPeeringId, r.provider.DedicatedClient)
+	VpcPeering, err = WaitDedicatedVpcPeeringReady(ctx, clusterCreateTimeout, clusterCreateInterval, *VpcPeering.VpcPeeringId, r.provider.DedicatedClient)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Dedicated vpc peering creation failed",
-			fmt.Sprintf("Dedicated vpc peering is not ready, get error: %s", err),
+			fmt.Sprintf("aws_vpc_peering_connection_id is not ready, get error: %s", err),
 		)
 		return
 	}
+
 	refreshDedicatedVpcPeeringResourceData(ctx, VpcPeering, &data)
 
 	// save into the Terraform state.
@@ -272,6 +270,8 @@ func refreshDedicatedVpcPeeringResourceData(ctx context.Context, vpcPeering *ded
 	data.CustomerVpcCidr = types.StringValue(vpcPeering.CustomerVpcCidr)
 	if vpcPeering.AwsVpcPeeringConnectionId.IsSet() {
 		data.AWSVpcPeeringConnectionId = types.StringValue(*vpcPeering.AwsVpcPeeringConnectionId.Get())
+	} else {
+		data.AWSVpcPeeringConnectionId = types.StringNull()
 	}
 	labels, diag := types.MapValueFrom(ctx, types.StringType, *vpcPeering.Labels)
 	if diag.HasError() {
@@ -284,11 +284,10 @@ func WaitDedicatedVpcPeeringReady(ctx context.Context, timeout time.Duration, in
 	client tidbcloud.TiDBCloudDedicatedClient) (*dedicated.Dedicatedv1beta1VpcPeering, error) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
-			string(dedicated.DEDICATEDV1BETA1VPCPEERINGSTATE_PENDING),
+			"pending",
 		},
 		Target: []string{
-			string(dedicated.DEDICATEDV1BETA1VPCPEERINGSTATE_FAILED),
-			string(dedicated.DEDICATEDV1BETA1VPCPEERINGSTATE_ACTIVE),
+			"ready",
 		},
 		Timeout:      timeout,
 		MinTimeout:   500 * time.Millisecond,
@@ -307,11 +306,17 @@ func WaitDedicatedVpcPeeringReady(ctx context.Context, timeout time.Duration, in
 func dedicatedVpcPeeringStateRefreshFunc(ctx context.Context, VpcPeeringId string,
 	client tidbcloud.TiDBCloudDedicatedClient) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		tflog.Trace(ctx, "Waiting for dedicated vpc peering ready")
+		tflog.Trace(ctx, "Waiting for aws_vpc_peering_connection_id")
 		VpcPeering, err := client.GetVPCPeering(ctx, VpcPeeringId)
 		if err != nil {
 			return nil, "", err
 		}
-		return VpcPeering, string(*VpcPeering.State), nil
+		if VpcPeering.State != nil && *VpcPeering.State == dedicated.DEDICATEDV1BETA1VPCPEERINGSTATE_FAILED {
+			return VpcPeering, "failed", fmt.Errorf("dedicated vpc peering is in FAILED state")
+		}
+		if VpcPeering.AwsVpcPeeringConnectionId.IsSet() {
+			return VpcPeering, "ready", nil
+		}
+		return VpcPeering, "pending", nil
 	}
 }
