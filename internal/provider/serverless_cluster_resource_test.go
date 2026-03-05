@@ -21,7 +21,8 @@ func TestAccServerlessClusterResource(t *testing.T) {
 			{
 				Config: testAccServerlessClusterResourceConfig(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(serverlessClusterResourceName, "name", "test-tf"),
+					resource.TestCheckResourceAttr(serverlessClusterResourceName, "display_name", "test-tf"),
+					resource.TestCheckResourceAttr(serverlessClusterResourceName, "root_password", "Password123!"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "region.region_id", "us-east-1"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "endpoints.public.port", "4000"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "endpoints.private.port", "4000"),
@@ -31,7 +32,8 @@ func TestAccServerlessClusterResource(t *testing.T) {
 			{
 				Config: testAccServerlessClusterResourceUpdateConfig(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("tidbcloud_serverless_cluster.test", "name", "test-tf2"),
+					resource.TestCheckResourceAttr("tidbcloud_serverless_cluster.test", "display_name", "test-tf2"),
+					resource.TestCheckResourceAttr("tidbcloud_serverless_cluster.test", "root_password", "Password1234!"),
 				),
 			},
 		},
@@ -68,6 +70,7 @@ func TestUTServerlessClusterResource(t *testing.T) {
 	)
 	s.EXPECT().DeleteCluster(gomock.Any(), clusterId).Return(&getClusterResp, nil)
 	s.EXPECT().PartialUpdateCluster(gomock.Any(), clusterId, gomock.Any()).Return(&updateClusterSuccessResp, nil)
+	s.EXPECT().ChangeClusterRootPassword(gomock.Any(), clusterId, gomock.Any()).Return(nil)
 
 	testServerlessClusterResource(t)
 }
@@ -86,6 +89,7 @@ func testServerlessClusterResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(serverlessClusterResourceName, "cluster_id"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "display_name", "test-tf"),
+					resource.TestCheckResourceAttr(serverlessClusterResourceName, "root_password", "Password123!"),
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "region.name", "regions/aws-us-east-1"),
 				),
 			},
@@ -95,6 +99,7 @@ func testServerlessClusterResource(t *testing.T) {
 				Config:             testUTServerlessClusterResourceUpdateConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(serverlessClusterResourceName, "display_name", "test-tf2"),
+					resource.TestCheckResourceAttr(serverlessClusterResourceName, "root_password", "Password1234!"),
 				),
 			},
 			// Delete testing automatically occurs in TestCase
@@ -106,6 +111,7 @@ func testAccServerlessClusterResourceConfig() string {
 	return `
 resource "tidbcloud_serverless_cluster" "test" {
    display_name = "test-tf"
+   root_password = "Password123!"
    region = {
       name = "regions/aws-us-east-1"
    }
@@ -117,6 +123,7 @@ func testAccServerlessClusterResourceUpdateConfig() string {
 	return `
 resource "tidbcloud_serverless_cluster" "test" {
    display_name = "test-tf2"
+   root_password = "Password1234!"
    region = {
       name = "regions/aws-us-east-1"
    }
@@ -128,6 +135,7 @@ func testUTServerlessClusterResourceConfig() string {
 	return `
 resource "tidbcloud_serverless_cluster" "test" {
    display_name = "test-tf"
+   root_password = "Password123!"
    region = {
       name = "regions/aws-us-east-1"
    }
@@ -139,6 +147,7 @@ func testUTServerlessClusterResourceUpdateConfig() string {
 	return `
 resource "tidbcloud_serverless_cluster" "test" {
    display_name = "test-tf2"
+   root_password = "Password1234!"
    region = {
       name = "regions/aws-us-east-1"
    }
@@ -160,6 +169,10 @@ func testUTTidbCloudOpenApiserverlessv1beta1Cluster(clusterId, regionName, displ
     },
     "spendingLimit": {
         "monthly": 0
+    },
+    "autoScaling": {
+        "minRcu": 0,
+        "maxRcu": 0
     },
     "automatedBackupPolicy": {
         "startTime": "07:00",

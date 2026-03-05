@@ -82,6 +82,20 @@ func (mr *MockTiDBCloudServerlessClientMockRecorder) CancelUpload(ctx, clusterId
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelUpload", reflect.TypeOf((*MockTiDBCloudServerlessClient)(nil).CancelUpload), ctx, clusterId, uploadId)
 }
 
+// ChangeClusterRootPassword mocks base method.
+func (m *MockTiDBCloudServerlessClient) ChangeClusterRootPassword(ctx context.Context, clusterId string, body *cluster.ClusterServiceChangeRootPasswordBody) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeClusterRootPassword", ctx, clusterId, body)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ChangeClusterRootPassword indicates an expected call of ChangeClusterRootPassword.
+func (mr *MockTiDBCloudServerlessClientMockRecorder) ChangeClusterRootPassword(ctx, clusterId, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeClusterRootPassword", reflect.TypeOf((*MockTiDBCloudServerlessClient)(nil).ChangeClusterRootPassword), ctx, clusterId, body)
+}
+
 // CompleteUpload mocks base method.
 func (m *MockTiDBCloudServerlessClient) CompleteUpload(ctx context.Context, clusterId string, uploadId *string, parts *[]imp.CompletePart) error {
 	m.ctrl.T.Helper()

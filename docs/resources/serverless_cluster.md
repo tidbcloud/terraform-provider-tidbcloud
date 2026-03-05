@@ -49,6 +49,7 @@ resource "tidbcloud_serverless_cluster" "example" {
 - `encryption_config` (Attributes) The encryption settings for the cluster. (see [below for nested schema](#nestedatt--encryption_config))
 - `endpoints` (Attributes) The endpoints for connecting to the cluster. (see [below for nested schema](#nestedatt--endpoints))
 - `project_id` (String) The ID of the project. When not provided, the default project will be used.
+- `root_password` (String, Sensitive) The root password to access the cluster. It must be 8-64 characters.
 - `spending_limit` (Attributes) The spending limit of the cluster. (see [below for nested schema](#nestedatt--spending_limit))
 
 ### Read-Only

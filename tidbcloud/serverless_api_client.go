@@ -22,6 +22,7 @@ type TiDBCloudServerlessClient interface {
 	GetCluster(ctx context.Context, clusterId string, view cluster.ClusterServiceGetClusterViewParameter) (*cluster.TidbCloudOpenApiserverlessv1beta1Cluster, error)
 	ListClusters(ctx context.Context, filter *string, pageSize *int32, pageToken *string, orderBy *string, skip *int32) (*cluster.TidbCloudOpenApiserverlessv1beta1ListClustersResponse, error)
 	PartialUpdateCluster(ctx context.Context, clusterId string, body *cluster.V1beta1ClusterServicePartialUpdateClusterBody) (*cluster.TidbCloudOpenApiserverlessv1beta1Cluster, error)
+	ChangeClusterRootPassword(ctx context.Context, clusterId string, body *cluster.ClusterServiceChangeRootPasswordBody) error
 	ListProviderRegions(ctx context.Context) ([]cluster.Commonv1beta1Region, error)
 	CancelImport(ctx context.Context, clusterId string, id string) error
 	CreateImport(ctx context.Context, clusterId string, body *imp.ImportServiceCreateImportBody) (*imp.Import, error)
@@ -173,6 +174,15 @@ func (d *ServerlessClientDelegate) PartialUpdateCluster(ctx context.Context, clu
 	}
 	c, h, err := r.Execute()
 	return c, parseError(err, h)
+}
+
+func (d *ServerlessClientDelegate) ChangeClusterRootPassword(ctx context.Context, clusterId string, body *cluster.ClusterServiceChangeRootPasswordBody) error {
+	r := d.sc.ClusterServiceAPI.ClusterServiceChangeRootPassword(ctx, clusterId)
+	if body != nil {
+		r = r.Body(*body)
+	}
+	_, h, err := r.Execute()
+	return parseError(err, h)
 }
 
 func (d *ServerlessClientDelegate) CancelImport(ctx context.Context, clusterId string, id string) error {
