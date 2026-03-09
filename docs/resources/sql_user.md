@@ -52,7 +52,6 @@ resource "tidbcloud_sql_user" "example" {
 
 ### Required
 
-- `builtin_role` (String) The built-in role of the sql user, available values [role_admin, role_readonly, role_readwrite]. The built-in role [role_readonly, role_readwrite] must start with user_prefix for serverless cluster
 - `cluster_id` (String) The ID of the cluster.
 - `password` (String, Sensitive) The password of the user.
 - `user_name` (String) The name of the user. The user name must start with user_prefix for serverless cluster
@@ -60,4 +59,5 @@ resource "tidbcloud_sql_user" "example" {
 ### Optional
 
 - `auth_method` (String) The authentication method of the user. Only mysql_native_password is supported.
+- `builtin_role` (String) The built-in role of the sql user, available values [role_admin, role_readonly, role_readwrite]. The built-in role [role_readonly, role_readwrite] must start with user_prefix for serverless cluster
 - `custom_roles` (List of String) The custom roles of the user.
