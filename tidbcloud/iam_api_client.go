@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	DefaultIAMEndpoint = "https://iam.tidbapi.com"
+	DefaultIAMEndpoint = "https://iam.de2v.tidbapi.com"
 )
 
 type TiDBCloudIAMClient interface {
