@@ -83,7 +83,7 @@ func (r *sqlUserResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"builtin_role": schema.StringAttribute{
 				MarkdownDescription: "The built-in role of the sql user, available values [role_admin, role_readonly, role_readwrite]. The built-in role [role_readonly, role_readwrite] must start with user_prefix for serverless cluster",
-				Required:            true,
+				Optional:            true,
 			},
 			"custom_roles": schema.ListAttribute{
 				MarkdownDescription: "The custom roles of the user.",
