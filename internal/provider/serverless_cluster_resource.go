@@ -47,6 +47,7 @@ type serverlessClusterResourceData struct {
 	ProjectId             types.String           `tfsdk:"project_id"`
 	ClusterId             types.String           `tfsdk:"cluster_id"`
 	DisplayName           types.String           `tfsdk:"display_name"`
+	RootPassword          types.String           `tfsdk:"root_password"`
 	Region                *region                `tfsdk:"region"`
 	SpendingLimit         types.Object           `tfsdk:"spending_limit"`
 	AutoScaling           types.Object           `tfsdk:"auto_scaling"`
@@ -168,6 +169,11 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The display name of the cluster.",
 				Required:            true,
 			},
+			"root_password": schema.StringAttribute{
+				MarkdownDescription: "The root password to access the cluster. It must be 8-64 characters.",
+				Optional:            true,
+				Sensitive:           true,
+			},
 			"region": schema.SingleNestedAttribute{
 				MarkdownDescription: "The region of the cluster.",
 				Required:            true,
@@ -220,6 +226,10 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"auto_scaling": schema.SingleNestedAttribute{
 				MarkdownDescription: "The auto scaling config of the essential cluster.",
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"min_rcu": schema.Int64Attribute{
 						MarkdownDescription: "The minimum RCU (Request Capacity Unit) of the cluster.",
@@ -467,6 +477,12 @@ func (r serverlessClusterResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 	var data serverlessClusterResourceData
+	var rootPassword types.String
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("root_password"), &rootPassword)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.RootPassword = rootPassword
 	err = refreshServerlessClusterResourceData(ctx, cluster, &data)
 	if err != nil {
 		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless cluster resource data, got error: %s", err))
@@ -495,9 +511,16 @@ func (r serverlessClusterResource) Delete(ctx context.Context, req resource.Dele
 }
 
 func (r serverlessClusterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	// get config
+	var config serverlessClusterResourceData
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	// get plan
 	var plan serverlessClusterResourceData
-	diags := req.Plan.Get(ctx, &plan)
+	diags = req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -508,6 +531,26 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	hasConfigSpendingLimit := IsKnown(config.SpendingLimit)
+	hasConfigAutoScaling := IsKnown(config.AutoScaling)
+	if hasConfigSpendingLimit && hasConfigAutoScaling {
+		resp.Diagnostics.AddError("Update Error", "Cannot set both spending limit and capacity for serverless cluster")
+		return
+	}
+
+	if !IsKnown(plan.RootPassword) {
+		plan.RootPassword = state.RootPassword
+	}
+	if !plan.RootPassword.Equal(state.RootPassword) {
+		err := r.provider.ServerlessClient.ChangeClusterRootPassword(ctx, state.ClusterId.ValueString(), &clusterV1beta1.ClusterServiceChangeRootPasswordBody{
+			Password: plan.RootPassword.ValueString(),
+		})
+		if err != nil {
+			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call ChangeClusterRootPassword, got error: %s", err))
+			return
+		}
 	}
 
 	body := &clusterV1beta1.V1beta1ClusterServicePartialUpdateClusterBody{
@@ -542,11 +585,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 		}
 	}
 
-	if IsKnown(plan.SpendingLimit) {
-		if IsKnown(plan.AutoScaling) || IsKnown(state.AutoScaling) {
-			resp.Diagnostics.AddError("Update Error", "Cannot set both spending limit and capacity for serverless cluster")
-			return
-		}
+	if hasConfigSpendingLimit && IsKnown(plan.SpendingLimit) {
 		var planLimit spendingLimit
 		diags := plan.SpendingLimit.As(ctx, &planLimit, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -578,11 +617,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 		}
 	}
 
-	if IsKnown(plan.AutoScaling) {
-		if IsKnown(plan.SpendingLimit) || IsKnown(state.SpendingLimit) {
-			resp.Diagnostics.AddError("Update Error", "Cannot set both spending limit and capacity for serverless cluster")
-			return
-		}
+	if hasConfigAutoScaling && IsKnown(plan.AutoScaling) {
 		var planCap autoScaling
 		diags := plan.AutoScaling.As(ctx, &planCap, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -647,6 +682,7 @@ func (r serverlessClusterResource) Update(ctx context.Context, req resource.Upda
 		resp.Diagnostics.AddError("Refresh Error", fmt.Sprintf("Unable to refresh serverless cluster resource data, got error: %s", err))
 		return
 	}
+	state.RootPassword = plan.RootPassword
 
 	// save into the Terraform state.
 	diags = resp.State.Set(ctx, &state)
@@ -670,6 +706,10 @@ func buildCreateServerlessClusterBody(ctx context.Context, data serverlessCluste
 			Name: &regionName,
 		},
 		Labels: &labels,
+	}
+	if IsKnown(data.RootPassword) {
+		rootPassword := data.RootPassword.ValueString()
+		body.RootPassword = &rootPassword
 	}
 
 	if IsKnown(data.SpendingLimit) {
