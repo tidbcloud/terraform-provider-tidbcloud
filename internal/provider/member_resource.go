@@ -105,7 +105,7 @@ func (r *memberResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"status": schema.StringAttribute{
-				MarkdownDescription: "The current status of the member. `Active` indicates the member has accepted the invitation; `Pending` indicates the invitation has not yet been accepted.",
+				MarkdownDescription: "The current status of the member as returned by the IAM API. For example, `ACTIVE` indicates the member has accepted the invitation, while a pending status indicates the invitation has not yet been accepted.",
 				Computed:            true,
 			},
 			"first_name": schema.StringAttribute{

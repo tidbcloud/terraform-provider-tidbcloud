@@ -64,7 +64,7 @@ resource "tidbcloud_member" "example" {
 - `invite_time` (String) The timestamp when the member was invited, in ISO 8601 format.
 - `last_login_time` (String) The timestamp when the member last logged in, in ISO 8601 format.
 - `last_name` (String) The last name of the member.
-- `status` (String) The current status of the member. `Active` indicates the member has accepted the invitation; `Pending` indicates the invitation has not yet been accepted.
+- `status` (String) The current status of the member as returned by the IAM API. For example, `ACTIVE` indicates the member has accepted the invitation, while a pending status indicates the invitation has not yet been accepted.
 - `user_id` (String) The ID of the member.
 
 <a id="nestedatt--instance_roles"></a>
