@@ -2,6 +2,7 @@ package tidbcloud
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/icholy/digest"
@@ -10,6 +11,8 @@ import (
 
 const (
 	DefaultIAMEndpoint = "https://iam.tidbapi.com"
+	// IAMAPIBasePath is the version prefix shared by all IAM v1beta1 endpoints.
+	IAMAPIBasePath = "/v1beta1"
 )
 
 type TiDBCloudIAMClient interface {
@@ -18,6 +21,14 @@ type TiDBCloudIAMClient interface {
 	GetSQLUser(ctx context.Context, clusterID string, userName string) (*iam.ApiSqlUser, error)
 	DeleteSQLUser(ctx context.Context, clusterID string, userName string) (*iam.ApiBasicResp, error)
 	UpdateSQLUser(ctx context.Context, clusterID string, userName string, body *iam.ApiUpdateSqlUserReq) (*iam.ApiSqlUser, error)
+
+	// Organization member operations. The IAM Go SDK does not (yet) expose the
+	// member API, so these are served by a hand-written REST client in
+	// member_api_client.go that reuses the same digest-authenticated transport.
+	ListMembers(ctx context.Context, params *ListMembersParams) (*OpenApiListUsersRsp, error)
+	InviteMembers(ctx context.Context, body *OpenApiInviteUsersReq) (*OpenApiInviteUsersRsp, error)
+	UpdateMember(ctx context.Context, userID string, body *OpenApiUpdateUserReq) error
+	DeleteMember(ctx context.Context, userID string) error
 }
 
 func NewIAMApiClient(rt http.RoundTripper, iamEndpoint string, userAgent string) (*iam.APIClient, error) {
@@ -43,6 +54,10 @@ func NewIAMApiClient(rt http.RoundTripper, iamEndpoint string, userAgent string)
 
 type IAMClientDelegate struct {
 	ic *iam.APIClient
+	// httpClient and memberBaseURL back the hand-written member REST client.
+	// They share the same digest transport as ic.
+	httpClient    *http.Client
+	memberBaseURL string
 }
 
 func NewIAMClientDelegate(publicKey string, privateKey string, iamEndpoint string, userAgent string) (TiDBCloudIAMClient, error) {
@@ -55,8 +70,18 @@ func NewIAMClientDelegate(publicKey string, privateKey string, iamEndpoint strin
 	if err != nil {
 		return nil, err
 	}
+
+	if iamEndpoint == "" {
+		iamEndpoint = DefaultIAMEndpoint
+	}
+	iamURL, err := validateApiUrl(iamEndpoint)
+	if err != nil {
+		return nil, err
+	}
 	return &IAMClientDelegate{
-		ic: ic,
+		ic:            ic,
+		httpClient:    &http.Client{Transport: transport},
+		memberBaseURL: fmt.Sprintf("%s://%s%s", iamURL.Scheme, iamURL.Host, IAMAPIBasePath),
 	}, nil
 }
 
