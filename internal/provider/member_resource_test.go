@@ -36,6 +36,14 @@ func TestAccMemberResource(t *testing.T) {
 					resource.TestCheckResourceAttr(memberResourceName, "org_role", "org:billing_viewer"),
 				),
 			},
+			// Import testing (by email)
+			{
+				ResourceName:                         memberResourceName,
+				ImportState:                          true,
+				ImportStateId:                        email,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "email",
+			},
 		},
 	})
 }
