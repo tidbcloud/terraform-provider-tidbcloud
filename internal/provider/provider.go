@@ -173,6 +173,7 @@ func (p *tidbcloudProvider) Resources(ctx context.Context) []func() resource.Res
 		NewDedicatedPrivateEndpointConnectionResource,
 		NewDedicatedNetworkContainerResource,
 		NewDedicatedVpcPeeringResource,
+		NewDedicatedChangefeedResource,
 
 		NewServerlessClusterResource,
 		NewServerlessExportResource,
@@ -206,6 +207,8 @@ func (p *tidbcloudProvider) DataSources(ctx context.Context) []func() datasource
 		NewDedicatedNetworkContainersDataSource,
 		NewDedicatedVpcPeeringDataSource,
 		NewDedicatedVpcPeeringsDataSource,
+		NewDedicatedChangefeedDataSource,
+		NewDedicatedChangefeedsDataSource,
 
 		NewServerlessClusterDataSource,
 		NewServerlessClustersDataSource,
