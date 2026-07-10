@@ -69,7 +69,7 @@ func memberRoleComputedAttribute(mdDescription string) schema.ListNestedAttribut
 
 func (d *memberDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "member data source",
+		MarkdownDescription: "member data source. The API key must carry the `Organization Owner` role: the IAM members API requires it even for read operations.",
 		Attributes: map[string]schema.Attribute{
 			"email": schema.StringAttribute{
 				MarkdownDescription: "The email address of the member.",

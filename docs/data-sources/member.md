@@ -3,12 +3,12 @@
 page_title: "tidbcloud_member Data Source - terraform-provider-tidbcloud"
 subcategory: ""
 description: |-
-  member data source
+  member data source. The API key must carry the Organization Owner role: the IAM members API requires it even for read operations.
 ---
 
 # tidbcloud_member (Data Source)
 
-member data source
+member data source. The API key must carry the `Organization Owner` role: the IAM members API requires it even for read operations.
 
 ## Example Usage
 

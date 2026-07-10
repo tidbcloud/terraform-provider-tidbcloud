@@ -56,7 +56,7 @@ func (d *membersDataSource) Configure(_ context.Context, req datasource.Configur
 
 func (d *membersDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "members data source lists all members of the organization.",
+		MarkdownDescription: "members data source lists all members of the organization. The API key must carry the `Organization Owner` role: the IAM members API requires it even for read operations.",
 		Attributes: map[string]schema.Attribute{
 			"members": schema.ListNestedAttribute{
 				MarkdownDescription: "The members of the organization.",

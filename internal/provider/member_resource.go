@@ -82,7 +82,7 @@ func roleNestedAttribute(mdDescription string) schema.SetNestedAttribute {
 
 func (r *memberResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "member resource manages an organization member in TiDB Cloud. Creating the resource invites the member; the member stays in `Pending` status until the invitation is accepted.",
+		MarkdownDescription: "member resource manages an organization member in TiDB Cloud. Creating the resource invites the member; the member stays in `Pending` status until the invitation is accepted. The API key must carry the `Organization Owner` role: the IAM members API requires it even for read operations.",
 		Attributes: map[string]schema.Attribute{
 			"email": schema.StringAttribute{
 				MarkdownDescription: "The email address of the member. Changing this forces a new member to be invited.",

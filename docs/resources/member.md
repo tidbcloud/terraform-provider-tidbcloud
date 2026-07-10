@@ -3,12 +3,12 @@
 page_title: "tidbcloud_member Resource - terraform-provider-tidbcloud"
 subcategory: ""
 description: |-
-  member resource manages an organization member in TiDB Cloud. Creating the resource invites the member; the member stays in Pending status until the invitation is accepted.
+  member resource manages an organization member in TiDB Cloud. Creating the resource invites the member; the member stays in Pending status until the invitation is accepted. The API key must carry the Organization Owner role: the IAM members API requires it even for read operations.
 ---
 
 # tidbcloud_member (Resource)
 
-member resource manages an organization member in TiDB Cloud. Creating the resource invites the member; the member stays in `Pending` status until the invitation is accepted.
+member resource manages an organization member in TiDB Cloud. Creating the resource invites the member; the member stays in `Pending` status until the invitation is accepted. The API key must carry the `Organization Owner` role: the IAM members API requires it even for read operations.
 
 ## Example Usage
 
