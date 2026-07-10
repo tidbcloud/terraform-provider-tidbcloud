@@ -723,17 +723,38 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 			// edit and resume it afterwards so a single apply converges;
 			// replication pauses briefly and catches up after the resume.
 			needsPauseResume := !plan.Paused.ValueBool()
-			if needsPauseResume {
-				if err := r.provider.DedicatedClient.PauseChangefeed(ctx, changefeedId); err != nil {
-					resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call PauseChangefeed before editing the downstream config, got error: %s", err))
+			// Best-effort recovery: once we paused a running changefeed, any
+			// failure between here and the final resume must not leave it
+			// paused. resumed is flipped after the successful resume below.
+			resumed := !needsPauseResume
+			defer func() {
+				if resumed {
 					return
 				}
-				if _, err := WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
-					[]string{tidbcloud.ChangefeedStatePausing, tidbcloud.ChangefeedStateRunning, tidbcloud.ChangefeedStateWarning},
-					[]string{tidbcloud.ChangefeedStatePaused},
-				); err != nil {
-					resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Changefeed %s did not pause before editing the downstream config, get error: %s", changefeedId, err))
-					return
+				if err := r.provider.DedicatedClient.ResumeChangefeed(ctx, changefeedId); err != nil {
+					resp.Diagnostics.AddWarning(
+						"Changefeed left paused",
+						fmt.Sprintf("The downstream-config edit failed and the automatic resume of changefeed %s also failed: %s. Resume it manually or re-run terraform apply.", changefeedId, err),
+					)
+				}
+			}()
+			if needsPauseResume {
+				// A previous failed apply may have left the changefeed paused
+				// (terraform still records paused=false): skip the pause call
+				// in that case so the retry can proceed straight to the edit.
+				if current.State == nil || *current.State != tidbcloud.ChangefeedStatePaused {
+					if err := r.provider.DedicatedClient.PauseChangefeed(ctx, changefeedId); err != nil {
+						resumed = true // pause never took effect; nothing to undo
+						resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call PauseChangefeed before editing the downstream config, got error: %s", err))
+						return
+					}
+					if _, err := WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
+						[]string{tidbcloud.ChangefeedStatePausing, tidbcloud.ChangefeedStateRunning, tidbcloud.ChangefeedStateWarning},
+						[]string{tidbcloud.ChangefeedStatePaused},
+					); err != nil {
+						resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Changefeed %s did not pause before editing the downstream config, get error: %s", changefeedId, err))
+						return
+					}
 				}
 			}
 
@@ -765,6 +786,7 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 					resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call ResumeChangefeed after editing the downstream config, got error: %s", err))
 					return
 				}
+				resumed = true
 				if _, err := WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
 					[]string{tidbcloud.ChangefeedStatePaused},
 					steadyStates,

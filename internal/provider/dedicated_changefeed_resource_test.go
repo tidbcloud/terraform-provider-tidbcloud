@@ -22,6 +22,9 @@ import (
 type changefeedStore struct {
 	changefeed tidbcloud.Changefeed
 	deleted    bool
+	// failEdit makes EditChangefeedDownstreamConfig return an error, for
+	// exercising the failure-path resume.
+	failEdit bool
 }
 
 func (s *changefeedStore) get() *tidbcloud.Changefeed {
@@ -70,6 +73,9 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 			// auto pause -> edit -> resume sequencing is actually exercised.
 			if store.changefeed.State == nil || *store.changefeed.State != tidbcloud.ChangefeedStatePaused {
 				return nil, &tidbcloud.ChangefeedAPIError{StatusCode: http.StatusBadRequest}
+			}
+			if store.failEdit {
+				return nil, &tidbcloud.ChangefeedAPIError{StatusCode: http.StatusInternalServerError}
 			}
 			store.changefeed.TableConfig = body.TableConfig
 			store.changefeed.Kafka = body.Kafka
@@ -235,6 +241,48 @@ func TestUTDedicatedChangefeedResourceFailedState(t *testing.T) {
 					store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning)
 				},
 				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+			},
+		},
+	})
+}
+
+func TestUTDedicatedChangefeedResourceEditFailureResumes(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+			},
+			// A failing downstream edit must not leave the changefeed paused:
+			// the resource pauses it for the edit, the edit blows up, and the
+			// best-effort recovery resumes it.
+			{
+				PreConfig: func() {
+					store.failEdit = true
+				},
+				Config:      testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc-v2", ""),
+				ExpectError: regexp.MustCompile("Unable to call EditChangefeedDownstreamConfig"),
+			},
+			// The refresh in this step reads the live state: RUNNING proves
+			// the failure-path resume ran (it would be PAUSED otherwise).
+			{
+				PreConfig: func() {
+					store.failEdit = false
+				},
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+				),
 			},
 		},
 	})
