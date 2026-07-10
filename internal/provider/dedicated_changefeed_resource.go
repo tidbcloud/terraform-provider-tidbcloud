@@ -171,7 +171,7 @@ func (r *dedicatedChangefeedResource) Configure(_ context.Context, req resource.
 
 func (r *dedicatedChangefeedResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the `KAFKA` and `MYSQL` downstream types are supported for now.",
+		MarkdownDescription: "dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the `KAFKA` and `MYSQL` downstream types are supported for now. Editing the downstream configuration of a RUNNING changefeed automatically pauses it for the duration of the edit and resumes it afterwards (the API requires the PAUSED state for edits); replication catches up after the resume. A changefeed in the FAILED state rejects all modifications.",
 		Attributes: map[string]schema.Attribute{
 			"changefeed_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the changefeed.",
@@ -650,6 +650,22 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 	}
 
 	tflog.Trace(ctx, "update dedicated_changefeed_resource")
+	// A FAILED changefeed accepts no mutations (pause/resume/scale/edit all
+	// reject); surface that as a clear error instead of an opaque API failure.
+	// Check the LIVE state — the terraform state may predate the failure.
+	current, err := r.provider.DedicatedClient.GetChangefeed(ctx, changefeedId)
+	if err != nil {
+		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to read changefeed %s before update, got error: %s", changefeedId, err))
+		return
+	}
+	if current.State != nil && *current.State == tidbcloud.ChangefeedStateFailed {
+		resp.Diagnostics.AddError(
+			"Invalid Update",
+			fmt.Sprintf("Changefeed %s is in FAILED state and cannot be modified. Resolve the failure out of band (or recreate the changefeed, e.g. terraform apply -replace) before changing its configuration.", changefeedId),
+		)
+		return
+	}
+
 	// The steady state the changefeed is expected to settle in after an
 	// operation depends on whether it is (or is becoming) paused.
 	steadyStates := []string{tidbcloud.ChangefeedStateRunning, tidbcloud.ChangefeedStateWarning}
@@ -700,6 +716,27 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 		}
 
 		if isDownstreamConfigChanging {
+			// EditChangefeedDownstreamConfig requires the changefeed to be in
+			// the PAUSED state
+			// (https://docs.pingcap.com/tidbcloud/api/v1beta1/dedicated/#tag/Changefeed/operation/EditChangefeedDownstreamConfig).
+			// When the changefeed is running, transparently pause it around the
+			// edit and resume it afterwards so a single apply converges;
+			// replication pauses briefly and catches up after the resume.
+			needsPauseResume := !plan.Paused.ValueBool()
+			if needsPauseResume {
+				if err := r.provider.DedicatedClient.PauseChangefeed(ctx, changefeedId); err != nil {
+					resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call PauseChangefeed before editing the downstream config, got error: %s", err))
+					return
+				}
+				if _, err := WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
+					[]string{tidbcloud.ChangefeedStatePausing, tidbcloud.ChangefeedStateRunning, tidbcloud.ChangefeedStateWarning},
+					[]string{tidbcloud.ChangefeedStatePaused},
+				); err != nil {
+					resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Changefeed %s did not pause before editing the downstream config, get error: %s", changefeedId, err))
+					return
+				}
+			}
+
 			body := &tidbcloud.EditChangefeedDownstreamConfigRequest{
 				DownstreamType: plan.DownstreamType.ValueString(),
 				TableConfig:    tableConfigModelToAPI(ctx, plan.TableConfig, &resp.Diagnostics),
@@ -713,12 +750,28 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call EditChangefeedDownstreamConfig, got error: %s", err))
 				return
 			}
+			// The edit is applied while paused: the changefeed settles back in
+			// PAUSED regardless of the desired end state.
 			if _, err := WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
 				[]string{tidbcloud.ChangefeedStateEditing},
-				steadyStates,
+				[]string{tidbcloud.ChangefeedStatePaused},
 			); err != nil {
 				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Changefeed %s failed to apply the downstream configuration, get error: %s", changefeedId, err))
 				return
+			}
+
+			if needsPauseResume {
+				if err := r.provider.DedicatedClient.ResumeChangefeed(ctx, changefeedId); err != nil {
+					resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call ResumeChangefeed after editing the downstream config, got error: %s", err))
+					return
+				}
+				if _, err := WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
+					[]string{tidbcloud.ChangefeedStatePaused},
+					steadyStates,
+				); err != nil {
+					resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Changefeed %s did not resume after editing the downstream config, get error: %s", changefeedId, err))
+					return
+				}
 			}
 		}
 	}

@@ -65,6 +65,12 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 
 	s.EXPECT().EditChangefeedDownstreamConfig(gomock.Any(), changefeedId, gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, body *tidbcloud.EditChangefeedDownstreamConfigRequest) (*tidbcloud.Changefeed, error) {
+			// The real API only accepts downstream-config edits while the
+			// changefeed is PAUSED — enforce it here so the resource's
+			// auto pause -> edit -> resume sequencing is actually exercised.
+			if store.changefeed.State == nil || *store.changefeed.State != tidbcloud.ChangefeedStatePaused {
+				return nil, &tidbcloud.ChangefeedAPIError{StatusCode: http.StatusBadRequest}
+			}
 			store.changefeed.TableConfig = body.TableConfig
 			store.changefeed.Kafka = body.Kafka
 			store.changefeed.Mysql = body.Mysql
@@ -192,6 +198,43 @@ resource "tidbcloud_dedicated_changefeed" "test" {
 }
 `,
 				ExpectError: regexp.MustCompile("`mysql` must be configured"),
+			},
+		},
+	})
+}
+
+func TestUTDedicatedChangefeedResourceFailedState(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+			},
+			// Simulate the changefeed failing out of band, then attempt an
+			// in-place downstream edit: the resource must refuse with a clear
+			// FAILED-state error instead of an opaque API failure.
+			{
+				PreConfig: func() {
+					store.changefeed.State = Ptr(tidbcloud.ChangefeedStateFailed)
+				},
+				Config:      testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc-v2", ""),
+				ExpectError: regexp.MustCompile("FAILED state and cannot be modified"),
+			},
+			// Recover the fake so the framework's automatic destroy works.
+			{
+				PreConfig: func() {
+					store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning)
+				},
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
 			},
 		},
 	})

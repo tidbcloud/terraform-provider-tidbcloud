@@ -3,12 +3,12 @@
 page_title: "tidbcloud_dedicated_changefeed Resource - terraform-provider-tidbcloud"
 subcategory: ""
 description: |-
-  dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the KAFKA and MYSQL downstream types are supported for now.
+  dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the KAFKA and MYSQL downstream types are supported for now. Editing the downstream configuration of a RUNNING changefeed automatically pauses it for the duration of the edit and resumes it afterwards (the API requires the PAUSED state for edits); replication catches up after the resume. A changefeed in the FAILED state rejects all modifications.
 ---
 
 # tidbcloud_dedicated_changefeed (Resource)
 
-dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the `KAFKA` and `MYSQL` downstream types are supported for now.
+dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the `KAFKA` and `MYSQL` downstream types are supported for now. Editing the downstream configuration of a RUNNING changefeed automatically pauses it for the duration of the edit and resumes it afterwards (the API requires the PAUSED state for edits); replication catches up after the resume. A changefeed in the FAILED state rejects all modifications.
 
 ## Example Usage
 
