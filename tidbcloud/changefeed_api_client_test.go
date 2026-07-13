@@ -128,3 +128,36 @@ func TestIsChangefeedNotFoundError(t *testing.T) {
 		t.Error("expected a plain error not to be reported as not found")
 	}
 }
+
+// TestIsChangefeedNotFoundErrorOn500RecordNotFound reproduces the response the
+// changefeed API actually returns for a GET of a deleted changefeed: HTTP 500
+// with a "record not found" business error (code=49900004) instead of 404.
+// Regression test for the failed post-delete wait/refresh in
+// kouzoh/microservices-terraform#303851.
+func TestIsChangefeedNotFoundErrorOn500RecordNotFound(t *testing.T) {
+	body := `{"code":500, "message":"get changefeed: [.../biz_changefeed.go:29][...(*BizChangefeedRepoImpl).Load]code=49900004,msg=load biz_changefeed -> load biz_changefeed error: record not found", "details":[{"@type":"type.tidbapi.com/tidb.rpc.ErrorInfo", "reason":"INTERNAL"}]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, body, http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+	d := newTestChangefeedDelegate(srv)
+
+	_, err := d.GetChangefeed(context.Background(), "deleted")
+	if err == nil {
+		t.Fatal("expected an error for 500 response")
+	}
+	if !IsChangefeedNotFoundError(err) {
+		t.Errorf("expected 500 with record-not-found business error to be reported as not found, got %v", err)
+	}
+
+	// An unrelated 500 must still surface as a real error.
+	otherSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"code":500, "message":"internal error"}`, http.StatusInternalServerError)
+	}))
+	defer otherSrv.Close()
+	d2 := newTestChangefeedDelegate(otherSrv)
+	_, err = d2.GetChangefeed(context.Background(), "cf-1")
+	if IsChangefeedNotFoundError(err) {
+		t.Errorf("expected an unrelated 500 not to be reported as not found, got %v", err)
+	}
+}
