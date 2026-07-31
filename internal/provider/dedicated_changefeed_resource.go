@@ -25,7 +25,8 @@ const (
 )
 
 var (
-	_ resource.Resource = &dedicatedChangefeedResource{}
+	_ resource.Resource               = &dedicatedChangefeedResource{}
+	_ resource.ResourceWithModifyPlan = &dedicatedChangefeedResource{}
 )
 
 type changefeedNetworkInfoModel struct {
@@ -195,7 +196,7 @@ func (r *dedicatedChangefeedResource) Schema(_ context.Context, _ resource.Schem
 				},
 			},
 			"replication_capacity": schema.StringAttribute{
-				MarkdownDescription: "The replication capacity (RCU) of the changefeed, for example `4rcu`. Changing it scales the changefeed.",
+				MarkdownDescription: "The replication capacity (RCU) of the changefeed, for example `4rcu`. Changing it scales the changefeed via an independent ScaleChangefeed call that requires the RUNNING state. `replication_capacity` can therefore only be changed while the changefeed is running (`paused = false`); attempting to change it while paused fails at plan time — resume the changefeed in a separate apply first.",
 				Required:            true,
 			},
 			"downstream_type": schema.StringAttribute{
@@ -615,6 +616,40 @@ func (r dedicatedChangefeedResource) Read(ctx context.Context, req resource.Read
 	resp.Diagnostics.Append(diags...)
 }
 
+// scaleRequiresRunningError enforces that a replication_capacity (RCU) change
+// is only attempted while the changefeed is RUNNING. ScaleChangefeed is an
+// independent API call that requires the RUNNING state, so RCU cannot be
+// changed while the changefeed is (or is becoming) paused. It returns a
+// non-nil error describing the violation, or nil when the change is allowed.
+func scaleRequiresRunningError(capacityChanging, willBePaused bool) error {
+	if capacityChanging && willBePaused {
+		return fmt.Errorf("replication_capacity (RCU) can only be changed while the changefeed is RUNNING: ScaleChangefeed requires the RUNNING state, but this changefeed is paused. Resume it (set paused = false) in a separate apply before changing replication_capacity")
+	}
+	return nil
+}
+
+// ModifyPlan rejects a replication_capacity (RCU) change on a changefeed that
+// will be paused, at PLAN time, so the user sees the constraint before apply
+// (ScaleChangefeed would otherwise fail at apply with a 400 "current status
+// paused, not allowed to Scale").
+func (r *dedicatedChangefeedResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// Only meaningful on update: skip create (no prior capacity to change) and
+	// destroy (no plan).
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+	var plan, state dedicatedChangefeedResourceData
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	capacityChanging := !plan.ReplicationCapacity.Equal(state.ReplicationCapacity)
+	if err := scaleRequiresRunningError(capacityChanging, plan.Paused.ValueBool()); err != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("replication_capacity"), "Invalid Update", err.Error())
+	}
+}
+
 func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan dedicatedChangefeedResourceData
 	diags := req.Plan.Get(ctx, &plan)
@@ -702,6 +737,14 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 		}
 	} else {
 		if isCapacityChanging {
+			// ScaleChangefeed requires RUNNING. ModifyPlan already blocks a
+			// scale when the desired state is paused; this guards the drift
+			// case (plan says running but the live changefeed is not) with a
+			// clear error instead of the opaque API 400.
+			if current.State != nil && *current.State != tidbcloud.ChangefeedStateRunning && *current.State != tidbcloud.ChangefeedStateWarning {
+				resp.Diagnostics.AddError("Invalid Update", fmt.Sprintf("replication_capacity (RCU) can only be changed while the changefeed is RUNNING: ScaleChangefeed requires RUNNING but changefeed %s is in state %s. Resume it before changing replication_capacity.", changefeedId, *current.State))
+				return
+			}
 			if _, err := r.provider.DedicatedClient.ScaleChangefeed(ctx, changefeedId, plan.ReplicationCapacity.ValueString()); err != nil {
 				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call ScaleChangefeed, got error: %s", err))
 				return

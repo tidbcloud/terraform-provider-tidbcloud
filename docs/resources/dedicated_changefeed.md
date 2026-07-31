@@ -99,7 +99,7 @@ resource "tidbcloud_dedicated_changefeed" "mysql_example" {
 - `downstream_type` (String) The downstream type of the changefeed. Available values: `KAFKA`, `MYSQL`.
 - `name` (String) The user-defined name of the changefeed.
 - `network_info` (Attributes) The network configuration for the downstream connection. (see [below for nested schema](#nestedatt--network_info))
-- `replication_capacity` (String) The replication capacity (RCU) of the changefeed, for example `4rcu`. Changing it scales the changefeed.
+- `replication_capacity` (String) The replication capacity (RCU) of the changefeed, for example `4rcu`. Changing it scales the changefeed via an independent ScaleChangefeed call that requires the RUNNING state. `replication_capacity` can therefore only be changed while the changefeed is running (`paused = false`); attempting to change it while paused fails at plan time — resume the changefeed in a separate apply first.
 - `start_position` (Attributes) The start position for the changefeed. (see [below for nested schema](#nestedatt--start_position))
 
 ### Optional

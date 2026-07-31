@@ -392,3 +392,25 @@ resource "tidbcloud_dedicated_changefeed" "test" {
 }
 `, clusterId, replicationCapacity, brokerEndpoints)
 }
+
+func TestUTScaleRequiresRunningError(t *testing.T) {
+	cases := []struct {
+		name             string
+		capacityChanging bool
+		willBePaused     bool
+		wantErr          bool
+	}{
+		{name: "scale while paused is rejected", capacityChanging: true, willBePaused: true, wantErr: true},
+		{name: "scale while running is allowed", capacityChanging: true, willBePaused: false, wantErr: false},
+		{name: "no scale while paused is fine", capacityChanging: false, willBePaused: true, wantErr: false},
+		{name: "no scale while running is fine", capacityChanging: false, willBePaused: false, wantErr: false},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			err := scaleRequiresRunningError(tt.capacityChanging, tt.willBePaused)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("scaleRequiresRunningError(%v,%v) err=%v, wantErr=%v", tt.capacityChanging, tt.willBePaused, err, tt.wantErr)
+			}
+		})
+	}
+}
