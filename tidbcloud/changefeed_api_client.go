@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 )
 
 // ChangefeedAPIError wraps a non-2xx response from the hand-written changefeed
@@ -30,23 +29,12 @@ func (e *ChangefeedAPIError) Error() string {
 
 func (e *ChangefeedAPIError) Unwrap() error { return e.Err }
 
-// IsChangefeedNotFoundError reports whether err means the changefeed does not
-// exist. Besides a plain 404, the changefeed API answers a GET for a deleted
-// changefeed with HTTP 500 carrying the business error "record not found"
-// (code=49900004), so that shape is treated as not-found too — otherwise the
-// post-delete wait and the post-delete refresh would report failure for a
-// successfully deleted changefeed.
+// IsChangefeedNotFoundError reports whether err is a ChangefeedAPIError with a
+// 404 status.
 func IsChangefeedNotFoundError(err error) bool {
 	var apiErr *ChangefeedAPIError
-	if !errors.As(err, &apiErr) {
-		return false
-	}
-	if apiErr.StatusCode == http.StatusNotFound {
-		return true
-	}
-	if apiErr.StatusCode == http.StatusInternalServerError && apiErr.Err != nil {
-		msg := apiErr.Err.Error()
-		return strings.Contains(msg, "code=49900004") || strings.Contains(msg, "record not found")
+	if errors.As(err, &apiErr) {
+		return apiErr.StatusCode == http.StatusNotFound
 	}
 	return false
 }
