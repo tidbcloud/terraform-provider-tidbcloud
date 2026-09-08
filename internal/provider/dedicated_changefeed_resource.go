@@ -675,11 +675,9 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 		!reflect.DeepEqual(plan.Kafka, state.Kafka) ||
 		!reflect.DeepEqual(plan.Mysql, state.Mysql)
 
-	// Scaling requires a RUNNING changefeed, so a pause-state flip cannot be
-	// sequenced with it in one update. A downstream-config edit CAN ride the
-	// same update as a flip: the edit API requires PAUSED anyway, so the flip
-	// becomes the pause in front of the edit (running -> paused) or the
-	// resume after it (paused -> running); see the edit block below.
+	// Scaling requires RUNNING, so a pause flip cannot ride the same update.
+	// A config edit can: the flip becomes the pause before the edit or the
+	// resume after it (see the edit block).
 	if isPauseStateChanging && isCapacityChanging {
 		resp.Diagnostics.AddError(
 			"Invalid Update",
@@ -712,33 +710,38 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 		steadyStates = []string{tidbcloud.ChangefeedStatePaused}
 	}
 
-	// A flip combined with a config edit is handled inside the edit block in
-	// the else branch; this branch is the flip on its own.
+	// A flip together with a config edit is handled in the edit block below.
 	if isPauseStateChanging && !isDownstreamConfigChanging {
+		// Skip the call when the live changefeed already matches (e.g. it was
+		// pause/resumed out of band) and just converge the state.
 		switch plan.Paused.ValueBool() {
 		case true:
-			if err := r.provider.DedicatedClient.PauseChangefeed(ctx, changefeedId); err != nil {
-				resp.Diagnostics.AddError("Pause Error", fmt.Sprintf("Unable to call PauseChangefeed, got error: %s", err))
-				return
-			}
-			if _, err := WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
-				[]string{tidbcloud.ChangefeedStatePausing, tidbcloud.ChangefeedStateRunning, tidbcloud.ChangefeedStateWarning},
-				steadyStates,
-			); err != nil {
-				resp.Diagnostics.AddError("Pause Error", fmt.Sprintf("Changefeed %s is not paused, get error: %s", changefeedId, err))
-				return
+			if current.State == nil || *current.State != tidbcloud.ChangefeedStatePaused {
+				if err := r.provider.DedicatedClient.PauseChangefeed(ctx, changefeedId); err != nil {
+					resp.Diagnostics.AddError("Pause Error", fmt.Sprintf("Unable to call PauseChangefeed, got error: %s", err))
+					return
+				}
+				if _, err := WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
+					[]string{tidbcloud.ChangefeedStatePausing, tidbcloud.ChangefeedStateRunning, tidbcloud.ChangefeedStateWarning},
+					steadyStates,
+				); err != nil {
+					resp.Diagnostics.AddError("Pause Error", fmt.Sprintf("Changefeed %s is not paused, get error: %s", changefeedId, err))
+					return
+				}
 			}
 		case false:
-			if err := r.provider.DedicatedClient.ResumeChangefeed(ctx, changefeedId); err != nil {
-				resp.Diagnostics.AddError("Resume Error", fmt.Sprintf("Unable to call ResumeChangefeed, got error: %s", err))
-				return
-			}
-			if _, err := WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
-				[]string{tidbcloud.ChangefeedStatePaused},
-				steadyStates,
-			); err != nil {
-				resp.Diagnostics.AddError("Resume Error", fmt.Sprintf("Changefeed %s is not resumed, get error: %s", changefeedId, err))
-				return
+			if current.State == nil || (*current.State != tidbcloud.ChangefeedStateRunning && *current.State != tidbcloud.ChangefeedStateWarning) {
+				if err := r.provider.DedicatedClient.ResumeChangefeed(ctx, changefeedId); err != nil {
+					resp.Diagnostics.AddError("Resume Error", fmt.Sprintf("Unable to call ResumeChangefeed, got error: %s", err))
+					return
+				}
+				if _, err := WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
+					[]string{tidbcloud.ChangefeedStatePaused},
+					steadyStates,
+				); err != nil {
+					resp.Diagnostics.AddError("Resume Error", fmt.Sprintf("Changefeed %s is not resumed, get error: %s", changefeedId, err))
+					return
+				}
 			}
 		}
 	} else {
@@ -765,24 +768,16 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 		}
 
 		if isDownstreamConfigChanging {
-			// EditChangefeedDownstreamConfig requires the changefeed to be in
-			// the PAUSED state
-			// (https://docs.pingcap.com/tidbcloud/api/v1beta1/dedicated/#tag/Changefeed/operation/EditChangefeedDownstreamConfig).
-			// needsPause and needsResume are derived independently — pause
-			// when the LIVE changefeed is not paused, resume when the plan
-			// wants it running. That keeps the transparent pause-edit-resume
-			// for a running feed AND sequences a pause-state flip riding the
-			// same update: paused -> running edits first and resumes last,
-			// running -> paused pauses first and stays paused.
+			// EditChangefeedDownstreamConfig requires PAUSED. Pause when the
+			// live feed is not paused, resume when the plan wants it running;
+			// deriving the two independently also sequences a pause flip
+			// riding this update.
 			needsPause := current.State == nil || *current.State != tidbcloud.ChangefeedStatePaused
 			needsResume := !plan.Paused.ValueBool()
-			// Best-effort recovery: when WE paused a running changefeed on
-			// the way back to a running end state, a failure between here and
-			// the final resume must not leave it paused. A feed that entered
-			// the update already paused is NOT auto-resumed on failure: its
-			// edit did not land, and silently resuming with the old config
-			// would be worse than staying paused. resumed is flipped after
-			// the successful resume below.
+			// Best-effort recovery: never leave a feed paused that this update
+			// paused on the way back to running. A feed that entered the
+			// update already paused stays paused on failure — its edit did
+			// not land, so resuming it with the old config would be worse.
 			resumed := !(needsPause && needsResume)
 			defer func() {
 				if resumed {
@@ -795,9 +790,8 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 					)
 				}
 			}()
-			// needsPause reads the LIVE state, so a previous failed apply
-			// that left the changefeed paused (terraform still recording
-			// paused=false) skips straight to the edit on retry.
+			// needsPause reads the live state, so a retry after a failed
+			// apply that left the feed paused goes straight to the edit.
 			if needsPause {
 				if err := r.provider.DedicatedClient.PauseChangefeed(ctx, changefeedId); err != nil {
 					resumed = true // pause never took effect; nothing to undo

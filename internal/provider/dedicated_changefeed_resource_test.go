@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	mockClient "github.com/tidbcloud/terraform-provider-tidbcloud/mock"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 )
@@ -25,6 +26,9 @@ type changefeedStore struct {
 	// failEdit makes EditChangefeedDownstreamConfig return an error, for
 	// exercising the failure-path resume.
 	failEdit bool
+	// call counters, for asserting that an operation was skipped
+	pauseCalls  int
+	resumeCalls int
 }
 
 func (s *changefeedStore) get() *tidbcloud.Changefeed {
@@ -85,12 +89,14 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 
 	s.EXPECT().PauseChangefeed(gomock.Any(), changefeedId).DoAndReturn(
 		func(_ context.Context, _ string) error {
+			store.pauseCalls++
 			store.changefeed.State = Ptr(tidbcloud.ChangefeedStatePaused)
 			return nil
 		}).AnyTimes()
 
 	s.EXPECT().ResumeChangefeed(gomock.Any(), changefeedId).DoAndReturn(
 		func(_ context.Context, _ string) error {
+			store.resumeCalls++
 			store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning)
 			return nil
 		}).AnyTimes()
@@ -107,12 +113,13 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 func TestUTDedicatedChangefeedResource(t *testing.T) {
 	setupTestEnv()
 
-	s, _ := newChangefeedMock(t)
+	s, store := newChangefeedMock(t)
 	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
 		return s, nil
 	})()
 
 	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	var pauseCallsBefore, resumeCallsBefore int
 	resource.Test(t, resource.TestCase{
 		IsUnitTest:               true,
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -180,12 +187,51 @@ func TestUTDedicatedChangefeedResource(t *testing.T) {
 				Config:      testUTDedicatedChangefeedResourceConfig("16rcu", "tidb-cdc-v4", "paused = false"),
 				ExpectError: regexp.MustCompile(`Cannot change changefeed pause state along with[\s\n]+replication_capacity`),
 			},
-			// Resume
+			// Out-of-band recovery: the live feed was edited and resumed by
+			// hand after a failed apply; the same edit+resume config still
+			// applies (pause -> re-edit -> resume)
 			{
-				Config: testUTDedicatedChangefeedResourceConfig("8rcu", "tidb-cdc-v4", "paused = false"),
+				PreConfig: func() { store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning) },
+				Config:    testUTDedicatedChangefeedResourceConfig("8rcu", "tidb-cdc-v5", "paused = false"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "false"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "kafka.topic_partition_config.default_topic", "tidb-cdc-v5"),
 					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+				),
+			},
+			// A flip to paused skips the API call when the live feed is
+			// already paused out of band
+			{
+				PreConfig: func() {
+					store.changefeed.State = Ptr(tidbcloud.ChangefeedStatePaused)
+					pauseCallsBefore = store.pauseCalls
+				},
+				Config: testUTDedicatedChangefeedResourceConfig("8rcu", "tidb-cdc-v5", "paused = true"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
+					func(_ *terraform.State) error {
+						if store.pauseCalls != pauseCallsBefore {
+							return fmt.Errorf("PauseChangefeed was called %d times on an already-paused changefeed", store.pauseCalls-pauseCallsBefore)
+						}
+						return nil
+					},
+				),
+			},
+			// ... and a flip to running skips the call when it is already
+			// running out of band
+			{
+				PreConfig: func() {
+					store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning)
+					resumeCallsBefore = store.resumeCalls
+				},
+				Config: testUTDedicatedChangefeedResourceConfig("8rcu", "tidb-cdc-v5", "paused = false"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+					func(_ *terraform.State) error {
+						if store.resumeCalls != resumeCallsBefore {
+							return fmt.Errorf("ResumeChangefeed was called %d times on an already-running changefeed", store.resumeCalls-resumeCallsBefore)
+						}
+						return nil
+					},
 				),
 			},
 			// Import
