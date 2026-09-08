@@ -151,9 +151,38 @@ func TestUTDedicatedChangefeedResource(t *testing.T) {
 					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
 				),
 			},
+			// Edit the downstream config and resume in the same update: the
+			// edit applies while the feed is still paused, the resume runs
+			// last (the mock rejects an edit on a non-paused feed, so the
+			// ordering is actually exercised)
+			{
+				Config: testUTDedicatedChangefeedResourceConfig("8rcu", "tidb-cdc-v3", "paused = false"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "kafka.topic_partition_config.default_topic", "tidb-cdc-v3"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "false"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+				),
+			},
+			// Pause and edit in the same update: the pause runs first and the
+			// feed stays paused after the edit
+			{
+				Config: testUTDedicatedChangefeedResourceConfig("8rcu", "tidb-cdc-v4", "paused = true"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "kafka.topic_partition_config.default_topic", "tidb-cdc-v4"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "true"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
+				),
+			},
+			// A pause-state flip combined with a capacity change stays
+			// rejected: scaling requires RUNNING, so the two cannot be
+			// sequenced in one update
+			{
+				Config:      testUTDedicatedChangefeedResourceConfig("16rcu", "tidb-cdc-v4", "paused = false"),
+				ExpectError: regexp.MustCompile(`Cannot change changefeed pause state along with[\s\n]+replication_capacity`),
+			},
 			// Resume
 			{
-				Config: testUTDedicatedChangefeedResourceConfig("8rcu", "tidb-cdc-v2", "paused = false"),
+				Config: testUTDedicatedChangefeedResourceConfig("8rcu", "tidb-cdc-v4", "paused = false"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "false"),
 					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
