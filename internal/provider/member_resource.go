@@ -166,28 +166,40 @@ func (r memberResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 	invitedUserID := userIDFromInviteResult(inviteRsp, data.Email.ValueString())
 
-	// The invitation was accepted by the API; from here on we must save state
-	// (with at least the user_id) even on read failures, otherwise the member
-	// would be left unmanaged and re-invited on the next apply.
+	// The invitation now exists remotely, so it must be tracked from this
+	// point on: persist the returned identity and the planned configuration
+	// before the follow-up read, and keep that state on every later error.
+	// A failed create then leaves a destroyable (tainted) member instead of
+	// an unmanaged invitation that the next apply would re-invite.
+	if invitedUserID != "" {
+		data.UserId = types.StringValue(invitedUserID)
+	}
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	member, err := r.readMemberByEmailWithRetry(ctx, data.Email.ValueString())
 	if err != nil {
+		// State keeps the invited identity saved above.
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to read invited member, got error: %s", err))
 		return
 	}
 	if member == nil {
 		if invitedUserID == "" {
+			// State keeps the planned configuration saved above, so the
+			// invitation is still tracked (by email) despite the error.
 			resp.Diagnostics.AddError("Create Error", fmt.Sprintf("The invited member %q was not found after invitation and no user_id was returned", data.Email.ValueString()))
 			return
 		}
-		// Save partial state so the member is tracked; a later refresh will
-		// populate the remaining computed fields once the invite is visible.
-		data.UserId = types.StringValue(invitedUserID)
+		// The partial state (with user_id) is already saved; a later refresh
+		// will populate the remaining computed fields once the invite is
+		// visible.
 		resp.Diagnostics.AddWarning(
 			"Member not yet visible",
 			fmt.Sprintf("Member %q was invited (user_id %s) but is not yet visible via the API. Run apply again to reconcile its computed attributes.", data.Email.ValueString(), invitedUserID),
 		)
-		diags = resp.State.Set(ctx, &data)
-		resp.Diagnostics.Append(diags...)
 		return
 	}
 	// Keep the user-supplied email and role lists from config; only refresh the

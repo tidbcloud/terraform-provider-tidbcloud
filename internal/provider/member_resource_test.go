@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -57,6 +59,10 @@ type memberStore struct {
 	orgRole string
 	status  string
 	deleted bool
+	// failList makes ListMembers return an error, to exercise the
+	// create-succeeded-but-read-failed path.
+	failList    bool
+	deleteCalls int
 }
 
 func (m *memberStore) toUser() tidbcloud.OpenApiUser {
@@ -95,6 +101,9 @@ func newMemberMock(t *testing.T) (*mockClient.MockTiDBCloudIAMClient, *memberSto
 
 	s.EXPECT().ListMembers(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ *tidbcloud.ListMembersParams) (*tidbcloud.OpenApiListUsersRsp, error) {
+			if store.failList {
+				return nil, errors.New("transient list error")
+			}
 			if store.deleted {
 				return &tidbcloud.OpenApiListUsersRsp{}, nil
 			}
@@ -112,6 +121,7 @@ func newMemberMock(t *testing.T) (*mockClient.MockTiDBCloudIAMClient, *memberSto
 	s.EXPECT().DeleteMember(gomock.Any(), store.userId).DoAndReturn(
 		func(_ context.Context, _ string) error {
 			store.deleted = true
+			store.deleteCalls++
 			return nil
 		}).AnyTimes()
 
@@ -152,6 +162,52 @@ func TestUTMemberResource(t *testing.T) {
 			// Delete is performed automatically by the test framework.
 		},
 	})
+}
+
+// TestUTMemberResourceCreateKeepsStateOnReadFailure reproduces the
+// invite-succeeded-but-read-failed create: the apply must fail AND the
+// invited member must be persisted to state, so the next apply replaces the
+// tracked (tainted) member instead of leaving an unmanaged invitation behind
+// and inviting a second one.
+func TestUTMemberResourceCreateKeepsStateOnReadFailure(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newMemberMock(t)
+	defer HookGlobal(&NewIAMClient, func(publicKey string, privateKey string, iamEndpoint string, userAgent string) (tidbcloud.TiDBCloudIAMClient, error) {
+		return s, nil
+	})()
+
+	memberResourceName := "tidbcloud_member.test"
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// InviteMembers succeeds, the follow-up ListMembers fails: the
+			// step errors, but the member is now tracked in (tainted) state.
+			{
+				PreConfig:   func() { store.failList = true },
+				Config:      testUTMemberResourceConfig(store.email, "org:member"),
+				ExpectError: regexp.MustCompile("Unable to read invited member"),
+			},
+			// With reads working again, the tainted member is replaced: the
+			// tracked invitation is deleted first, then re-invited cleanly.
+			{
+				PreConfig: func() { store.failList = false },
+				Config:    testUTMemberResourceConfig(store.email, "org:member"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(memberResourceName, "user_id", store.userId),
+					resource.TestCheckResourceAttr(memberResourceName, "status", "Pending"),
+				),
+			},
+		},
+	})
+	// Two deletes prove step 1 persisted state: one for the tainted replace,
+	// one for the framework's final destroy. Without the persisted state the
+	// first invitation is never tracked, so only the final destroy deletes.
+	if store.deleteCalls != 2 {
+		t.Fatalf("expected 2 DeleteMember calls (tainted replace + destroy), got %d", store.deleteCalls)
+	}
 }
 
 func testAccMemberResourceConfig(email, orgRole string) string {
