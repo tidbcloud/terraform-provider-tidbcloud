@@ -557,17 +557,37 @@ func (r dedicatedChangefeedResource) Create(ctx context.Context, req resource.Cr
 	}
 	changefeedId := *changefeed.Id
 
+	// The changefeed now exists remotely, so it must be tracked from this
+	// point on: persist the identity and planned configuration before waiting
+	// for readiness, and keep the latest valid snapshot on every later error.
+	// A failed create then leaves a destroyable (tainted) changefeed instead
+	// of an unmanaged one that the next apply would create again.
+	refreshDedicatedChangefeedComputedFields(changefeed, &data)
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	changefeed, err = WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
 		[]string{tidbcloud.ChangefeedStateCreating},
 		[]string{tidbcloud.ChangefeedStateRunning, tidbcloud.ChangefeedStateWarning},
 	)
 	if err != nil {
+		// State keeps the created identity saved above.
 		resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Changefeed %s is not ready, get error: %s", changefeedId, err))
+		return
+	}
+	refreshDedicatedChangefeedComputedFields(changefeed, &data)
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if data.Paused.ValueBool() {
 		if err := r.provider.DedicatedClient.PauseChangefeed(ctx, changefeedId); err != nil {
+			// State keeps the ready (running) snapshot saved above.
 			resp.Diagnostics.AddError("Create Error", fmt.Sprintf("Unable to call PauseChangefeed, got error: %s", err))
 			return
 		}

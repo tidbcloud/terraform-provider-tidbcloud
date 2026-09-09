@@ -26,9 +26,13 @@ type changefeedStore struct {
 	// failEdit makes EditChangefeedDownstreamConfig return an error, for
 	// exercising the failure-path resume.
 	failEdit bool
+	// failGet makes GetChangefeed return an error, for exercising the
+	// create-succeeded-but-read-failed path.
+	failGet bool
 	// call counters, for asserting that an operation was skipped
 	pauseCalls  int
 	resumeCalls int
+	deleteCalls int
 }
 
 func (s *changefeedStore) get() *tidbcloud.Changefeed {
@@ -58,6 +62,9 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 
 	s.EXPECT().GetChangefeed(gomock.Any(), changefeedId).DoAndReturn(
 		func(_ context.Context, _ string) (*tidbcloud.Changefeed, error) {
+			if store.failGet {
+				return nil, &tidbcloud.ChangefeedAPIError{StatusCode: http.StatusInternalServerError}
+			}
 			if store.deleted {
 				return nil, &tidbcloud.ChangefeedAPIError{StatusCode: http.StatusNotFound}
 			}
@@ -104,6 +111,7 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 	s.EXPECT().DeleteChangefeed(gomock.Any(), changefeedId).DoAndReturn(
 		func(_ context.Context, _ string) error {
 			store.deleted = true
+			store.deleteCalls++
 			return nil
 		}).AnyTimes()
 
@@ -319,6 +327,53 @@ func TestUTDedicatedChangefeedResourceFailedState(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestUTDedicatedChangefeedResourceCreateKeepsStateOnReadFailure reproduces
+// the create-succeeded-but-readiness-read-failed path: CreateChangefeed
+// returns cf-1, the waiter's first GetChangefeed errors. The apply must fail
+// AND the created changefeed must be persisted to state, so the next apply
+// replaces the tracked (tainted) changefeed instead of leaving an unmanaged
+// one behind and creating a second one.
+func TestUTDedicatedChangefeedResourceCreateKeepsStateOnReadFailure(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// CreateChangefeed succeeds, the readiness GetChangefeed fails:
+			// the step errors, but cf-1 is now tracked in (tainted) state.
+			{
+				PreConfig:   func() { store.failGet = true },
+				Config:      testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+				ExpectError: regexp.MustCompile("is not ready"),
+			},
+			// With reads working again, the tainted changefeed is replaced:
+			// the tracked cf-1 is deleted first, then created cleanly.
+			{
+				PreConfig: func() { store.failGet = false },
+				Config:    testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "changefeed_id", "cf-1"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+				),
+			},
+		},
+	})
+	// Two deletes prove step 1 persisted state: one for the tainted replace,
+	// one for the framework's final destroy. Without the persisted state the
+	// first changefeed is never tracked, so only the final destroy deletes.
+	if store.deleteCalls != 2 {
+		t.Fatalf("expected 2 DeleteChangefeed calls (tainted replace + destroy), got %d", store.deleteCalls)
+	}
 }
 
 func TestUTDedicatedChangefeedResourceEditFailureResumes(t *testing.T) {
