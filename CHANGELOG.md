@@ -1,3 +1,8 @@
+## Unreleased
+
+**Feature**
+* Add `tidbcloud_member` resource and `tidbcloud_member` / `tidbcloud_members` data sources to manage organization members ([#255](https://github.com/tidbcloud/terraform-provider-tidbcloud/issues/255))
+
 ## [0.2.0] 2023-01-16
 
 **Feature**
