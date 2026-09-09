@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -207,8 +208,10 @@ func (r *dedicatedChangefeedResource) Schema(_ context.Context, _ resource.Schem
 				},
 			},
 			"paused": schema.BoolAttribute{
-				MarkdownDescription: "Whether the changefeed is paused.",
+				MarkdownDescription: "Whether the changefeed is paused. Defaults to `false` (running). The value is refreshed from the live changefeed state on every read, so a changefeed paused or resumed outside Terraform shows up as drift and is reconciled back to the configured value on the next apply.",
 				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
 			},
 			"network_info": schema.SingleNestedAttribute{
 				MarkdownDescription: "The network configuration for the downstream connection.",
@@ -961,9 +964,13 @@ func refreshDedicatedChangefeedResourceData(ctx context.Context, changefeed *tid
 	data.ReplicationCapacity = types.StringValue(changefeed.ReplicationCapacity)
 	data.DownstreamType = types.StringValue(changefeed.DownstreamType)
 
+	// paused is reconciled from the live state on every read (not only on
+	// import), so a pause/resume performed outside Terraform shows up as
+	// drift and the next apply restores the configured value.
+	data.Paused = types.BoolValue(changefeed.State != nil &&
+		(*changefeed.State == tidbcloud.ChangefeedStatePaused || *changefeed.State == tidbcloud.ChangefeedStatePausing))
+
 	if isImport {
-		data.Paused = types.BoolValue(changefeed.State != nil &&
-			(*changefeed.State == tidbcloud.ChangefeedStatePaused || *changefeed.State == tidbcloud.ChangefeedStatePausing))
 		data.NetworkInfo = networkInfoAPIToModel(ctx, changefeed.NetworkInfo)
 		data.StartPosition = startPositionAPIToModel(changefeed.StartPosition)
 		data.TableConfig = tableConfigAPIToModel(ctx, changefeed.TableConfig)

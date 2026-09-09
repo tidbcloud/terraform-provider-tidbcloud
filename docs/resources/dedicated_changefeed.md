@@ -106,7 +106,7 @@ resource "tidbcloud_dedicated_changefeed" "mysql_example" {
 
 - `kafka` (Attributes) The Kafka downstream configuration. Required when `downstream_type` is `KAFKA`. (see [below for nested schema](#nestedatt--kafka))
 - `mysql` (Attributes) The MySQL downstream configuration. Required when `downstream_type` is `MYSQL`. (see [below for nested schema](#nestedatt--mysql))
-- `paused` (Boolean) Whether the changefeed is paused.
+- `paused` (Boolean) Whether the changefeed is paused. Defaults to `false` (running). The value is refreshed from the live changefeed state on every read, so a changefeed paused or resumed outside Terraform shows up as drift and is reconciled back to the configured value on the next apply.
 - `table_config` (Attributes) The table filtering and event filter configuration. (see [below for nested schema](#nestedatt--table_config))
 
 ### Read-Only

@@ -249,9 +249,6 @@ func TestUTDedicatedChangefeedResource(t *testing.T) {
 				ImportStateId:                        "cf-1",
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: "changefeed_id",
-				// paused is preserved from state rather than derived from the
-				// API outside of import, and the credentials are input-only.
-				ImportStateVerifyIgnore: []string{"paused"},
 			},
 			// Delete is performed automatically by the test framework.
 		},
@@ -374,6 +371,55 @@ func TestUTDedicatedChangefeedResourceCreateKeepsStateOnReadFailure(t *testing.T
 	if store.deleteCalls != 2 {
 		t.Fatalf("expected 2 DeleteChangefeed calls (tainted replace + destroy), got %d", store.deleteCalls)
 	}
+}
+
+// TestUTDedicatedChangefeedResourcePausedDrift reproduces an out-of-band
+// pause: refresh must surface the live PAUSED state as paused = true, so the
+// unchanged configuration (paused defaults to false) plans a resume and the
+// apply restores the declared running state.
+func TestUTDedicatedChangefeedResourcePausedDrift(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	resumeCallsBefore := 0
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// paused is omitted from the configuration: the default is false.
+			{
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "false"),
+				),
+			},
+			// The changefeed is paused out of band: the refresh reports the
+			// drift and the apply resumes it back to the declared state.
+			{
+				PreConfig: func() {
+					store.changefeed.State = Ptr(tidbcloud.ChangefeedStatePaused)
+					resumeCallsBefore = store.resumeCalls
+				},
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "false"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+					func(_ *terraform.State) error {
+						if store.resumeCalls != resumeCallsBefore+1 {
+							return fmt.Errorf("expected exactly one ResumeChangefeed call for the drift, got %d", store.resumeCalls-resumeCallsBefore)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
 }
 
 func TestUTDedicatedChangefeedResourceEditFailureResumes(t *testing.T) {
