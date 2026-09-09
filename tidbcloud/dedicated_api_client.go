@@ -14,6 +14,9 @@ import (
 
 const (
 	DefaultDedicatedEndpoint = "https://dedicated.tidbapi.com"
+	// DedicatedAPIBasePath is the version prefix shared by all dedicated
+	// v1beta1 endpoints.
+	DedicatedAPIBasePath = "/v1beta1"
 )
 
 type TiDBCloudDedicatedClient interface {
@@ -48,6 +51,19 @@ type TiDBCloudDedicatedClient interface {
 	ListVPCPeerings(ctx context.Context, projectId string, cloudProvider string, pageSize *int32, pageToken *string) (*dedicated.Dedicatedv1beta1ListVpcPeeringsResponse, error)
 	UpdatePublicEndpoint(ctx context.Context, clusterId string, nodeGroupId string, body *dedicated.TidbNodeGroupServiceUpdatePublicEndpointSettingRequest) (*dedicated.V1beta1PublicEndpointSetting, error)
 	GetPublicEndpoint(ctx context.Context, clusterId string, nodeGroupId string) (*dedicated.V1beta1PublicEndpointSetting, error)
+
+	// Changefeed operations. The dedicated Go SDK does not (yet) expose the
+	// changefeed API, so these are served by a hand-written REST client in
+	// changefeed_api_client.go that reuses the same digest-authenticated
+	// transport.
+	CreateChangefeed(ctx context.Context, body *CreateChangefeedRequest) (*Changefeed, error)
+	GetChangefeed(ctx context.Context, changefeedId string) (*Changefeed, error)
+	ListChangefeeds(ctx context.Context, params *ListChangefeedsParams) (*ListChangefeedsResponse, error)
+	DeleteChangefeed(ctx context.Context, changefeedId string) error
+	PauseChangefeed(ctx context.Context, changefeedId string) error
+	ResumeChangefeed(ctx context.Context, changefeedId string) error
+	ScaleChangefeed(ctx context.Context, changefeedId string, replicationCapacity string) (*Changefeed, error)
+	EditChangefeedDownstreamConfig(ctx context.Context, changefeedId string, body *EditChangefeedDownstreamConfigRequest) (*Changefeed, error)
 }
 
 func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userAgent string) (*dedicated.APIClient, error) {
@@ -73,6 +89,10 @@ func NewDedicatedApiClient(rt http.RoundTripper, dedicatedEndpoint string, userA
 
 type DedicatedClientDelegate struct {
 	dc *dedicated.APIClient
+	// httpClient and changefeedBaseURL back the hand-written changefeed REST
+	// client. They share the same digest transport as dc.
+	httpClient        *http.Client
+	changefeedBaseURL string
 }
 
 func NewDedicatedClientDelegate(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (TiDBCloudDedicatedClient, error) {
@@ -85,8 +105,18 @@ func NewDedicatedClientDelegate(publicKey string, privateKey string, dedicatedEn
 	if err != nil {
 		return nil, err
 	}
+
+	if dedicatedEndpoint == "" {
+		dedicatedEndpoint = DefaultDedicatedEndpoint
+	}
+	dedicatedURL, err := validateApiUrl(dedicatedEndpoint)
+	if err != nil {
+		return nil, err
+	}
 	return &DedicatedClientDelegate{
-		dc: dc,
+		dc:                dc,
+		httpClient:        &http.Client{Transport: transport},
+		changefeedBaseURL: fmt.Sprintf("%s://%s%s", dedicatedURL.Scheme, dedicatedURL.Host, DedicatedAPIBasePath),
 	}, nil
 }
 
