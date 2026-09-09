@@ -949,12 +949,15 @@ func refreshDedicatedChangefeedComputedFields(changefeed *tidbcloud.Changefeed, 
 }
 
 // refreshDedicatedChangefeedResourceData copies the API changefeed onto the
-// Terraform model. The user-managed nested blocks (start_position,
-// network_info, table_config, kafka, mysql) are only populated when missing
-// from state (i.e. on import): the credentials they contain are input-only and
-// never returned by the API, so overwriting them from the API would clear
-// them, and the API may return server-side defaults for fields the user did
-// not configure, which would show up as perpetual diffs.
+// Terraform model. On import the nested blocks are populated wholesale from
+// the API. On every other read the downstream blocks (table_config, kafka,
+// mysql) are reconciled field-wise via the merge helpers in
+// dedicated_changefeed_convert.go: readable fields the configuration manages
+// are refreshed from the API so out-of-band edits surface as drift, while
+// input-only credentials are retained from prior state and attributes the
+// configuration leaves unset stay null (server-side defaults must not become
+// perpetual diffs). network_info and start_position are immutable
+// (RequiresReplace) and stay import-only.
 func refreshDedicatedChangefeedResourceData(ctx context.Context, changefeed *tidbcloud.Changefeed, data *dedicatedChangefeedResourceData) {
 	isImport := data.Name.IsNull()
 
@@ -976,6 +979,10 @@ func refreshDedicatedChangefeedResourceData(ctx context.Context, changefeed *tid
 		data.TableConfig = tableConfigAPIToModel(ctx, changefeed.TableConfig)
 		data.Kafka = kafkaAPIToModel(ctx, changefeed.Kafka)
 		data.Mysql = mysqlAPIToModel(changefeed.Mysql)
+	} else {
+		data.TableConfig = mergeTableConfig(data.TableConfig, tableConfigAPIToModel(ctx, changefeed.TableConfig))
+		data.Kafka = mergeKafka(data.Kafka, kafkaAPIToModel(ctx, changefeed.Kafka))
+		data.Mysql = mergeMysql(data.Mysql, mysqlAPIToModel(changefeed.Mysql))
 	}
 }
 

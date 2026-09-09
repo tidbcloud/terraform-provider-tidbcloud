@@ -290,3 +290,163 @@ func mysqlAPIToModel(m *tidbcloud.ChangefeedMySQLConfig) *changefeedMysqlModel {
 	}
 	return out
 }
+
+// --- read-time reconciliation ----------------------------------------------
+//
+// The helpers below merge the API view of the downstream configuration onto
+// the prior Terraform state on every read (not only on import), so changes
+// made outside Terraform surface as drift. The merge is field-wise:
+//
+//   - a field the configuration manages (non-null in prior state) is
+//     refreshed from the API, so an out-of-band change plans back to the
+//     configured value;
+//   - a field the configuration leaves unset (null in prior state) stays
+//     null, so server-side defaults do not surface as perpetual diffs;
+//   - input-only credentials (never returned by the API) are retained from
+//     prior state;
+//   - a nested block that is absent from prior state stays absent, and a
+//     block the API stops returning keeps its prior value rather than
+//     inventing a removal.
+//
+// Collections of nested blocks are merged element-wise when the lengths
+// match; a length change is real structural drift and takes the API view.
+
+type nullableValue interface{ IsNull() bool }
+
+func mergeField[T nullableValue](prior, api T) T {
+	if prior.IsNull() {
+		return prior
+	}
+	return api
+}
+
+func mergeTableConfig(prior, api *changefeedTableConfigModel) *changefeedTableConfigModel {
+	if prior == nil || api == nil {
+		return prior
+	}
+	out := &changefeedTableConfigModel{
+		FilterRules:   mergeField(prior.FilterRules, api.FilterRules),
+		Mode:          mergeField(prior.Mode, api.Mode),
+		CaseSensitive: mergeField(prior.CaseSensitive, api.CaseSensitive),
+	}
+	if len(prior.EventFilters) == len(api.EventFilters) {
+		for i := range api.EventFilters {
+			p, a := prior.EventFilters[i], api.EventFilters[i]
+			out.EventFilters = append(out.EventFilters, changefeedEventFilterModel{
+				TableMatchers:                   mergeField(p.TableMatchers, a.TableMatchers),
+				IgnoredEvents:                   mergeField(p.IgnoredEvents, a.IgnoredEvents),
+				IgnoredSqlStatements:            mergeField(p.IgnoredSqlStatements, a.IgnoredSqlStatements),
+				IgnoredInsertValueExpression:    mergeField(p.IgnoredInsertValueExpression, a.IgnoredInsertValueExpression),
+				IgnoredUpdateOldValueExpression: mergeField(p.IgnoredUpdateOldValueExpression, a.IgnoredUpdateOldValueExpression),
+				IgnoredUpdateNewValueExpression: mergeField(p.IgnoredUpdateNewValueExpression, a.IgnoredUpdateNewValueExpression),
+				IgnoredDeleteValueExpression:    mergeField(p.IgnoredDeleteValueExpression, a.IgnoredDeleteValueExpression),
+			})
+		}
+	} else {
+		out.EventFilters = api.EventFilters
+	}
+	return out
+}
+
+func mergeKafka(prior, api *changefeedKafkaModel) *changefeedKafkaModel {
+	if prior == nil || api == nil {
+		return prior
+	}
+	out := &changefeedKafkaModel{}
+	if prior.Broker == nil || api.Broker == nil {
+		out.Broker = prior.Broker
+	} else {
+		out.Broker = &changefeedKafkaBrokerModel{
+			Version:            mergeField(prior.Broker.Version, api.Broker.Version),
+			BrokerEndpoints:    mergeField(prior.Broker.BrokerEndpoints, api.Broker.BrokerEndpoints),
+			UseTls:             mergeField(prior.Broker.UseTls, api.Broker.UseTls),
+			InsecureSkipVerify: mergeField(prior.Broker.InsecureSkipVerify, api.Broker.InsecureSkipVerify),
+			Compression:        mergeField(prior.Broker.Compression, api.Broker.Compression),
+		}
+	}
+	if prior.Authentication == nil || api.Authentication == nil {
+		out.Authentication = prior.Authentication
+	} else {
+		out.Authentication = &changefeedKafkaAuthenticationModel{
+			AuthType: mergeField(prior.Authentication.AuthType, api.Authentication.AuthType),
+			Username: mergeField(prior.Authentication.Username, api.Authentication.Username),
+			// Password is input-only and never returned by the API.
+			Password: prior.Authentication.Password,
+		}
+	}
+	if prior.DataFormat == nil || api.DataFormat == nil {
+		out.DataFormat = prior.DataFormat
+	} else {
+		df := &changefeedKafkaDataFormatModel{
+			Protocol:             mergeField(prior.DataFormat.Protocol, api.DataFormat.Protocol),
+			EnableTidbExtension:  mergeField(prior.DataFormat.EnableTidbExtension, api.DataFormat.EnableTidbExtension),
+			OutputRawChangeEvent: mergeField(prior.DataFormat.OutputRawChangeEvent, api.DataFormat.OutputRawChangeEvent),
+		}
+		if prior.DataFormat.DebeziumConfig == nil || api.DataFormat.DebeziumConfig == nil {
+			df.DebeziumConfig = prior.DataFormat.DebeziumConfig
+		} else {
+			df.DebeziumConfig = &changefeedKafkaDebeziumConfigModel{
+				OutputOldValue: mergeField(prior.DataFormat.DebeziumConfig.OutputOldValue, api.DataFormat.DebeziumConfig.OutputOldValue),
+				DisableSchema:  mergeField(prior.DataFormat.DebeziumConfig.DisableSchema, api.DataFormat.DebeziumConfig.DisableSchema),
+			}
+		}
+		out.DataFormat = df
+	}
+	if prior.TopicPartitionConfig == nil || api.TopicPartitionConfig == nil {
+		out.TopicPartitionConfig = prior.TopicPartitionConfig
+	} else {
+		tpc := &changefeedKafkaTopicPartitionConfigModel{
+			DispatchType:      mergeField(prior.TopicPartitionConfig.DispatchType, api.TopicPartitionConfig.DispatchType),
+			DefaultTopic:      mergeField(prior.TopicPartitionConfig.DefaultTopic, api.TopicPartitionConfig.DefaultTopic),
+			TopicPrefix:       mergeField(prior.TopicPartitionConfig.TopicPrefix, api.TopicPartitionConfig.TopicPrefix),
+			Separator:         mergeField(prior.TopicPartitionConfig.Separator, api.TopicPartitionConfig.Separator),
+			TopicSuffix:       mergeField(prior.TopicPartitionConfig.TopicSuffix, api.TopicPartitionConfig.TopicSuffix),
+			ReplicationFactor: mergeField(prior.TopicPartitionConfig.ReplicationFactor, api.TopicPartitionConfig.ReplicationFactor),
+			PartitionNum:      mergeField(prior.TopicPartitionConfig.PartitionNum, api.TopicPartitionConfig.PartitionNum),
+		}
+		if len(prior.TopicPartitionConfig.PartitionDispatchers) == len(api.TopicPartitionConfig.PartitionDispatchers) {
+			for i := range api.TopicPartitionConfig.PartitionDispatchers {
+				p, a := prior.TopicPartitionConfig.PartitionDispatchers[i], api.TopicPartitionConfig.PartitionDispatchers[i]
+				tpc.PartitionDispatchers = append(tpc.PartitionDispatchers, changefeedKafkaPartitionDispatcherModel{
+					PartitionType: mergeField(p.PartitionType, a.PartitionType),
+					Matcher:       mergeField(p.Matcher, a.Matcher),
+					IndexName:     mergeField(p.IndexName, a.IndexName),
+					Columns:       mergeField(p.Columns, a.Columns),
+				})
+			}
+		} else {
+			tpc.PartitionDispatchers = api.TopicPartitionConfig.PartitionDispatchers
+		}
+		out.TopicPartitionConfig = tpc
+	}
+	if len(prior.ColumnSelectors) == len(api.ColumnSelectors) {
+		for i := range api.ColumnSelectors {
+			p, a := prior.ColumnSelectors[i], api.ColumnSelectors[i]
+			out.ColumnSelectors = append(out.ColumnSelectors, changefeedKafkaColumnSelectorModel{
+				Matcher: mergeField(p.Matcher, a.Matcher),
+				Columns: mergeField(p.Columns, a.Columns),
+			})
+		}
+	} else {
+		out.ColumnSelectors = api.ColumnSelectors
+	}
+	return out
+}
+
+func mergeMysql(prior, api *changefeedMysqlModel) *changefeedMysqlModel {
+	if prior == nil || api == nil {
+		return prior
+	}
+	out := &changefeedMysqlModel{}
+	if prior.Connection == nil || api.Connection == nil {
+		out.Connection = prior.Connection
+	} else {
+		out.Connection = &changefeedMysqlConnectionModel{
+			Endpoint: mergeField(prior.Connection.Endpoint, api.Connection.Endpoint),
+			Username: mergeField(prior.Connection.Username, api.Connection.Username),
+			// Password is input-only and never returned by the API.
+			Password: prior.Connection.Password,
+		}
+	}
+	return out
+}

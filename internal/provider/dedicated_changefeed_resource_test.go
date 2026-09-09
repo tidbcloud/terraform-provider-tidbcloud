@@ -422,6 +422,102 @@ func TestUTDedicatedChangefeedResourcePausedDrift(t *testing.T) {
 	})
 }
 
+// TestUTDedicatedChangefeedResourceDownstreamDrift reproduces an out-of-band
+// edit of a readable downstream field: the MySQL username is changed through
+// the API, the refresh must surface it as drift, and the next apply must
+// restore the configured value via the pause -> edit -> resume sequence. The
+// input-only password must survive the refresh untouched.
+func TestUTDedicatedChangefeedResourceDownstreamDrift(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testUTDedicatedChangefeedResourceMysqlConfig("app-writer"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "mysql.connection.username", "app-writer"),
+				),
+			},
+			// The username is changed through the API: the refresh reports
+			// the drift and the apply edits the downstream config back to the
+			// declared value, keeping the input-only password intact.
+			{
+				PreConfig: func() {
+					store.changefeed.Mysql.Connection.Username = "changed-out-of-band"
+				},
+				Config: testUTDedicatedChangefeedResourceMysqlConfig("app-writer"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "mysql.connection.username", "app-writer"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "mysql.connection.password", "pw-secret"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+					func(_ *terraform.State) error {
+						if got := store.changefeed.Mysql.Connection.Username; got != "app-writer" {
+							return fmt.Errorf("expected the drifted username to be edited back to %q, live value is %q", "app-writer", got)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// TestUTDedicatedChangefeedResourceServerDefaultNoDiff guards the other half
+// of the read-time reconciliation: an attribute the configuration leaves
+// unset (kafka.broker.use_tls) that the API starts reporting with a
+// server-side default must stay null in state and produce no diff, i.e. no
+// spurious pause/edit/resume cycle.
+func TestUTDedicatedChangefeedResourceServerDefaultNoDiff(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	pauseCallsBefore := 0
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// use_tls is not configured.
+			{
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+			},
+			// The API now reports a server-side default for use_tls: the
+			// refresh must keep the unset attribute null, so the unchanged
+			// configuration plans no update at all.
+			{
+				PreConfig: func() {
+					store.changefeed.Kafka.Broker.UseTls = Ptr(false)
+					pauseCallsBefore = store.pauseCalls
+				},
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr(changefeedResourceName, "kafka.broker.use_tls"),
+					func(_ *terraform.State) error {
+						if store.pauseCalls != pauseCallsBefore {
+							return fmt.Errorf("a server-side default triggered a downstream edit: PauseChangefeed called %d times", store.pauseCalls-pauseCallsBefore)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
 func TestUTDedicatedChangefeedResourceEditFailureResumes(t *testing.T) {
 	setupTestEnv()
 
@@ -496,6 +592,30 @@ func TestAccDedicatedChangefeedResource(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testUTDedicatedChangefeedResourceMysqlConfig(username string) string {
+	return fmt.Sprintf(`
+resource "tidbcloud_dedicated_changefeed" "test" {
+	cluster_id           = "10001"
+	name                 = "test-changefeed-mysql"
+	replication_capacity = "4rcu"
+	downstream_type      = "MYSQL"
+	network_info = {
+		network_type = "NETWORK_TYPE_PUBLIC"
+	}
+	start_position = {
+		mode = "FROM_NOW"
+	}
+	mysql = {
+		connection = {
+			endpoint = "mysql.example.com:3306"
+			username = "%s"
+			password = "pw-secret"
+		}
+	}
+}
+`, username)
 }
 
 func testUTDedicatedChangefeedResourceConfig(replicationCapacity, defaultTopic, extra string) string {
