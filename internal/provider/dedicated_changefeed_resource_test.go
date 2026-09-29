@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	mockClient "github.com/tidbcloud/terraform-provider-tidbcloud/mock"
 	"github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
@@ -33,6 +34,7 @@ type changefeedStore struct {
 	pauseCalls  int
 	resumeCalls int
 	deleteCalls int
+	scaleCalls  int
 }
 
 func (s *changefeedStore) get() *tidbcloud.Changefeed {
@@ -73,6 +75,13 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 
 	s.EXPECT().ScaleChangefeed(gomock.Any(), changefeedId, gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, replicationCapacity string) (*tidbcloud.Changefeed, error) {
+			// The real API only scales a RUNNING changefeed — enforce it so
+			// the resource's resume -> scale / scale -> pause ordering is
+			// actually exercised.
+			if store.changefeed.State == nil || (*store.changefeed.State != tidbcloud.ChangefeedStateRunning && *store.changefeed.State != tidbcloud.ChangefeedStateWarning) {
+				return nil, &tidbcloud.ChangefeedAPIError{StatusCode: http.StatusBadRequest}
+			}
+			store.scaleCalls++
 			store.changefeed.ReplicationCapacity = replicationCapacity
 			return store.get(), nil
 		}).AnyTimes()
@@ -188,12 +197,15 @@ func TestUTDedicatedChangefeedResource(t *testing.T) {
 					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
 				),
 			},
-			// A pause-state flip combined with a capacity change stays
-			// rejected: scaling requires RUNNING, so the two cannot be
-			// sequenced in one update
+			// A resume combined with a capacity change is sequenced: resume,
+			// then scale (the mock rejects a scale on a paused feed)
 			{
-				Config:      testUTDedicatedChangefeedResourceConfig("16rcu", "tidb-cdc-v4", "paused = false"),
-				ExpectError: regexp.MustCompile(`Cannot change changefeed pause state along with[\s\n]+replication_capacity`),
+				Config: testUTDedicatedChangefeedResourceConfig("16rcu", "tidb-cdc-v4", "paused = false"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "replication_capacity", "16rcu"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "false"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+				),
 			},
 			// Out-of-band recovery: the live feed was edited and resumed by
 			// hand after a failed apply; the same edit+resume config still
@@ -242,7 +254,94 @@ func TestUTDedicatedChangefeedResource(t *testing.T) {
 					},
 				),
 			},
-			// Import
+			// A capacity change combined with a pause is sequenced: scale
+			// while still running, then pause
+			{
+				Config: testUTDedicatedChangefeedResourceConfig("16rcu", "tidb-cdc-v5", "paused = true"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "replication_capacity", "16rcu"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "true"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
+				),
+			},
+			// The one combination that cannot be sequenced — scaling a feed
+			// that is paused and stays paused — is rejected at plan time
+			{
+				Config:      testUTDedicatedChangefeedResourceConfig("32rcu", "tidb-cdc-v5", "paused = true"),
+				ExpectError: regexp.MustCompile(`paused and stays paused`),
+			},
+			// Resumed out of band while the state still said paused: the
+			// refresh picks up RUNNING, so a capacity change with
+			// paused = false is a plain scale (no resume call)
+			{
+				PreConfig: func() {
+					store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning)
+					resumeCallsBefore = store.resumeCalls
+				},
+				Config: testUTDedicatedChangefeedResourceConfig("32rcu", "tidb-cdc-v5", "paused = false"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "replication_capacity", "32rcu"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+					func(_ *terraform.State) error {
+						if store.resumeCalls != resumeCallsBefore {
+							return fmt.Errorf("ResumeChangefeed was called %d times on an already-running changefeed", store.resumeCalls-resumeCallsBefore)
+						}
+						return nil
+					},
+				),
+			},
+			// Paused out of band while the config says paused = false: the
+			// refresh shows the drift and the apply resumes it
+			{
+				PreConfig: func() {
+					store.changefeed.State = Ptr(tidbcloud.ChangefeedStatePaused)
+					resumeCallsBefore = store.resumeCalls
+				},
+				Config: testUTDedicatedChangefeedResourceConfig("32rcu", "tidb-cdc-v5", "paused = false"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+					func(_ *terraform.State) error {
+						if store.resumeCalls != resumeCallsBefore+1 {
+							return fmt.Errorf("want 1 ResumeChangefeed call to revert the out-of-band pause, got %d", store.resumeCalls-resumeCallsBefore)
+						}
+						return nil
+					},
+				),
+			},
+			// paused unset: the pause state is not managed. A feed paused out
+			// of band stays paused through an unrelated edit
+			{
+				PreConfig: func() {
+					store.changefeed.State = Ptr(tidbcloud.ChangefeedStatePaused)
+					resumeCallsBefore = store.resumeCalls
+				},
+				Config: testUTDedicatedChangefeedResourceConfig("32rcu", "tidb-cdc-v6", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "kafka.topic_partition_config.default_topic", "tidb-cdc-v6"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "true"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
+					func(_ *terraform.State) error {
+						if store.resumeCalls != resumeCallsBefore {
+							return fmt.Errorf("ResumeChangefeed was called %d times with paused unmanaged", store.resumeCalls-resumeCallsBefore)
+						}
+						return nil
+					},
+				),
+			},
+			// ... and a feed resumed out of band plans as no change
+			{
+				PreConfig: func() { store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning) },
+				Config:    testUTDedicatedChangefeedResourceConfig("32rcu", "tidb-cdc-v6", ""),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "false"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+				),
+			},
+			// Import: paused is derived from the live state on every refresh,
+			// so it round-trips like any other attribute
 			{
 				ResourceName:                         changefeedResourceName,
 				ImportState:                          true,
@@ -375,8 +474,9 @@ func TestUTDedicatedChangefeedResourceCreateKeepsStateOnReadFailure(t *testing.T
 
 // TestUTDedicatedChangefeedResourcePausedDrift reproduces an out-of-band
 // pause: refresh must surface the live PAUSED state as paused = true, so the
-// unchanged configuration (paused defaults to false) plans a resume and the
-// apply restores the declared running state.
+// unchanged configuration (paused = false) plans a resume and the apply
+// restores the declared running state. (With paused unset the pause state is
+// not managed and the drift is only reported; see TestUTDedicatedChangefeedResource.)
 func TestUTDedicatedChangefeedResourcePausedDrift(t *testing.T) {
 	setupTestEnv()
 
@@ -392,9 +492,8 @@ func TestUTDedicatedChangefeedResourcePausedDrift(t *testing.T) {
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// paused is omitted from the configuration: the default is false.
 			{
-				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", "paused = false"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "false"),
 				),
@@ -406,7 +505,7 @@ func TestUTDedicatedChangefeedResourcePausedDrift(t *testing.T) {
 					store.changefeed.State = Ptr(tidbcloud.ChangefeedStatePaused)
 					resumeCallsBefore = store.resumeCalls
 				},
-				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", "paused = false"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "false"),
 					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
@@ -693,19 +792,54 @@ func TestUTScaleRequiresRunningError(t *testing.T) {
 	cases := []struct {
 		name             string
 		capacityChanging bool
+		currentlyPaused  bool
 		willBePaused     bool
 		wantErr          bool
 	}{
-		{name: "scale while paused is rejected", capacityChanging: true, willBePaused: true, wantErr: true},
-		{name: "scale while running is allowed", capacityChanging: true, willBePaused: false, wantErr: false},
-		{name: "no scale while paused is fine", capacityChanging: false, willBePaused: true, wantErr: false},
-		{name: "no scale while running is fine", capacityChanging: false, willBePaused: false, wantErr: false},
+		{name: "scale while paused and staying paused is rejected", capacityChanging: true, currentlyPaused: true, willBePaused: true, wantErr: true},
+		{name: "scale with a resume is sequenced", capacityChanging: true, currentlyPaused: true, willBePaused: false, wantErr: false},
+		{name: "scale with a pause is sequenced", capacityChanging: true, currentlyPaused: false, willBePaused: true, wantErr: false},
+		{name: "scale while running is allowed", capacityChanging: true, currentlyPaused: false, willBePaused: false, wantErr: false},
+		{name: "no scale while paused is fine", capacityChanging: false, currentlyPaused: true, willBePaused: true, wantErr: false},
+		{name: "no scale while running is fine", capacityChanging: false, currentlyPaused: false, willBePaused: false, wantErr: false},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			err := scaleRequiresRunningError(tt.capacityChanging, tt.willBePaused)
+			err := scaleRequiresRunningError(tt.capacityChanging, tt.currentlyPaused, tt.willBePaused)
 			if (err != nil) != tt.wantErr {
-				t.Fatalf("scaleRequiresRunningError(%v,%v) err=%v, wantErr=%v", tt.capacityChanging, tt.willBePaused, err, tt.wantErr)
+				t.Fatalf("scaleRequiresRunningError(%v,%v,%v) err=%v, wantErr=%v", tt.capacityChanging, tt.currentlyPaused, tt.willBePaused, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestUTPausedFromChangefeedState(t *testing.T) {
+	cases := []struct {
+		state      *string
+		wantPaused bool
+		wantOK     bool
+	}{
+		{Ptr(tidbcloud.ChangefeedStatePaused), true, true},
+		{Ptr(tidbcloud.ChangefeedStatePausing), true, true},
+		{Ptr(tidbcloud.ChangefeedStateEditing), true, true},
+		{Ptr(tidbcloud.ChangefeedStateRunning), false, true},
+		{Ptr(tidbcloud.ChangefeedStateWarning), false, true},
+		{Ptr(tidbcloud.ChangefeedStateScaling), false, true},
+		{Ptr(tidbcloud.ChangefeedStateCreating), false, true},
+		{Ptr(tidbcloud.ChangefeedStateFailed), false, false},
+		{Ptr(tidbcloud.ChangefeedStateError), false, false},
+		{Ptr(tidbcloud.ChangefeedStateDeleting), false, false},
+		{nil, false, false},
+	}
+	for _, tt := range cases {
+		name := "nil"
+		if tt.state != nil {
+			name = *tt.state
+		}
+		t.Run(name, func(t *testing.T) {
+			paused, ok := pausedFromChangefeedState(tt.state)
+			if paused != tt.wantPaused || ok != tt.wantOK {
+				t.Fatalf("pausedFromChangefeedState(%s) = (%v, %v), want (%v, %v)", name, paused, ok, tt.wantPaused, tt.wantOK)
 			}
 		})
 	}

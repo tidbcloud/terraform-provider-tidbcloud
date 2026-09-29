@@ -3,12 +3,12 @@
 page_title: "tidbcloud_dedicated_changefeed Resource - terraform-provider-tidbcloud"
 subcategory: ""
 description: |-
-  dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the KAFKA and MYSQL downstream types are supported for now. Editing the downstream configuration of a RUNNING changefeed automatically pauses it for the duration of the edit and resumes it afterwards (the API requires the PAUSED state for edits); replication catches up after the resume. A changefeed in the FAILED state rejects all modifications.
+  dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the KAFKA and MYSQL downstream types are supported for now. Editing the downstream configuration of a RUNNING changefeed automatically pauses it for the duration of the edit and resumes it afterwards (the API requires the PAUSED state for edits); replication catches up after the resume. Every update is planned against the live state of the changefeed and sequences the pause, resume, scale and edit calls it needs, so a pause-state change can be combined with a replication_capacity change or a downstream edit in one apply. A changefeed in the FAILED state rejects all modifications.
 ---
 
 # tidbcloud_dedicated_changefeed (Resource)
 
-dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the `KAFKA` and `MYSQL` downstream types are supported for now. Editing the downstream configuration of a RUNNING changefeed automatically pauses it for the duration of the edit and resumes it afterwards (the API requires the PAUSED state for edits); replication catches up after the resume. A changefeed in the FAILED state rejects all modifications.
+dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the `KAFKA` and `MYSQL` downstream types are supported for now. Editing the downstream configuration of a RUNNING changefeed automatically pauses it for the duration of the edit and resumes it afterwards (the API requires the PAUSED state for edits); replication catches up after the resume. Every update is planned against the live state of the changefeed and sequences the pause, resume, scale and edit calls it needs, so a pause-state change can be combined with a `replication_capacity` change or a downstream edit in one apply. A changefeed in the FAILED state rejects all modifications.
 
 ## Example Usage
 
@@ -99,14 +99,14 @@ resource "tidbcloud_dedicated_changefeed" "mysql_example" {
 - `downstream_type` (String) The downstream type of the changefeed. Available values: `KAFKA`, `MYSQL`.
 - `name` (String) The user-defined name of the changefeed.
 - `network_info` (Attributes) The network configuration for the downstream connection. (see [below for nested schema](#nestedatt--network_info))
-- `replication_capacity` (String) The replication capacity (RCU) of the changefeed, for example `4rcu`. Changing it scales the changefeed via an independent ScaleChangefeed call that requires the RUNNING state. `replication_capacity` can therefore only be changed while the changefeed is running (`paused = false`); attempting to change it while paused fails at plan time — resume the changefeed in a separate apply first.
+- `replication_capacity` (String) The replication capacity (RCU) of the changefeed, for example `4rcu`. Changing it scales the changefeed via an independent ScaleChangefeed call that requires the RUNNING state. The scale is sequenced with a pause-state change in the same apply (resume, then scale; or scale, then pause). The only combination that is rejected, at plan time, is changing it on a changefeed that is paused and stays paused.
 - `start_position` (Attributes) The start position for the changefeed. (see [below for nested schema](#nestedatt--start_position))
 
 ### Optional
 
 - `kafka` (Attributes) The Kafka downstream configuration. Required when `downstream_type` is `KAFKA`. (see [below for nested schema](#nestedatt--kafka))
 - `mysql` (Attributes) The MySQL downstream configuration. Required when `downstream_type` is `MYSQL`. (see [below for nested schema](#nestedatt--mysql))
-- `paused` (Boolean) Whether the changefeed is paused. Defaults to `false` (running). The value is refreshed from the live changefeed state on every read, so a changefeed paused or resumed outside Terraform shows up as drift and is reconciled back to the configured value on the next apply.
+- `paused` (Boolean) Whether the changefeed is paused. Refreshed from the live changefeed state on every read (`PAUSED`, `PAUSING` and `EDITING` read as `true`), so a pause or resume done outside Terraform shows up as a diff. Leave it unset to not manage the pause state at all: Terraform then never pauses or resumes the changefeed (other than around a downstream-config edit, which it restores) and only reports the live value — useful when operators pause the changefeed by hand, e.g. for downstream maintenance.
 - `table_config` (Attributes) The table filtering and event filter configuration. (see [below for nested schema](#nestedatt--table_config))
 
 ### Read-Only
