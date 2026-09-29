@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	tidbcloud "github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 	dedicated "github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/dedicated"
 )
 
@@ -47,6 +48,21 @@ func (m *MockTiDBCloudDedicatedClient) ChangeClusterRootPassword(ctx context.Con
 func (mr *MockTiDBCloudDedicatedClientMockRecorder) ChangeClusterRootPassword(ctx, clusterId, body interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeClusterRootPassword", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ChangeClusterRootPassword), ctx, clusterId, body)
+}
+
+// CreateChangefeed mocks base method.
+func (m *MockTiDBCloudDedicatedClient) CreateChangefeed(ctx context.Context, body *tidbcloud.CreateChangefeedRequest) (*tidbcloud.Changefeed, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateChangefeed", ctx, body)
+	ret0, _ := ret[0].(*tidbcloud.Changefeed)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateChangefeed indicates an expected call of CreateChangefeed.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreateChangefeed(ctx, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateChangefeed", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).CreateChangefeed), ctx, body)
 }
 
 // CreateCluster mocks base method.
@@ -124,6 +140,20 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) CreateVPCPeering(ctx, body i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPCPeering", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).CreateVPCPeering), ctx, body)
 }
 
+// DeleteChangefeed mocks base method.
+func (m *MockTiDBCloudDedicatedClient) DeleteChangefeed(ctx context.Context, changefeedId string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteChangefeed", ctx, changefeedId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteChangefeed indicates an expected call of DeleteChangefeed.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) DeleteChangefeed(ctx, changefeedId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteChangefeed", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).DeleteChangefeed), ctx, changefeedId)
+}
+
 // DeleteCluster mocks base method.
 func (m *MockTiDBCloudDedicatedClient) DeleteCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	m.ctrl.T.Helper()
@@ -193,6 +223,36 @@ func (m *MockTiDBCloudDedicatedClient) DeleteVPCPeering(ctx context.Context, vpc
 func (mr *MockTiDBCloudDedicatedClientMockRecorder) DeleteVPCPeering(ctx, vpcPeeringId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPCPeering", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).DeleteVPCPeering), ctx, vpcPeeringId)
+}
+
+// EditChangefeedDownstreamConfig mocks base method.
+func (m *MockTiDBCloudDedicatedClient) EditChangefeedDownstreamConfig(ctx context.Context, changefeedId string, body *tidbcloud.EditChangefeedDownstreamConfigRequest) (*tidbcloud.Changefeed, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EditChangefeedDownstreamConfig", ctx, changefeedId, body)
+	ret0, _ := ret[0].(*tidbcloud.Changefeed)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EditChangefeedDownstreamConfig indicates an expected call of EditChangefeedDownstreamConfig.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) EditChangefeedDownstreamConfig(ctx, changefeedId, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditChangefeedDownstreamConfig", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).EditChangefeedDownstreamConfig), ctx, changefeedId, body)
+}
+
+// GetChangefeed mocks base method.
+func (m *MockTiDBCloudDedicatedClient) GetChangefeed(ctx context.Context, changefeedId string) (*tidbcloud.Changefeed, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetChangefeed", ctx, changefeedId)
+	ret0, _ := ret[0].(*tidbcloud.Changefeed)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetChangefeed indicates an expected call of GetChangefeed.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetChangefeed(ctx, changefeedId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChangefeed", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetChangefeed), ctx, changefeedId)
 }
 
 // GetCluster mocks base method.
@@ -315,6 +375,21 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) GetVPCPeering(ctx, vpcPeerin
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVPCPeering", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).GetVPCPeering), ctx, vpcPeeringId)
 }
 
+// ListChangefeeds mocks base method.
+func (m *MockTiDBCloudDedicatedClient) ListChangefeeds(ctx context.Context, params *tidbcloud.ListChangefeedsParams) (*tidbcloud.ListChangefeedsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListChangefeeds", ctx, params)
+	ret0, _ := ret[0].(*tidbcloud.ListChangefeedsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListChangefeeds indicates an expected call of ListChangefeeds.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListChangefeeds(ctx, params interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListChangefeeds", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListChangefeeds), ctx, params)
+}
+
 // ListCloudProviders mocks base method.
 func (m *MockTiDBCloudDedicatedClient) ListCloudProviders(ctx context.Context, projectId string) ([]dedicated.V1beta1RegionCloudProvider, error) {
 	m.ctrl.T.Helper()
@@ -420,6 +495,20 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) ListVPCPeerings(ctx, project
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCPeerings", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ListVPCPeerings), ctx, projectId, cloudProvider, pageSize, pageToken)
 }
 
+// PauseChangefeed mocks base method.
+func (m *MockTiDBCloudDedicatedClient) PauseChangefeed(ctx context.Context, changefeedId string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PauseChangefeed", ctx, changefeedId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PauseChangefeed indicates an expected call of PauseChangefeed.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) PauseChangefeed(ctx, changefeedId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseChangefeed", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).PauseChangefeed), ctx, changefeedId)
+}
+
 // PauseCluster mocks base method.
 func (m *MockTiDBCloudDedicatedClient) PauseCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	m.ctrl.T.Helper()
@@ -435,6 +524,20 @@ func (mr *MockTiDBCloudDedicatedClientMockRecorder) PauseCluster(ctx, clusterId 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseCluster", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).PauseCluster), ctx, clusterId)
 }
 
+// ResumeChangefeed mocks base method.
+func (m *MockTiDBCloudDedicatedClient) ResumeChangefeed(ctx context.Context, changefeedId string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResumeChangefeed", ctx, changefeedId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ResumeChangefeed indicates an expected call of ResumeChangefeed.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) ResumeChangefeed(ctx, changefeedId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResumeChangefeed", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ResumeChangefeed), ctx, changefeedId)
+}
+
 // ResumeCluster mocks base method.
 func (m *MockTiDBCloudDedicatedClient) ResumeCluster(ctx context.Context, clusterId string) (*dedicated.TidbCloudOpenApidedicatedv1beta1Cluster, error) {
 	m.ctrl.T.Helper()
@@ -448,6 +551,21 @@ func (m *MockTiDBCloudDedicatedClient) ResumeCluster(ctx context.Context, cluste
 func (mr *MockTiDBCloudDedicatedClientMockRecorder) ResumeCluster(ctx, clusterId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResumeCluster", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ResumeCluster), ctx, clusterId)
+}
+
+// ScaleChangefeed mocks base method.
+func (m *MockTiDBCloudDedicatedClient) ScaleChangefeed(ctx context.Context, changefeedId, replicationCapacity string) (*tidbcloud.Changefeed, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScaleChangefeed", ctx, changefeedId, replicationCapacity)
+	ret0, _ := ret[0].(*tidbcloud.Changefeed)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ScaleChangefeed indicates an expected call of ScaleChangefeed.
+func (mr *MockTiDBCloudDedicatedClientMockRecorder) ScaleChangefeed(ctx, changefeedId, replicationCapacity interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScaleChangefeed", reflect.TypeOf((*MockTiDBCloudDedicatedClient)(nil).ScaleChangefeed), ctx, changefeedId, replicationCapacity)
 }
 
 // UpdateCluster mocks base method.
