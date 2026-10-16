@@ -164,7 +164,7 @@ func (r *DedicatedNetworkContainerResource) Read(ctx context.Context, req resour
 	tflog.Trace(ctx, "read dedicated_network_container_resource")
 	networkContainer, err := r.provider.DedicatedClient.GetNetworkContainer(ctx, data.NetworkContainerId.ValueString())
 	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("Unable to call GetNetworkContainer, error: %s", err))
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Unable to call GetNetworkContainer, got error: %s", err))
 		return
 	}
 	refreshDedicatedNetworkContainerResourceData(ctx, networkContainer, &data)
@@ -218,6 +218,8 @@ func refreshDedicatedNetworkContainerResourceData(ctx context.Context, networkCo
 		return
 	}
 	data.NetworkContainerId = types.StringValue(*networkContainer.NetworkContainerId)
+	data.RegionId = types.StringValue(networkContainer.RegionId)
+	data.CidrNotation = types.StringValue(*networkContainer.CidrNotation)
 	data.State = types.StringValue(string(*networkContainer.State))
 	data.CloudProvider = types.StringValue(string(*networkContainer.CloudProvider))
 	data.RegionDisplayName = types.StringValue(*networkContainer.RegionDisplayName)
