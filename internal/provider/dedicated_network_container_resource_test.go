@@ -44,17 +44,24 @@ func testDedicatedNetworkContainerResource(t *testing.T) {
 				Config: testUTDedicatedNetworkContainerResourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(dedicatedNetworkContainerResourceName, "cloud_provider", "aws"),
+					resource.TestCheckResourceAttr(dedicatedNetworkContainerResourceName, "region_id", "aws-ap-northeast-3"),
+					resource.TestCheckResourceAttr(dedicatedNetworkContainerResourceName, "cidr_notation", "172.16.0.0/21"),
 				),
+			},
+			{
+				ResourceName:                         dedicatedNetworkContainerResourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "network_container_id",
+				ImportStateId:                        "1860000000000",
 			},
 			// Delete testing automatically occurs in TestCase
 		},
 		ErrorCheck: func(err error) error {
-			if err != nil {
-				if regexp.MustCompile(`Network container can not be deleted`).MatchString(err.Error()) {
-					return nil
-				}
+			if err != nil && regexp.MustCompile(`Network container can not be deleted`).MatchString(err.Error()) {
+				return nil
 			}
-			return nil
+			return err
 		},
 	})
 }
