@@ -71,7 +71,7 @@ func (r *restoreResource) Configure(_ context.Context, req resource.ConfigureReq
 
 func (r *restoreResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "restore resource",
+		MarkdownDescription: "Creates a restore task from a backup. Destroying this resource only removes it from Terraform state; the restored cluster remains running and must be managed or deleted separately.",
 		Attributes: map[string]schema.Attribute{
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster",
@@ -100,6 +100,7 @@ func (r *restoreResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					"root_password": schema.StringAttribute{
 						MarkdownDescription: "The root password to access the cluster. It must be 8-64 characters.",
 						Required:            true,
+						Sensitive:           true,
 					},
 					"port": schema.Int64Attribute{
 						MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080, 4000 in default.\n" +
@@ -375,5 +376,5 @@ func (r restoreResource) Update(_ context.Context, _ resource.UpdateRequest, res
 }
 
 func (r restoreResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
-	resp.Diagnostics.AddWarning("Unsupported", "restore can't be deleted")
+	resp.Diagnostics.AddWarning("Restored cluster retained", "Only the restore task is removed from Terraform state. The restored cluster remains running and must be managed or deleted separately.")
 }

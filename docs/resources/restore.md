@@ -3,12 +3,12 @@
 page_title: "tidbcloud_restore Resource - terraform-provider-tidbcloud"
 subcategory: ""
 description: |-
-  restore resource
+  Creates a restore task from a backup. Destroying this resource only removes it from Terraform state; the restored cluster remains running and must be managed or deleted separately.
 ---
 
 # tidbcloud_restore (Resource)
 
-restore resource
+Creates a restore task from a backup. Destroying this resource only removes it from Terraform state; the restored cluster remains running and must be managed or deleted separately.
 
 ## Example Usage
 
@@ -80,7 +80,7 @@ Required:
 
 - `components` (Attributes) The components of the cluster.
   - For a Serverless Tier cluster, the components value can not be set.  - For a Dedicated Tier cluster, the components value must be set. (see [below for nested schema](#nestedatt--config--components))
-- `root_password` (String) The root password to access the cluster. It must be 8-64 characters.
+- `root_password` (String, Sensitive) The root password to access the cluster. It must be 8-64 characters.
 
 Optional:
 
