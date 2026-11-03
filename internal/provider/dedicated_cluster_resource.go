@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -180,9 +181,12 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 				ElementType:         types.StringType,
 			},
 			"root_password": schema.StringAttribute{
-				MarkdownDescription: "The root password to access the cluster.",
+				MarkdownDescription: "The root password to access the cluster. When set, it must be 8-64 characters. Removing this attribute leaves the remote password unchanged.",
 				Optional:            true,
 				Sensitive:           true,
+				Validators: []validator.String{
+					rootPasswordValidator{},
+				},
 			},
 			"port": schema.Int32Attribute{
 				MarkdownDescription: "The port used for accessing the cluster.",
@@ -654,6 +658,12 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 
 	// Check if paused state is changing
 	isPauseStateChanging := plan.Paused.ValueBool() != state.Paused.ValueBool()
+	if err := validateRootPassword(plan.RootPassword, false); err != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("root_password"), "Invalid root password", err.Error())
+		return
+	}
+	// A removed optional password is not a request to reset the remote secret.
+	isRootPasswordChanging := !plan.RootPassword.IsNull() && !plan.RootPassword.Equal(state.RootPassword)
 
 	// Check if TiFlashNodeSetting is changing
 	isTiFlashNodeSettingChanging := false
@@ -692,7 +702,7 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 		plan.TiKVNodeSetting.StorageType != state.TiKVNodeSetting.StorageType ||
 		plan.TiKVNodeSetting.RaftStoreIOPS != state.TiKVNodeSetting.RaftStoreIOPS ||
 
-		plan.RootPassword != state.RootPassword ||
+		isRootPasswordChanging ||
 		isTiFlashNodeSettingChanging
 
 	// If trying to change pause state along with other attributes, return an error
@@ -721,8 +731,8 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 				return
 			}
 		}
-	} else {
-		if plan.RootPassword != state.RootPassword {
+	} else if isOtherAttributesChanging {
+		if isRootPasswordChanging {
 			err := r.provider.DedicatedClient.ChangeClusterRootPassword(ctx, state.ClusterId.ValueString(), &dedicated.V1beta1ClusterServiceResetRootPasswordBody{
 				RootPassword: plan.RootPassword.ValueString(),
 			})
@@ -916,10 +926,12 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 	if data.Paused.ValueBool() {
 		return dedicated.TidbCloudOpenApidedicatedv1beta1Cluster{}, errors.New("can not create a cluster with paused set to true")
 	}
+	if err := validateRootPassword(data.RootPassword, false); err != nil {
+		return dedicated.TidbCloudOpenApidedicatedv1beta1Cluster{}, err
+	}
 
 	displayName := data.DisplayName.ValueString()
 	regionId := data.RegionId.ValueString()
-	rootPassword := data.RootPassword.ValueString()
 
 	// tidb node groups
 	defaultNodeGroup := dedicated.Dedicatedv1beta1TidbNodeGroup{}
@@ -991,7 +1003,7 @@ func buildCreateDedicatedClusterBody(data dedicatedClusterResourceData) (dedicat
 		TikvNodeSetting:    tikvNodeSetting,
 		TiflashNodeSetting: tiflashNodeSetting,
 		Port:               data.Port.ValueInt32(),
-		RootPassword:       &rootPassword,
+		RootPassword:       data.RootPassword.ValueStringPointer(),
 	}, nil
 }
 

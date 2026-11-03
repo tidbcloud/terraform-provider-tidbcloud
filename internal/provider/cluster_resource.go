@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -245,8 +246,12 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Required:            true,
 				Attributes: map[string]schema.Attribute{
 					"root_password": schema.StringAttribute{
-						MarkdownDescription: "The root password to access the cluster. It must be 8-64 characters.",
+						MarkdownDescription: "The root password to access the cluster. It must be 8-64 characters and is required when creating a cluster. Password updates are not supported by this deprecated resource. Omit this attribute for imported clusters. Removing this attribute leaves the remote password unchanged.",
 						Optional:            true,
+						Sensitive:           true,
+						Validators: []validator.String{
+							rootPasswordValidator{},
+						},
 					},
 					"port": schema.Int64Attribute{
 						MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080, 4000 in default.\n" +
@@ -406,6 +411,11 @@ func (r clusterResource) Create(ctx context.Context, req resource.CreateRequest,
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if err := validateRootPassword(data.Config.RootPassword, true); err != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("config").AtName("root_password"), "Invalid root password", err.Error())
 		return
 	}
 
@@ -657,6 +667,17 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	// The legacy API cannot rotate a password. Removing it from configuration
+	// only stops tracking the secret and does not change the remote credential.
+	if !data.Config.RootPassword.IsNull() && !data.Config.RootPassword.Equal(state.Config.RootPassword) {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("config").AtName("root_password"),
+			"Unsupported password update",
+			"root_password cannot be updated by tidbcloud_cluster. Rotate the password in the TiDB Cloud console, or use tidbcloud_dedicated_cluster to manage supported dedicated clusters.",
+		)
+		return
+	}
+
 	// Severless can not be changed now
 	if data.ClusterType == dev {
 		resp.Diagnostics.AddError(
@@ -811,12 +832,14 @@ func (r clusterResource) Update(ctx context.Context, req resource.UpdateRequest,
 		}
 	}
 
-	tflog.Trace(ctx, "update cluster_resource")
-	updateClusterParams := clusterApi.NewUpdateClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString()).WithBody(updateClusterBody)
-	_, err := r.provider.client.UpdateCluster(updateClusterParams)
-	if err != nil {
-		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateClusterById, got error: %s", err))
-		return
+	if updateClusterBody.Config.Components != nil || updateClusterBody.Config.Paused != nil {
+		tflog.Trace(ctx, "update cluster_resource")
+		updateClusterParams := clusterApi.NewUpdateClusterParams().WithProjectID(data.ProjectId).WithClusterID(data.ClusterId.ValueString()).WithBody(updateClusterBody)
+		_, err := r.provider.client.UpdateCluster(updateClusterParams)
+		if err != nil {
+			resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call UpdateClusterById, got error: %s", err))
+			return
+		}
 	}
 
 	if r.provider.sync {

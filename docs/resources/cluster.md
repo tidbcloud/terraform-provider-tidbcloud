@@ -96,7 +96,7 @@ Optional:
   - The cluster can be paused only when the cluster_status is "AVAILABLE".  - The cluster can be resumed only when the cluster_status is "PAUSED".
 - `port` (Number) The TiDB port for connection. The port must be in the range of 1024-65535 except 10080, 4000 in default.
   - For a Serverless Tier cluster, only port 4000 is available.
-- `root_password` (String) The root password to access the cluster. It must be 8-64 characters.
+- `root_password` (String, Sensitive) The root password to access the cluster. It must be 8-64 characters and is required when creating a cluster. Password updates are not supported by this deprecated resource. Omit this attribute for imported clusters. Removing this attribute leaves the remote password unchanged.
 
 <a id="nestedatt--config--components"></a>
 ### Nested Schema for `config.components`
