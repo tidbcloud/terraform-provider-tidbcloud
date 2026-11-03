@@ -21,9 +21,7 @@ type TiDBCloudIAMClient interface {
 }
 
 func NewIAMApiClient(rt http.RoundTripper, iamEndpoint string, userAgent string) (*iam.APIClient, error) {
-	httpClient := &http.Client{
-		Transport: rt,
-	}
+	httpClient := newAPIHTTPClient(rt)
 
 	// v1beta1 api (iam)
 	if iamEndpoint == "" {

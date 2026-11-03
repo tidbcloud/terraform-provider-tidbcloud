@@ -115,6 +115,10 @@ brew install hashicorp/tap/terraform
 
 See [TiDB Cloud Terraform Integration Overview](https://docs.pingcap.com/tidbcloud/terraform-tidbcloud-provider-overview) for more details.
 
+### API endpoint overrides
+
+`TIDBCLOUD_HOST`, `TIDBCLOUD_DEDICATED_ENDPOINT`, `TIDBCLOUD_SERVERLESS_ENDPOINT`, and `TIDBCLOUD_IAM_ENDPOINT` override the API endpoints. Use absolute HTTPS URLs for hosts you trust; custom hosts and ports are supported. HTTP endpoints and redirects to HTTP are rejected. Local mock APIs must use HTTPS with a certificate trusted by the provider process.
+
 ## Developing the Provider
 
 ### Environment

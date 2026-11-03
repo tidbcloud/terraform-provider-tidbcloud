@@ -49,9 +49,7 @@ type TiDBCloudServerlessClient interface {
 }
 
 func NewServerlessApiClient(rt http.RoundTripper, serverlessEndpoint string, userAgent string) (*branch.APIClient, *cluster.APIClient, *br.APIClient, *imp.APIClient, *export.APIClient, error) {
-	httpClient := &http.Client{
-		Transport: rt,
-	}
+	httpClient := newAPIHTTPClient(rt)
 
 	// v1beta1 api (serverless)
 	if serverlessEndpoint == "" {
