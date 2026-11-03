@@ -1,6 +1,7 @@
 package testwithproject
 
 import (
+	"crypto/rand"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"regexp"
@@ -13,6 +14,8 @@ func TestAccClusterResource(t *testing.T) {
 	if !enableCost {
 		t.Skip("Skip test due to cost")
 	}
+	// Reuse one password across create and update steps.
+	password := "Aa1!" + rand.Text()
 	reg, _ := regexp.Compile(".*Unable to update Serverless cluster.*")
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -20,7 +23,7 @@ func TestAccClusterResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read serverless tier
 			{
-				Config: testAccServerlessClusterResourceConfig("serverless-test"),
+				Config: testAccServerlessClusterResourceConfig("serverless-test", password),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("tidbcloud_cluster.test", "id"),
 					resource.TestCheckResourceAttrSet("tidbcloud_cluster.test", "config.components.tidb.node_quantity"),
@@ -35,7 +38,7 @@ func TestAccClusterResource(t *testing.T) {
 			},
 			// Update is not supported
 			{
-				Config:      testAccServerlessClusterResourceConfig("serverless-test2"),
+				Config:      testAccServerlessClusterResourceConfig("serverless-test2", password),
 				ExpectError: reg,
 			},
 			// Delete testing automatically occurs in TestCase
@@ -48,7 +51,7 @@ func TestAccClusterResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read dedicated tier
 			{
-				Config: testAccDedicatedClusterResourceConfig("dedicated-test"),
+				Config: testAccDedicatedClusterResourceConfig("dedicated-test", password),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("tidbcloud_cluster.test", "id"),
 					resource.TestCheckResourceAttrSet("tidbcloud_cluster.test", "config.port"),
@@ -62,7 +65,7 @@ func TestAccClusterResource(t *testing.T) {
 			},
 			// only node_quantity can be updated now
 			{
-				Config:      testAccDedicatedClusterResourceConfig("dedicated-test2"),
+				Config:      testAccDedicatedClusterResourceConfig("dedicated-test2", password),
 				ExpectError: reg2,
 			},
 			// Delete testing automatically occurs in TestCase
@@ -70,7 +73,7 @@ func TestAccClusterResource(t *testing.T) {
 	})
 }
 
-func testAccServerlessClusterResourceConfig(name string) string {
+func testAccServerlessClusterResourceConfig(name, password string) string {
 	return fmt.Sprintf(`
 resource "tidbcloud_cluster" "test" {
  project_id     = %s
@@ -79,13 +82,13 @@ resource "tidbcloud_cluster" "test" {
  cloud_provider = "AWS"
  region         = "us-east-1"
  config = {
-   root_password = "Shiyuhang1."
+   root_password = %q
  }
 }
-`, projectId, name)
+`, projectId, name, password)
 }
 
-func testAccDedicatedClusterResourceConfig(name string) string {
+func testAccDedicatedClusterResourceConfig(name, password string) string {
 	return fmt.Sprintf(`
 resource "tidbcloud_cluster" "test" {
  project_id     = %s
@@ -94,7 +97,7 @@ resource "tidbcloud_cluster" "test" {
  cloud_provider = "AWS"
  region         = "us-east-1"
  config = {
-   root_password = "Shiyuhang1."
+   root_password = %q
    components = {
      tidb = {
        node_size : "2C8G"
@@ -108,5 +111,5 @@ resource "tidbcloud_cluster" "test" {
    }
  }
 }
-`, projectId, name)
+`, projectId, name, password)
 }
