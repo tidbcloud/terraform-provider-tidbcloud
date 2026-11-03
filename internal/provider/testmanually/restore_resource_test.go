@@ -1,6 +1,7 @@
 package manually
 
 import (
+	"crypto/rand"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -18,6 +19,8 @@ import (
 // 5. delete the restored cluster manually
 func TestAccRestoreResource(t *testing.T) {
 	t.Skip("skip for restored can't be delete")
+	// Reuse one password across create and update steps.
+	password := "Aa1!" + rand.Text()
 	reg, _ := regexp.Compile(".*restore can't be updated.*")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -26,7 +29,7 @@ func TestAccRestoreResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read restore
 			{
-				Config: testAccRestoreResourceConfig("restore-test"),
+				Config: testAccRestoreResourceConfig("restore-test", password),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("tidbcloud_restore.test", "id"),
 					resource.TestCheckResourceAttr("tidbcloud_restore.test", "error_message", ""),
@@ -34,7 +37,7 @@ func TestAccRestoreResource(t *testing.T) {
 			},
 			// Update is not supported
 			{
-				Config:      testAccRestoreResourceConfig("restore-test2"),
+				Config:      testAccRestoreResourceConfig("restore-test2", password),
 				ExpectError: reg,
 			},
 		},
@@ -42,14 +45,14 @@ func TestAccRestoreResource(t *testing.T) {
 }
 
 // full in the project_id and backup_id
-func testAccRestoreResourceConfig(name string) string {
+func testAccRestoreResourceConfig(name, password string) string {
 	return fmt.Sprintf(`
 resource "tidbcloud_restore" "test" {
   project_id     = "1372813089189561287"
   backup_id      = "1320143"
   name           = "%s"
   config = {
-      root_password = "Shiyuhang1."
+      root_password = %q
       port = 4002
       components = {
             tidb = {
@@ -73,5 +76,5 @@ resource "tidbcloud_restore" "test" {
           }
         ]
     }
-}`, name)
+}`, name, password)
 }
