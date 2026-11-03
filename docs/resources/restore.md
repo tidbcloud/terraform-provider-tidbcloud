@@ -3,12 +3,12 @@
 page_title: "tidbcloud_restore Resource - terraform-provider-tidbcloud"
 subcategory: ""
 description: |-
-  Creates a restore task from a backup. Destroying this resource only removes it from Terraform state; the restored cluster remains running and must be managed or deleted separately.
+  Creates a restore task from a backup. Destroying this resource only removes it from Terraform state; it does not cancel the restore task or delete any restored cluster. Manage or delete the cluster separately.
 ---
 
 # tidbcloud_restore (Resource)
 
-Creates a restore task from a backup. Destroying this resource only removes it from Terraform state; the restored cluster remains running and must be managed or deleted separately.
+Creates a restore task from a backup. Destroying this resource only removes it from Terraform state; it does not cancel the restore task or delete any restored cluster. Manage or delete the cluster separately.
 
 ## Example Usage
 

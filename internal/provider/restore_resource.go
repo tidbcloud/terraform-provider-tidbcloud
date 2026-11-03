@@ -71,7 +71,7 @@ func (r *restoreResource) Configure(_ context.Context, req resource.ConfigureReq
 
 func (r *restoreResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Creates a restore task from a backup. Destroying this resource only removes it from Terraform state; the restored cluster remains running and must be managed or deleted separately.",
+		MarkdownDescription: "Creates a restore task from a backup. Destroying this resource only removes it from Terraform state; it does not cancel the restore task or delete any restored cluster. Manage or delete the cluster separately.",
 		Attributes: map[string]schema.Attribute{
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster",
@@ -376,5 +376,5 @@ func (r restoreResource) Update(_ context.Context, _ resource.UpdateRequest, res
 }
 
 func (r restoreResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
-	resp.Diagnostics.AddWarning("Restored cluster retained", "Only the restore task is removed from Terraform state. The restored cluster remains running and must be managed or deleted separately.")
+	resp.Diagnostics.AddWarning("Restore task removed from state", "Only the restore task is removed from Terraform state. This does not cancel the restore task or delete any restored cluster. Manage or delete the cluster separately.")
 }
