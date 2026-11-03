@@ -740,6 +740,11 @@ func (r dedicatedClusterResource) Update(ctx context.Context, req resource.Updat
 				resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to call ChangeClusterRootPassword, got error: %s", err))
 				return
 			}
+			// Preserve the completed reset if a later update or refresh fails.
+			resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("root_password"), plan.RootPassword)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
 		}
 
 		if isPublicEndpointSettingChanging {

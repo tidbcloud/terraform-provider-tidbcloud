@@ -100,19 +100,24 @@ func TestClusterRootPasswordCreate(t *testing.T) {
 
 func TestDedicatedClusterRootPasswordUpdate(t *testing.T) {
 	for _, tc := range []struct {
-		name      string
-		password  types.String
-		wantReset bool
-		wantError bool
+		name        string
+		password    types.String
+		wantReset   bool
+		wantError   bool
+		resetError  error
+		updateError error
+		readError   error
 	}{
-		{"removed", types.StringNull(), false, false},
-		{"unchanged", types.StringValue("old-password"), false, false},
-		{"rotated", types.StringValue("new-password"), true, false},
-		{"rotation failed", types.StringValue("new-password"), true, true},
-		{"empty", types.StringValue(""), false, true},
-		{"short", types.StringValue("short"), false, true},
-		{"long", types.StringValue(strings.Repeat("x", 65)), false, true},
-		{"unknown", types.StringUnknown(), false, true},
+		{name: "removed", password: types.StringNull()},
+		{name: "unchanged", password: types.StringValue("old-password")},
+		{name: "rotated", password: types.StringValue("new-password"), wantReset: true},
+		{name: "rotation failed", password: types.StringValue("new-password"), wantReset: true, wantError: true, resetError: errors.New("password reset failed")},
+		{name: "cluster update failed", password: types.StringValue("new-password"), wantReset: true, wantError: true, updateError: errors.New("cluster update failed")},
+		{name: "refresh failed", password: types.StringValue("new-password"), wantReset: true, wantError: true, readError: errors.New("cluster refresh failed")},
+		{name: "empty", password: types.StringValue(""), wantError: true},
+		{name: "short", password: types.StringValue("short"), wantError: true},
+		{name: "long", password: types.StringValue(strings.Repeat("x", 65)), wantError: true},
+		{name: "unknown", password: types.StringUnknown(), wantError: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -128,18 +133,18 @@ func TestDedicatedClusterRootPasswordUpdate(t *testing.T) {
 			}
 			state := rootPasswordState(t, &r, &data)
 			data.RootPassword = tc.password
+			if tc.updateError != nil {
+				data.DisplayName = types.StringValue("updated-name")
+			}
 			planned := rootPasswordState(t, &r, &data)
 			if tc.wantReset {
-				var resetError error
-				if tc.wantError {
-					resetError = errors.New("password reset failed")
-				} else {
-					client.EXPECT().UpdateCluster(gomock.Any(), "cluster-id", gomock.Any()).Return(&cluster, nil)
+				if tc.resetError == nil {
+					client.EXPECT().UpdateCluster(gomock.Any(), "cluster-id", gomock.Any()).Return(&cluster, tc.updateError)
 				}
-				client.EXPECT().ChangeClusterRootPassword(gomock.Any(), "cluster-id", &dedicated.V1beta1ClusterServiceResetRootPasswordBody{RootPassword: tc.password.ValueString()}).Return(resetError)
+				client.EXPECT().ChangeClusterRootPassword(gomock.Any(), "cluster-id", &dedicated.V1beta1ClusterServiceResetRootPasswordBody{RootPassword: tc.password.ValueString()}).Return(tc.resetError)
 			}
-			if !tc.wantError {
-				client.EXPECT().GetCluster(gomock.Any(), "cluster-id").Return(&cluster, nil)
+			if !tc.wantError || tc.readError != nil {
+				client.EXPECT().GetCluster(gomock.Any(), "cluster-id").Return(&cluster, tc.readError)
 			}
 			resp := resource.UpdateResponse{State: state}
 			r.Update(ctx, resource.UpdateRequest{Plan: tfsdk.Plan{Raw: planned.Raw, Schema: planned.Schema}, State: state}, &resp)
@@ -151,11 +156,21 @@ func TestDedicatedClusterRootPasswordUpdate(t *testing.T) {
 				t.Fatal(diags)
 			}
 			want := tc.password
-			if tc.wantError {
+			if tc.wantError && !(tc.wantReset && tc.resetError == nil) {
 				want = types.StringValue("old-password")
 			}
 			if !got.Equal(want) {
 				t.Fatal("password state does not match the completed operation")
+			}
+			if tc.wantError {
+				expected := state
+				expected.Raw = state.Raw.Copy()
+				if diags := expected.SetAttribute(ctx, path.Root("root_password"), want); diags.HasError() {
+					t.Fatal(diags)
+				}
+				if !resp.State.Raw.Equal(expected.Raw) {
+					t.Fatal("failed operation recorded unrelated planned changes")
+				}
 			}
 		})
 	}
