@@ -61,7 +61,7 @@ resource "tidbcloud_dedicated_cluster" "example" {
 - `paused` (Boolean) Whether the cluster is paused.
 - `port` (Number) The port used for accessing the cluster.
 - `project_id` (String) The ID of the project. When not provided, the default project will be used.
-- `root_password` (String, Sensitive) The root password to access the cluster.
+- `root_password` (String, Sensitive) The root password to access the cluster. When set, it must be 8-64 characters. Removing this attribute leaves the remote password unchanged.
 - `tiflash_node_setting` (Attributes) Settings for TiFlash nodes. (see [below for nested schema](#nestedatt--tiflash_node_setting))
 
 ### Read-Only
