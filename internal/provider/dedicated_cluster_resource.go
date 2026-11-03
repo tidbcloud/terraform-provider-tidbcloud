@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -184,9 +183,6 @@ func (r *dedicatedClusterResource) Schema(_ context.Context, _ resource.SchemaRe
 				MarkdownDescription: "The root password to access the cluster. When set, it must be 8-64 characters. Removing this attribute leaves the remote password unchanged.",
 				Optional:            true,
 				Sensitive:           true,
-				Validators: []validator.String{
-					rootPasswordValidator{},
-				},
 			},
 			"port": schema.Int32Attribute{
 				MarkdownDescription: "The port used for accessing the cluster.",

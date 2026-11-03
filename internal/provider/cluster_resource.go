@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -249,9 +248,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						MarkdownDescription: "The root password to access the cluster. It must be 8-64 characters and is required when creating a cluster. Password updates are not supported by this deprecated resource. Omit this attribute for imported clusters. Removing this attribute leaves the remote password unchanged.",
 						Optional:            true,
 						Sensitive:           true,
-						Validators: []validator.String{
-							rootPasswordValidator{},
-						},
 					},
 					"port": schema.Int64Attribute{
 						MarkdownDescription: "The TiDB port for connection. The port must be in the range of 1024-65535 except 10080, 4000 in default.\n" +

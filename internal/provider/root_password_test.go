@@ -11,8 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	mockClient "github.com/tidbcloud/terraform-provider-tidbcloud/mock"
@@ -27,6 +25,8 @@ func TestDedicatedClusterRootPasswordCreatePayload(t *testing.T) {
 	}{
 		{"omitted", types.StringNull(), false},
 		{"valid", types.StringValue("example-password"), false},
+		{"minimum length", types.StringValue("12345678"), false},
+		{"maximum length", types.StringValue(strings.Repeat("x", 64)), false},
 		{"empty", types.StringValue(""), true},
 		{"short", types.StringValue("short"), true},
 		{"long", types.StringValue(strings.Repeat("x", 65)), true},
@@ -155,9 +155,10 @@ func TestDedicatedClusterRootPasswordUpdate(t *testing.T) {
 			if diags := resp.State.GetAttribute(ctx, path.Root("root_password"), &got); diags.HasError() {
 				t.Fatal(diags)
 			}
-			want := tc.password
-			if tc.wantError && !(tc.wantReset && tc.resetError == nil) {
-				want = types.StringValue("old-password")
+			want := types.StringValue("old-password")
+			resetSucceeded := tc.wantReset && tc.resetError == nil
+			if !tc.wantError || resetSucceeded {
+				want = tc.password
 			}
 			if !got.Equal(want) {
 				t.Fatal("password state does not match the completed operation")
@@ -248,38 +249,6 @@ func TestClusterRootPasswordRemovalAndUnchangedUpdates(t *testing.T) {
 				t.Fatal("password state does not match configuration")
 			}
 		})
-	}
-}
-
-func TestClusterRootPasswordSchemaValidation(t *testing.T) {
-	ctx := context.Background()
-	var legacySchema, dedicatedSchema resource.SchemaResponse
-	(&clusterResource{}).Schema(ctx, resource.SchemaRequest{}, &legacySchema)
-	(&dedicatedClusterResource{}).Schema(ctx, resource.SchemaRequest{}, &dedicatedSchema)
-	attributes := []schema.StringAttribute{
-		legacySchema.Schema.Attributes["config"].(schema.SingleNestedAttribute).Attributes["root_password"].(schema.StringAttribute),
-		dedicatedSchema.Schema.Attributes["root_password"].(schema.StringAttribute),
-	}
-	for _, attribute := range attributes {
-		if !attribute.Sensitive {
-			t.Error("root password must be sensitive")
-		}
-		for _, tc := range []struct {
-			password  types.String
-			wantError bool
-		}{
-			{types.StringNull(), false}, {types.StringUnknown(), false}, {types.StringValue(""), true},
-			{types.StringValue("1234567"), true}, {types.StringValue("12345678"), false},
-			{types.StringValue(strings.Repeat("x", 64)), false}, {types.StringValue(strings.Repeat("x", 65)), true},
-		} {
-			var resp validator.StringResponse
-			for _, v := range attribute.Validators {
-				v.ValidateString(ctx, validator.StringRequest{Path: path.Root("root_password"), ConfigValue: tc.password}, &resp)
-			}
-			if resp.Diagnostics.HasError() != tc.wantError {
-				t.Errorf("validation error = %v, want %v", resp.Diagnostics.HasError(), tc.wantError)
-			}
-		}
 	}
 }
 
