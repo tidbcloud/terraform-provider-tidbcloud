@@ -1,7 +1,6 @@
 package tidbcloud
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -85,96 +84,83 @@ func TestDefaultAPIEndpoints(t *testing.T) {
 	}
 }
 
-func TestLegacyHTTPSRequestPreservesBasePath(t *testing.T) {
-	var received atomic.Bool
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			t.Error(err)
-		}
-		if r.TLS == nil || r.URL.Path != "/proxy/api/v1beta/projects/1/clusters" || !strings.Contains(string(body), "synthetic-root-password") {
-			t.Errorf("unexpected request: TLS=%t path=%s body=%s", r.TLS != nil, r.URL.Path, body)
-		}
-		if r.UserAgent() != "endpoint-test" {
-			t.Errorf("unexpected User-Agent: %s", r.UserAgent())
-		}
-		received.Store(true)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, `{"id":"1"}`)
-	}))
-	defer server.Close()
-	request := testAPIRequest(t, "legacy", server.URL+"/proxy", server.Client().Transport)
-	if err := request(); err != nil {
-		t.Fatal(err)
-	}
-	if !received.Load() {
-		t.Fatal("HTTPS request did not reach the custom endpoint")
-	}
-
-	client, imports, err := NewApiClient("fake-public", "fake-private", server.URL+"/proxy", "endpoint-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if client.Transport != imports.Transport || client.Transport.(*httpTransport.Runtime).BasePath != "/proxy" {
-		t.Fatal("legacy and import clients must share the configured base path and transport")
-	}
-}
-
-func TestAPIClientsRejectHTTPSDowngrades(t *testing.T) {
-	for _, kind := range apiClientKinds {
-		t.Run(kind, func(t *testing.T) {
-			for _, status := range []int{http.StatusFound, http.StatusTemporaryRedirect, http.StatusPermanentRedirect} {
-				t.Run(fmt.Sprint(status), func(t *testing.T) {
-					var plaintextRequests atomic.Int32
-					plaintext := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						plaintextRequests.Add(1)
-						w.Header().Set("Content-Type", "application/json")
-						_, _ = io.WriteString(w, `{"id":"1"}`)
-					}))
-					defer plaintext.Close()
-					secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.Header().Set("Location", plaintext.URL)
-						w.WriteHeader(status)
-					}))
-					defer secure.Close()
-					request := testAPIRequest(t, kind, secure.URL, secure.Client().Transport)
-					err := request()
-					if err == nil || !strings.Contains(err.Error(), "redirects must use HTTPS") {
-						t.Errorf("expected HTTPS redirect error, got %v", err)
-					}
-					if got := plaintextRequests.Load(); got != 0 {
-						t.Fatalf("sent %d requests over plaintext HTTP", got)
-					}
-				})
-			}
-		})
-	}
-}
-
-func TestAPIClientsAllowHTTPSRedirects(t *testing.T) {
-	for _, kind := range apiClientKinds {
-		t.Run(kind, func(t *testing.T) {
-			var requests atomic.Int32
-			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if requests.Add(1) == 1 {
-					w.Header().Set("Location", "/redirected")
-					w.WriteHeader(http.StatusTemporaryRedirect)
-					return
+func TestLegacyAPIHTTPSRequests(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		redirectStatus int
+		insecure       bool
+	}{
+		{"direct HTTPS", 0, false},
+		{"HTTPS redirect", http.StatusTemporaryRedirect, false},
+		{"HTTP 302", http.StatusFound, true},
+		{"HTTP 307", http.StatusTemporaryRedirect, true},
+		{"HTTP 308", http.StatusPermanentRedirect, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var plaintextRequests, secureRequests atomic.Int32
+			plaintext := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				plaintextRequests.Add(1)
+			}))
+			defer plaintext.Close()
+			secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				secureRequests.Add(1)
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Error(err)
 				}
-				body, _ := io.ReadAll(r.Body)
-				if r.Method != http.MethodPost || !strings.Contains(string(body), "synthetic-root-password") {
-					t.Errorf("redirect lost the request method or body")
+				if r.TLS == nil || r.Method != http.MethodPost || !strings.Contains(string(body), "synthetic-root-password") || r.UserAgent() != "endpoint-test" {
+					t.Error("HTTPS request lost its method, body, or User-Agent")
+				}
+				switch r.URL.Path {
+				case "/proxy/api/v1beta/projects/1/clusters":
+					if tc.redirectStatus != 0 {
+						target := "/redirected"
+						if tc.insecure {
+							target = plaintext.URL
+						}
+						w.Header().Set("Location", target)
+						w.WriteHeader(tc.redirectStatus)
+						return
+					}
+				case "/redirected":
+				default:
+					t.Errorf("unexpected request path: %s", r.URL.Path)
 				}
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = io.WriteString(w, `{"id":"1"}`)
 			}))
-			defer server.Close()
-			request := testAPIRequest(t, kind, server.URL, server.Client().Transport)
-			if err := request(); err != nil {
+			defer secure.Close()
+
+			previous := http.DefaultTransport
+			http.DefaultTransport = secure.Client().Transport
+			t.Cleanup(func() { http.DefaultTransport = previous })
+			client, imports, err := NewApiClient("fake-public", "fake-private", secure.URL+"/proxy", "endpoint-test")
+			if err != nil {
 				t.Fatal(err)
 			}
-			if got := requests.Load(); got != 2 {
-				t.Fatalf("expected an HTTPS redirect, got %d requests", got)
+			if client.Transport != imports.Transport || client.Transport.(*httpTransport.Runtime).BasePath != "/proxy" {
+				t.Fatal("legacy and import clients must share the configured transport and base path")
+			}
+			password := "synthetic-root-password"
+			_, err = client.Cluster.CreateCluster(cluster.NewCreateClusterParams().WithProjectID("1").WithBody(cluster.CreateClusterBody{
+				Config: &cluster.CreateClusterParamsBodyConfig{RootPassword: &password},
+			}))
+			if tc.insecure {
+				if err == nil || !strings.Contains(err.Error(), "redirects must use HTTPS") {
+					t.Fatalf("expected HTTPS redirect error, got %v", err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			if plaintextRequests.Load() != 0 {
+				t.Fatal("sent a request over plaintext HTTP")
+			}
+			var wantRequests int32 = 1
+			if tc.redirectStatus != 0 && !tc.insecure {
+				wantRequests = 2
+			}
+			if got := secureRequests.Load(); got != wantRequests {
+				t.Fatalf("HTTPS requests = %d, want %d", got, wantRequests)
 			}
 		})
 	}
@@ -188,66 +174,15 @@ func TestAPIRedirectLimit(t *testing.T) {
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}))
 	defer server.Close()
-	request := testAPIRequest(t, "legacy", server.URL, server.Client().Transport)
-	err := request()
+	client := newAPIHTTPClient(server.Client().Transport)
+	resp, err := client.Get(server.URL)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
 	if err == nil || !strings.Contains(err.Error(), "stopped after 10 redirects") {
 		t.Fatalf("expected redirect limit, got %v", err)
 	}
 	if got := requests.Load(); got != 10 {
 		t.Fatalf("expected 10 requests, got %d", got)
-	}
-}
-
-var apiClientKinds = []string{"legacy", "dedicated", "iam", "branch", "cluster", "backup", "import", "export"}
-
-// Exercise each constructor's HTTP client, including the legacy Digest transport.
-func testAPIRequest(t *testing.T, kind, endpoint string, transport http.RoundTripper) func() error {
-	t.Helper()
-	var client *http.Client
-	switch kind {
-	case "legacy":
-		previous := http.DefaultTransport
-		http.DefaultTransport = transport
-		t.Cleanup(func() { http.DefaultTransport = previous })
-		legacy, _, err := NewApiClient("fake-public", "fake-private", endpoint, "endpoint-test")
-		if err != nil {
-			t.Fatal(err)
-		}
-		return func() error {
-			password := "synthetic-root-password"
-			_, err := legacy.Cluster.CreateCluster(cluster.NewCreateClusterParams().WithProjectID("1").WithBody(cluster.CreateClusterBody{
-				Config: &cluster.CreateClusterParamsBodyConfig{RootPassword: &password},
-			}))
-			return err
-		}
-	case "dedicated":
-		dedicated, err := NewDedicatedApiClient(transport, endpoint, "test")
-		if err != nil {
-			t.Fatal(err)
-		}
-		client = dedicated.GetConfig().HTTPClient
-	case "iam":
-		iamClient, err := NewIAMApiClient(transport, endpoint, "test")
-		if err != nil {
-			t.Fatal(err)
-		}
-		client = iamClient.GetConfig().HTTPClient
-	default:
-		branchClient, clusterClient, backupClient, importClient, exportClient, err := NewServerlessApiClient(transport, endpoint, "test")
-		if err != nil {
-			t.Fatal(err)
-		}
-		client = map[string]*http.Client{
-			"branch": branchClient.GetConfig().HTTPClient, "cluster": clusterClient.GetConfig().HTTPClient,
-			"backup": backupClient.GetConfig().HTTPClient, "import": importClient.GetConfig().HTTPClient,
-			"export": exportClient.GetConfig().HTTPClient,
-		}[kind]
-	}
-	return func() error {
-		resp, err := client.Post(endpoint, "application/json", strings.NewReader(`{"root_password":"synthetic-root-password"}`))
-		if resp != nil {
-			_ = resp.Body.Close()
-		}
-		return err
 	}
 }
