@@ -15,11 +15,13 @@ func TestPreSignedUrlUpload(t *testing.T) {
 		name           string
 		insecure       bool
 		redirectStatus int
+		otherOrigin    bool
 		wantErr        bool
 	}{
 		{name: "HTTPS upload"},
 		{name: "HTTP upload", insecure: true, wantErr: true},
 		{name: "HTTPS redirect", redirectStatus: http.StatusFound},
+		{name: "HTTPS redirect to another origin", redirectStatus: http.StatusFound, otherOrigin: true},
 		{name: "HTTP 301 redirect", insecure: true, redirectStatus: http.StatusMovedPermanently, wantErr: true},
 		{name: "HTTP 302 redirect", insecure: true, redirectStatus: http.StatusFound, wantErr: true},
 		{name: "HTTP 303 redirect", insecure: true, redirectStatus: http.StatusSeeOther, wantErr: true},
@@ -34,6 +36,13 @@ func TestPreSignedUrlUpload(t *testing.T) {
 				plaintextRequests.Add(1)
 			}))
 			defer plaintext.Close()
+			other := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				secureRequests.Add(1)
+				if r.Header.Get("Authorization") != "" {
+					t.Error("upload sent API credentials")
+				}
+			}))
+			defer other.Close()
 			secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				secureRequests.Add(1)
 				if r.URL.Path != "/redirected" {
@@ -51,6 +60,8 @@ func TestPreSignedUrlUpload(t *testing.T) {
 						target := "/redirected"
 						if tc.insecure {
 							target = plaintext.URL
+						} else if tc.otherOrigin {
+							target = other.URL
 						}
 						w.Header().Set("Location", target)
 						w.WriteHeader(tc.redirectStatus)
