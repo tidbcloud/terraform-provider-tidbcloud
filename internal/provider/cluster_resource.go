@@ -123,6 +123,9 @@ func (r *clusterResource) Configure(_ context.Context, req resource.ConfigureReq
 func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "cluster resource(deprecated). Use serverless_cluster and dedicated_cluster resources instead for more comprehensive functions",
+		DeprecationMessage: "tidbcloud_cluster is deprecated. This resource cannot detect IP access list changes made outside Terraform or update the IP access list of an existing cluster. " +
+			"Migrate to tidbcloud_dedicated_cluster or tidbcloud_serverless_cluster. " +
+			"See https://docs.pingcap.com/tidbcloud/terraform-migrate-cluster-resource/ for migration instructions.",
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project. You can get the project ID from [tidbcloud_projects datasource](../data-sources/projects.md).",
