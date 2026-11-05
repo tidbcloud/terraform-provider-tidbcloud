@@ -26,6 +26,9 @@ func TestPreSignedUrlUpload(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			const content = "id,name\n1,example\n"
+			const uploadTarget = "/upload/data%20file%2Bname.csv?X-Amz-Algorithm=AWS4-HMAC-SHA256" +
+				"&X-Amz-Credential=example%2F20261105%2Fus-east-1%2Fs3%2Faws4_request" +
+				"&X-Amz-Security-Token=example%2Btoken%2Fvalue%3D&X-Amz-Signature=example-signature"
 			var plaintextRequests, secureRequests atomic.Int32
 			plaintext := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				plaintextRequests.Add(1)
@@ -33,7 +36,10 @@ func TestPreSignedUrlUpload(t *testing.T) {
 			defer plaintext.Close()
 			secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				secureRequests.Add(1)
-				if r.URL.Path == "/upload" {
+				if r.URL.Path != "/redirected" {
+					if r.RequestURI != uploadTarget {
+						t.Errorf("upload URL changed: got %q, want %q", r.RequestURI, uploadTarget)
+					}
 					body, err := io.ReadAll(r.Body)
 					if err != nil {
 						t.Error(err)
@@ -69,7 +75,7 @@ func TestPreSignedUrlUpload(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			url := secure.URL + "/upload"
+			url := secure.URL + uploadTarget
 			if tc.insecure && tc.redirectStatus == 0 {
 				url = plaintext.URL
 			}
