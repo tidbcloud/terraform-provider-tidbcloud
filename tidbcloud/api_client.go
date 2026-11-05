@@ -158,13 +158,17 @@ func (d *ClientDelegate) GenerateUploadURL(params *importService.GenerateUploadU
 }
 
 func (d *ClientDelegate) PreSignedUrlUpload(url *string, uploadFile *os.File, size int64) error {
+	if _, err := validateApiUrl(*url); err != nil {
+		return fmt.Errorf("invalid upload URL: %w", err)
+	}
+
 	request, err := http.NewRequest("PUT", *url, uploadFile)
 	if err != nil {
 		return err
 	}
 	request.ContentLength = size
 
-	putRes, err := http.DefaultClient.Do(request)
+	putRes, err := newAPIHTTPClient(nil).Do(request)
 	if err != nil {
 		return err
 	}

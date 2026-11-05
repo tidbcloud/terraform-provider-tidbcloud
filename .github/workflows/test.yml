@@ -61,4 +61,4 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
       - uses: hashicorp/setup-terraform@v4
-      - run: go test -v -cover ./internal/provider/
+      - run: go test -v -cover ./internal/provider/ ./tidbcloud/
