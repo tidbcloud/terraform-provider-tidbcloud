@@ -6,10 +6,8 @@ terraform {
   }
 }
 
-provider "tidbcloud" {
-  public_key  = "fake_public_key"
-  private_key = "fake_private_key"
-}
+# Set TIDBCLOUD_PUBLIC_KEY and TIDBCLOUD_PRIVATE_KEY in the environment.
+provider "tidbcloud" {}
 
 resource "tidbcloud_import" "example_local" {
   project_id  = "fake_id"
