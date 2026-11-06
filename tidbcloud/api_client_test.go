@@ -15,11 +15,13 @@ func TestPreSignedUrlUpload(t *testing.T) {
 		name           string
 		insecure       bool
 		redirectStatus int
+		otherOrigin    bool
 		wantErr        bool
 	}{
 		{name: "HTTPS upload"},
 		{name: "HTTP upload", insecure: true, wantErr: true},
 		{name: "HTTPS redirect", redirectStatus: http.StatusFound},
+		{name: "HTTPS redirect to another origin", redirectStatus: http.StatusFound, otherOrigin: true},
 		{name: "HTTP 301 redirect", insecure: true, redirectStatus: http.StatusMovedPermanently, wantErr: true},
 		{name: "HTTP 302 redirect", insecure: true, redirectStatus: http.StatusFound, wantErr: true},
 		{name: "HTTP 303 redirect", insecure: true, redirectStatus: http.StatusSeeOther, wantErr: true},
@@ -34,6 +36,16 @@ func TestPreSignedUrlUpload(t *testing.T) {
 				plaintextRequests.Add(1)
 			}))
 			defer plaintext.Close()
+			redirectTarget := "/redirected"
+			if tc.insecure {
+				redirectTarget = plaintext.URL
+			} else if tc.otherOrigin {
+				other := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+					secureRequests.Add(1)
+				}))
+				defer other.Close()
+				redirectTarget = other.URL
+			}
 			secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				secureRequests.Add(1)
 				if r.URL.Path != "/redirected" {
@@ -48,11 +60,7 @@ func TestPreSignedUrlUpload(t *testing.T) {
 						t.Error("upload lost its method, file contents, or content length")
 					}
 					if tc.redirectStatus != 0 {
-						target := "/redirected"
-						if tc.insecure {
-							target = plaintext.URL
-						}
-						w.Header().Set("Location", target)
+						w.Header().Set("Location", redirectTarget)
 						w.WriteHeader(tc.redirectStatus)
 					}
 				}

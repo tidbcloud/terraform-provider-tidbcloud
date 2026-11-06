@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 func validateApiUrl(value string) (*url.URL, error) {
@@ -16,6 +17,35 @@ func validateApiUrl(value string) (*url.URL, error) {
 }
 
 func newAPIHTTPClient(transport http.RoundTripper) *http.Client {
+	client := newHTTPSClient(transport)
+	checkHTTPS := client.CheckRedirect
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if err := checkHTTPS(req, via); err != nil {
+			return err
+		}
+		// Digest can authenticate again even if net/http strips Authorization.
+		initial := via[0].URL
+		if !strings.EqualFold(req.URL.Hostname(), initial.Hostname()) || httpsPort(req.URL) != httpsPort(initial) {
+			return errors.New("API redirects must stay on the original host and port")
+		}
+		return nil
+	}
+	return client
+}
+
+func httpsPort(u *url.URL) string {
+	port := u.Port()
+	if port == "" {
+		return "443"
+	}
+	port = strings.TrimLeft(port, "0")
+	if port == "" {
+		return "0"
+	}
+	return port
+}
+
+func newHTTPSClient(transport http.RoundTripper) *http.Client {
 	return &http.Client{
 		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {

@@ -115,9 +115,15 @@ brew install hashicorp/tap/terraform
 
 See [TiDB Cloud Terraform Integration Overview](https://docs.pingcap.com/tidbcloud/terraform-tidbcloud-provider-overview) for more details.
 
+### API credentials
+
+Set `public_key` and `private_key` in the provider block, or omit them and set `TIDBCLOUD_PUBLIC_KEY` and `TIDBCLOUD_PRIVATE_KEY` in the environment. In CI, inject the keys from your secret store. Keep real keys out of version control.
+
+Rotate keys according to your organization's policy: create a replacement key with the required permissions, update all consumers, verify access, then delete the old key. Revoke potentially compromised keys immediately. See [API key management](https://docs.pingcap.com/tidbcloud/api/v1beta#section/Authentication/API-Key-Management) for creation and deletion instructions.
+
 ### API endpoint overrides
 
-`TIDBCLOUD_HOST`, `TIDBCLOUD_DEDICATED_ENDPOINT`, `TIDBCLOUD_SERVERLESS_ENDPOINT`, and `TIDBCLOUD_IAM_ENDPOINT` override the API endpoints. Use absolute HTTPS URLs for hosts you trust; custom hosts and ports are supported. HTTP endpoints and redirects to HTTP are rejected. Local mock APIs must use HTTPS with a certificate trusted by the provider process.
+`TIDBCLOUD_HOST`, `TIDBCLOUD_DEDICATED_ENDPOINT`, `TIDBCLOUD_SERVERLESS_ENDPOINT`, and `TIDBCLOUD_IAM_ENDPOINT` override the API endpoints. Use absolute HTTPS URLs for hosts you trust; custom hosts and ports are supported. API redirects must stay on HTTPS with the same hostname and effective port (443 by default). Local mock APIs must use HTTPS with a certificate trusted by the provider process.
 
 ## Developing the Provider
 

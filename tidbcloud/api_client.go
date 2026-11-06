@@ -168,7 +168,7 @@ func (d *ClientDelegate) PreSignedUrlUpload(url *string, uploadFile *os.File, si
 	}
 	request.ContentLength = size
 
-	putRes, err := newAPIHTTPClient(nil).Do(request)
+	putRes, err := newHTTPSClient(nil).Do(request)
 	if err != nil {
 		return err
 	}

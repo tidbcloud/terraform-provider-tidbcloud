@@ -186,3 +186,45 @@ func TestAPIRedirectLimit(t *testing.T) {
 		t.Fatalf("expected 10 requests, got %d", got)
 	}
 }
+
+func TestAPIRedirectOrigin(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		target  string
+		allowed bool
+	}{
+		{"different host", "https://other.example/next", false},
+		{"subdomain", "https://sub.api.example/next", false},
+		{"different port", "https://api.example:8443/next", false},
+		{"same host and default port", "https://API.EXAMPLE:443/next", true},
+		{"same port with leading zeros", "https://api.example:00443/next", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var reachedTarget bool
+			client := newAPIHTTPClient(roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+				resp := &http.Response{Request: r, StatusCode: http.StatusOK, Body: http.NoBody}
+				if r.URL.Path == "/start" {
+					resp.StatusCode = http.StatusFound
+					resp.Header = http.Header{"Location": {tc.target}}
+				} else {
+					reachedTarget = true
+				}
+				return resp, nil
+			}))
+
+			resp, err := client.Get("https://api.example/start")
+			if resp != nil {
+				_ = resp.Body.Close()
+			}
+			if (err == nil) != tc.allowed || reachedTarget != tc.allowed {
+				t.Errorf("reached target = %t, error = %v, want redirect allowed = %t", reachedTarget, err, tc.allowed)
+			}
+		})
+	}
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
