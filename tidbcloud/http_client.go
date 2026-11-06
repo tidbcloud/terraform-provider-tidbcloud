@@ -34,10 +34,15 @@ func newAPIHTTPClient(transport http.RoundTripper) *http.Client {
 }
 
 func httpsPort(u *url.URL) string {
-	if port := u.Port(); port != "" {
-		return port
+	port := u.Port()
+	if port == "" {
+		return "443"
 	}
-	return "443"
+	port = strings.TrimLeft(port, "0")
+	if port == "" {
+		return "0"
+	}
+	return port
 }
 
 func newHTTPSClient(transport http.RoundTripper) *http.Client {

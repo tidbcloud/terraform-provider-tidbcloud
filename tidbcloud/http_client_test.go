@@ -197,6 +197,7 @@ func TestAPIRedirectOrigin(t *testing.T) {
 		{"subdomain", "https://sub.api.example/next", false},
 		{"different port", "https://api.example:8443/next", false},
 		{"same host and default port", "https://API.EXAMPLE:443/next", true},
+		{"same port with leading zeros", "https://api.example:00443/next", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var reachedTarget bool
