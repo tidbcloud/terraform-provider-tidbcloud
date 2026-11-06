@@ -117,7 +117,7 @@ See [TiDB Cloud Terraform Integration Overview](https://docs.pingcap.com/tidbclo
 
 ### API credentials
 
-Pass API keys through `TIDBCLOUD_PUBLIC_KEY` and `TIDBCLOUD_PRIVATE_KEY`. In CI, store the keys in your CI secret store or a secrets manager and inject them into these environment variables. Do not commit real keys to Terraform configuration or variable files.
+Set `public_key` and `private_key` in the provider block, or omit them and set `TIDBCLOUD_PUBLIC_KEY` and `TIDBCLOUD_PRIVATE_KEY` in the environment. In CI, inject the keys from your secret store. Keep real keys out of version control.
 
 Rotate keys according to your organization's policy: create a replacement key with the required permissions, update all consumers, verify access, then delete the old key. Revoke potentially compromised keys immediately. See [API key management](https://docs.pingcap.com/tidbcloud/api/v1beta#section/Authentication/API-Key-Management) for creation and deletion instructions.
 

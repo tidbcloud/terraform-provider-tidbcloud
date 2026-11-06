@@ -23,11 +23,12 @@ terraform {
 
 # Instructions for getting an API Key
 # https://docs.pingcap.com/tidbcloud/api/v1beta#section/Authentication/API-Key-Management
-# Pass the keys through environment variables.
-# In CI, inject these values from your CI secret store or a secrets manager.
-# export TIDBCLOUD_PUBLIC_KEY="fake_public_key"
-# export TIDBCLOUD_PRIVATE_KEY="fake_private_key"
+# To use TIDBCLOUD_PUBLIC_KEY and TIDBCLOUD_PRIVATE_KEY from the environment,
+# omit the two key arguments below.
 provider "tidbcloud" {
+  public_key  = "fake_public_key"
+  private_key = "fake_private_key"
+
   # Set sync = true for synchronous operations on tidbcloud_cluster,
   # tidbcloud_backup, tidbcloud_import, and tidbcloud_restore.
   # Other resources are always managed synchronously.

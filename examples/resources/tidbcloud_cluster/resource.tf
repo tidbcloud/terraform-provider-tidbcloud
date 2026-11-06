@@ -6,9 +6,10 @@ terraform {
   }
 }
 
-# Set TIDBCLOUD_PUBLIC_KEY and TIDBCLOUD_PRIVATE_KEY in the environment.
 provider "tidbcloud" {
-  sync = true
+  public_key  = "fake_public_key"
+  private_key = "fake_private_key"
+  sync        = true
 }
 
 resource "tidbcloud_cluster" "dedicated_tier_cluster" {
