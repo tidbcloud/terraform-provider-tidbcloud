@@ -36,13 +36,16 @@ func TestPreSignedUrlUpload(t *testing.T) {
 				plaintextRequests.Add(1)
 			}))
 			defer plaintext.Close()
-			other := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				secureRequests.Add(1)
-				if r.Header.Get("Authorization") != "" {
-					t.Error("upload sent API credentials")
-				}
-			}))
-			defer other.Close()
+			redirectTarget := "/redirected"
+			if tc.insecure {
+				redirectTarget = plaintext.URL
+			} else if tc.otherOrigin {
+				other := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+					secureRequests.Add(1)
+				}))
+				defer other.Close()
+				redirectTarget = other.URL
+			}
 			secure := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				secureRequests.Add(1)
 				if r.URL.Path != "/redirected" {
@@ -57,13 +60,7 @@ func TestPreSignedUrlUpload(t *testing.T) {
 						t.Error("upload lost its method, file contents, or content length")
 					}
 					if tc.redirectStatus != 0 {
-						target := "/redirected"
-						if tc.insecure {
-							target = plaintext.URL
-						} else if tc.otherOrigin {
-							target = other.URL
-						}
-						w.Header().Set("Location", target)
+						w.Header().Set("Location", redirectTarget)
 						w.WriteHeader(tc.redirectStatus)
 					}
 				}

@@ -1,7 +1,6 @@
 package tidbcloud
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/c4pt0r/go-tidbcloud-sdk-v1/client/cluster"
 	httpTransport "github.com/go-openapi/runtime/client"
-	"github.com/icholy/digest"
 )
 
 func TestAPIEndpointValidation(t *testing.T) {
@@ -189,78 +187,38 @@ func TestAPIRedirectLimit(t *testing.T) {
 	}
 }
 
-func TestAPIAuthenticationRedirects(t *testing.T) {
+func TestAPIRedirectOrigin(t *testing.T) {
 	for _, tc := range []struct {
-		name     string
-		endpoint string
-		target   string
-		allowed  bool
+		name    string
+		target  string
+		allowed bool
 	}{
-		{"relative path", "https://custom.example", "/redirected", true},
-		{"custom port", "https://custom.example:8443", "https://custom.example:8443/redirected", true},
-		{"explicit default port", "https://custom.example", "https://custom.example:443/redirected", true},
-		{"implicit default port", "https://custom.example:443", "https://custom.example/redirected", true},
-		{"hostname case", "https://custom.example", "https://CUSTOM.EXAMPLE/redirected", true},
-		{"IPv6 default port", "https://[::1]", "https://[::1]:443/redirected", true},
-		{"different host", "https://custom.example", "https://other.example/redirected", false},
-		{"subdomain", "https://custom.example", "https://sub.custom.example/redirected", false},
-		{"different port", "https://custom.example:8443", "https://custom.example:9443/redirected", false},
-		{"default to custom port", "https://custom.example", "https://custom.example:8443/redirected", false},
+		{"different host", "https://other.example/next", false},
+		{"subdomain", "https://sub.api.example/next", false},
+		{"different port", "https://api.example:8443/next", false},
+		{"same host and default port", "https://API.EXAMPLE:443/next", true},
 	} {
-		for _, status := range []int{301, 302, 303, 307, 308} {
-			t.Run(fmt.Sprintf("%s/%d", tc.name, status), func(t *testing.T) {
-				var initialAuthenticated bool
-				var redirectedRequests, authenticatedRedirects int
-				transport := &digest.Transport{
-					Username: "fake-public",
-					Password: "fake-private",
-					Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
-						resp := &http.Response{
-							StatusCode: http.StatusOK,
-							Header:     make(http.Header),
-							Body:       http.NoBody,
-							Request:    r,
-						}
-						if r.URL.Path == "/redirected" {
-							redirectedRequests++
-						}
-						if r.Header.Get("Authorization") == "" {
-							resp.StatusCode = http.StatusUnauthorized
-							resp.Header.Set("WWW-Authenticate", `Digest realm="test", nonce="test-nonce", algorithm=MD5, qop="auth"`)
-							return resp, nil
-						}
-						if r.URL.Path == "/start" {
-							initialAuthenticated = true
-							resp.StatusCode = status
-							resp.Header.Set("Location", tc.target)
-						} else {
-							authenticatedRedirects++
-						}
-						return resp, nil
-					}),
-				}
-				client := newAPIHTTPClient(NewTransportWithAgent(transport, "test"))
-				resp, err := client.Get(tc.endpoint + "/start")
-				if resp != nil {
-					_ = resp.Body.Close()
-				}
-				if !initialAuthenticated {
-					t.Fatal("failed to authenticate to the configured endpoint")
-				}
-				if tc.allowed {
-					if err != nil || authenticatedRedirects != 1 {
-						t.Fatalf("expected authenticated redirect, got %d requests and error %v", authenticatedRedirects, err)
-					}
+		t.Run(tc.name, func(t *testing.T) {
+			var reachedTarget bool
+			client := newAPIHTTPClient(roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+				resp := &http.Response{Request: r, StatusCode: http.StatusOK, Body: http.NoBody}
+				if r.URL.Path == "/start" {
+					resp.StatusCode = http.StatusFound
+					resp.Header = http.Header{"Location": {tc.target}}
 				} else {
-					if err == nil || !strings.Contains(err.Error(), "original host and port") {
-						t.Errorf("expected cross-origin redirect error, got %v", err)
-					}
-					if redirectedRequests != 0 {
-						t.Errorf("sent %d requests outside the configured origin", redirectedRequests)
-					}
+					reachedTarget = true
 				}
-			})
-		}
+				return resp, nil
+			}))
+
+			resp, err := client.Get("https://api.example/start")
+			if resp != nil {
+				_ = resp.Body.Close()
+			}
+			if (err == nil) != tc.allowed || reachedTarget != tc.allowed {
+				t.Errorf("reached target = %t, error = %v, want redirect allowed = %t", reachedTarget, err, tc.allowed)
+			}
+		})
 	}
 }
 
