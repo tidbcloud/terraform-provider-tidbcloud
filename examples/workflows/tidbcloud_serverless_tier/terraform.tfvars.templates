@@ -1,3 +1,3 @@
+cluster_name = "cluster0"
 # Provide a strong, unique password via TF_VAR_password or Terraform's prompt.
 # password =
-cluster_name = "cluster0"
