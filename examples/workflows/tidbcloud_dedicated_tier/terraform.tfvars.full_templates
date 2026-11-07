@@ -1,4 +1,5 @@
 # Provide a strong, unique password via TF_VAR_password or Terraform's prompt.
+# password =
 cluster_name = "cluster0"
 cloud_provider = "AWS"
 cloud_provider_region = "us-east-1"
