@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	tidbcloud "github.com/tidbcloud/terraform-provider-tidbcloud/tidbcloud"
 	iam "github.com/tidbcloud/tidbcloud-cli/pkg/tidbcloud/v1beta1/iam"
 )
 
@@ -50,6 +51,20 @@ func (mr *MockTiDBCloudIAMClientMockRecorder) CreateSQLUser(ctx, clusterID, body
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSQLUser", reflect.TypeOf((*MockTiDBCloudIAMClient)(nil).CreateSQLUser), ctx, clusterID, body)
 }
 
+// DeleteMember mocks base method.
+func (m *MockTiDBCloudIAMClient) DeleteMember(ctx context.Context, userID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteMember", ctx, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteMember indicates an expected call of DeleteMember.
+func (mr *MockTiDBCloudIAMClientMockRecorder) DeleteMember(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteMember", reflect.TypeOf((*MockTiDBCloudIAMClient)(nil).DeleteMember), ctx, userID)
+}
+
 // DeleteSQLUser mocks base method.
 func (m *MockTiDBCloudIAMClient) DeleteSQLUser(ctx context.Context, clusterID, userName string) (*iam.ApiBasicResp, error) {
 	m.ctrl.T.Helper()
@@ -80,6 +95,36 @@ func (mr *MockTiDBCloudIAMClientMockRecorder) GetSQLUser(ctx, clusterID, userNam
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSQLUser", reflect.TypeOf((*MockTiDBCloudIAMClient)(nil).GetSQLUser), ctx, clusterID, userName)
 }
 
+// InviteMembers mocks base method.
+func (m *MockTiDBCloudIAMClient) InviteMembers(ctx context.Context, body *tidbcloud.OpenApiInviteUsersReq) (*tidbcloud.OpenApiInviteUsersRsp, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InviteMembers", ctx, body)
+	ret0, _ := ret[0].(*tidbcloud.OpenApiInviteUsersRsp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InviteMembers indicates an expected call of InviteMembers.
+func (mr *MockTiDBCloudIAMClientMockRecorder) InviteMembers(ctx, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InviteMembers", reflect.TypeOf((*MockTiDBCloudIAMClient)(nil).InviteMembers), ctx, body)
+}
+
+// ListMembers mocks base method.
+func (m *MockTiDBCloudIAMClient) ListMembers(ctx context.Context, params *tidbcloud.ListMembersParams) (*tidbcloud.OpenApiListUsersRsp, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMembers", ctx, params)
+	ret0, _ := ret[0].(*tidbcloud.OpenApiListUsersRsp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListMembers indicates an expected call of ListMembers.
+func (mr *MockTiDBCloudIAMClientMockRecorder) ListMembers(ctx, params interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMembers", reflect.TypeOf((*MockTiDBCloudIAMClient)(nil).ListMembers), ctx, params)
+}
+
 // ListSQLUsers mocks base method.
 func (m *MockTiDBCloudIAMClient) ListSQLUsers(ctx context.Context, clusterID string, pageSize *int32, pageToken *string) (*iam.ApiListSqlUsersRsp, error) {
 	m.ctrl.T.Helper()
@@ -93,6 +138,20 @@ func (m *MockTiDBCloudIAMClient) ListSQLUsers(ctx context.Context, clusterID str
 func (mr *MockTiDBCloudIAMClientMockRecorder) ListSQLUsers(ctx, clusterID, pageSize, pageToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSQLUsers", reflect.TypeOf((*MockTiDBCloudIAMClient)(nil).ListSQLUsers), ctx, clusterID, pageSize, pageToken)
+}
+
+// UpdateMember mocks base method.
+func (m *MockTiDBCloudIAMClient) UpdateMember(ctx context.Context, userID string, body *tidbcloud.OpenApiUpdateUserReq) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateMember", ctx, userID, body)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateMember indicates an expected call of UpdateMember.
+func (mr *MockTiDBCloudIAMClientMockRecorder) UpdateMember(ctx, userID, body interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMember", reflect.TypeOf((*MockTiDBCloudIAMClient)(nil).UpdateMember), ctx, userID, body)
 }
 
 // UpdateSQLUser mocks base method.
