@@ -1,3 +1,4 @@
 cluster_name = "cluster0"
-password     = "12345678"
+# Provide a strong, unique password via TF_VAR_password or Terraform's prompt.
+# password =
 project_name   = "project_name"
