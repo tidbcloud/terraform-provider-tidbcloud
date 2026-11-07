@@ -1,2 +1,2 @@
+# Provide a strong, unique password via TF_VAR_password or Terraform's prompt.
 cluster_name = "cluster0"
-password     = "12345678"

@@ -66,10 +66,10 @@ brew install hashicorp/tap/terraform
   git clone git@github.com:tidbcloud/terraform-provider-tidbcloud.git
   ```
 
-2. Go to the examples/workflows/tidbcloud_serverless_cluster directory.
+2. Go to the examples/workflows/tidbcloud_serverless_tier directory.
 
   ```
-  cd examples/workflows/tidbcloud_serverless_cluster
+  cd examples/workflows/tidbcloud_serverless_tier
   ```
 
 3. The provider requires an API key set in an environment variable. Copy the [API key](https://docs.pingcap.com/tidbcloud/api/v1beta#section/Authentication/API-Key-Management) from the TiDB Cloud console and create the environment variables.
@@ -79,12 +79,13 @@ brew install hashicorp/tap/terraform
   export TIDBCLOUD_PRIVATE_KEY=fake_private_key
   ```
 
-4. Rename the `terraform.tfvars.templates` to `terraform.tfvars` and change the variables as you wish. You can also pass them by environment variables.
+4. Copy `terraform.tfvars.templates` to `terraform.tfvars` and edit the cluster settings.
 
   ```
-  export TF_VAR_password=fake_password
-  export TF_VAR_cluster_name=fake_cluster_name
+  cp terraform.tfvars.templates terraform.tfvars
   ```
+
+  The examples do not include a password. Enter a strong, unique database password when Terraform prompts, or supply `TF_VAR_password` from your secret store for non-interactive runs.
 
 5. Execute the following commands to create a serverless tier
 
