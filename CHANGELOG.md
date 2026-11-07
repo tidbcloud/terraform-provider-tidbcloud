@@ -1,3 +1,8 @@
+## Unreleased
+
+**Feature**
+* Add `tidbcloud_dedicated_changefeed` resource and `tidbcloud_dedicated_changefeed` / `tidbcloud_dedicated_changefeeds` data sources to manage changefeeds of TiDB Cloud Dedicated clusters ([#264](https://github.com/tidbcloud/terraform-provider-tidbcloud/issues/264))
+
 ## [0.2.0] 2023-01-16
 
 **Feature**
