@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -350,6 +351,9 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"version": schema.StringAttribute{
 				MarkdownDescription: "The version of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"created_by": schema.StringAttribute{
 				MarkdownDescription: "The email of the creator of the cluster.",
@@ -368,6 +372,9 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"update_time": schema.StringAttribute{
 				MarkdownDescription: "The time the cluster was last updated.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_prefix": schema.StringAttribute{
 				MarkdownDescription: "The unique prefix in SQL user name.",
@@ -379,16 +386,25 @@ func (r *serverlessClusterResource) Schema(_ context.Context, _ resource.SchemaR
 			"state": schema.StringAttribute{
 				MarkdownDescription: "The state of the cluster.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"labels": schema.MapAttribute{
 				MarkdownDescription: "The labels of the cluster.",
 				Computed:            true,
 				ElementType:         types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"annotations": schema.MapAttribute{
 				MarkdownDescription: "The annotations of the cluster.",
 				Computed:            true,
 				ElementType:         types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
