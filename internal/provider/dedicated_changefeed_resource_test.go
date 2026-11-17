@@ -427,41 +427,51 @@ resource "tidbcloud_dedicated_changefeed" "test" {
 	})
 }
 
-func TestUTDedicatedChangefeedResourceFailedState(t *testing.T) {
+// TestUTDedicatedChangefeedResourceUnhealthyState fails the changefeed out of
+// band and then attempts an in-place downstream edit: for FAILED and ERROR
+// alike, Update must refuse with a clear error before calling the API.
+func TestUTDedicatedChangefeedResourceUnhealthyState(t *testing.T) {
 	setupTestEnv()
 
-	s, store := newChangefeedMock(t)
-	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
-		return s, nil
-	})()
+	for _, state := range []string{tidbcloud.ChangefeedStateFailed, tidbcloud.ChangefeedStateError} {
+		t.Run(state, func(t *testing.T) {
+			s, store := newChangefeedMock(t)
+			defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+				return s, nil
+			})()
 
-	resource.Test(t, resource.TestCase{
-		IsUnitTest:               true,
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
-			},
-			// Simulate the changefeed failing out of band, then attempt an
-			// in-place downstream edit: the resource must refuse with a clear
-			// FAILED-state error instead of an opaque API failure.
-			{
-				PreConfig: func() {
-					store.changefeed.State = Ptr(tidbcloud.ChangefeedStateFailed)
+			resource.Test(t, resource.TestCase{
+				IsUnitTest:               true,
+				PreCheck:                 func() { testAccPreCheck(t) },
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+					},
+					{
+						PreConfig: func() {
+							store.changefeed.State = Ptr(state)
+							store.changefeed.Error = Ptr("sink unreachable")
+						},
+						Config:      testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc-v2", ""),
+						ExpectError: regexp.MustCompile(fmt.Sprintf("in the %s state and cannot be modified", state)),
+					},
+					// Recover the fake so the framework's automatic destroy
+					// works.
+					{
+						PreConfig: func() {
+							if store.pauseCalls != 0 {
+								t.Errorf("the update of a %s changefeed called PauseChangefeed %d times", state, store.pauseCalls)
+							}
+							store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning)
+							store.changefeed.Error = nil
+						},
+						Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+					},
 				},
-				Config:      testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc-v2", ""),
-				ExpectError: regexp.MustCompile("FAILED state and cannot be modified"),
-			},
-			// Recover the fake so the framework's automatic destroy works.
-			{
-				PreConfig: func() {
-					store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning)
-				},
-				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
-			},
-		},
-	})
+			})
+		})
+	}
 }
 
 // TestUTDedicatedChangefeedResourceCreateKeepsStateOnReadFailure reproduces

@@ -177,7 +177,7 @@ func (r *dedicatedChangefeedResource) Configure(_ context.Context, req resource.
 
 func (r *dedicatedChangefeedResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the `KAFKA` and `MYSQL` downstream types are supported for now. Editing the downstream configuration of a RUNNING changefeed automatically pauses it for the duration of the edit and resumes it afterwards (the API requires the PAUSED state for edits); replication catches up after the resume. Every update is planned against the live state of the changefeed and sequences the pause, resume, scale and edit calls it needs, so a pause-state change can be combined with a `replication_capacity` change or a downstream edit in one apply. A changefeed in the FAILED state rejects all modifications.",
+		MarkdownDescription: "dedicated changefeed resource manages a changefeed (CDC replication) of a TiDB Cloud Dedicated cluster. Only the `KAFKA` and `MYSQL` downstream types are supported for now. Editing the downstream configuration of a RUNNING changefeed automatically pauses it for the duration of the edit and resumes it afterwards (the API requires the PAUSED state for edits); replication catches up after the resume. Every update is planned against the live state of the changefeed and sequences the pause, resume, scale and edit calls it needs, so a pause-state change can be combined with a `replication_capacity` change or a downstream edit in one apply. A changefeed in the `FAILED` or `ERROR` state cannot be modified: resolve the failure out of band or recreate the changefeed first (an `ERROR` changefeed may also recover on its own).",
 		Attributes: map[string]schema.Attribute{
 			"changefeed_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the changefeed.",
@@ -669,15 +669,8 @@ func (r dedicatedChangefeedResource) Read(ctx context.Context, req resource.Read
 	// Not an error: that would block every plan of the configuration,
 	// including the -replace that recovers the changefeed. Update rejects
 	// changes to it with a clear error instead.
-	if changefeed.State != nil && (*changefeed.State == tidbcloud.ChangefeedStateFailed || *changefeed.State == tidbcloud.ChangefeedStateError) {
-		msg := ""
-		if changefeed.Error != nil {
-			msg = ": " + *changefeed.Error
-		}
-		resp.Diagnostics.AddWarning(
-			"Changefeed not healthy",
-			fmt.Sprintf("Changefeed %s is in the %s state%s. It cannot be modified until the failure is resolved out of band or it is recreated (terraform apply -replace).", data.ChangefeedId.ValueString(), *changefeed.State, msg),
-		)
+	if isUnhealthyChangefeedState(changefeed.State) {
+		resp.Diagnostics.AddWarning("Changefeed not healthy", unhealthyChangefeedMessage(changefeed))
 	}
 
 	diags = resp.State.Set(ctx, &data)
@@ -787,13 +780,10 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 		resp.Diagnostics.AddError("Update Error", fmt.Sprintf("Unable to read changefeed %s before update, got error: %s", changefeedId, err))
 		return
 	}
-	// A FAILED changefeed accepts no mutations (pause/resume/scale/edit all
-	// reject); surface that as a clear error instead of an opaque API failure.
-	if current.State != nil && *current.State == tidbcloud.ChangefeedStateFailed {
-		resp.Diagnostics.AddError(
-			"Invalid Update",
-			fmt.Sprintf("Changefeed %s is in FAILED state and cannot be modified. Resolve the failure out of band (or recreate the changefeed, e.g. terraform apply -replace) before changing its configuration.", changefeedId),
-		)
+	// A FAILED or ERROR changefeed is not sequenced: surface that as a clear
+	// error instead of an opaque API failure.
+	if isUnhealthyChangefeedState(current.State) {
+		resp.Diagnostics.AddError("Invalid Update", unhealthyChangefeedMessage(current))
 		return
 	}
 	// Let an operation that is still in flight (for example one started out
@@ -1154,6 +1144,27 @@ func isTransitionalChangefeedState(state string) bool {
 	return false
 }
 
+// isUnhealthyChangefeedState reports whether the changefeed stopped on an
+// error: FAILED (fatal) or ERROR (may recover on its own). Read warns about
+// such a changefeed, Update refuses to modify it and the state waiters stop
+// waiting for it.
+func isUnhealthyChangefeedState(state *string) bool {
+	return state != nil && (*state == tidbcloud.ChangefeedStateFailed || *state == tidbcloud.ChangefeedStateError)
+}
+
+// unhealthyChangefeedMessage describes a FAILED or ERROR changefeed and how to
+// get it modifiable again.
+func unhealthyChangefeedMessage(changefeed *tidbcloud.Changefeed) string {
+	id, msg := "", ""
+	if changefeed.Id != nil {
+		id = *changefeed.Id
+	}
+	if changefeed.Error != nil {
+		msg = ": " + *changefeed.Error
+	}
+	return fmt.Sprintf("Changefeed %s is in the %s state and cannot be modified%s. Resolve the failure out of band or recreate the changefeed (terraform apply -replace) before changing its configuration; a changefeed in the ERROR state may also recover on its own.", id, *changefeed.State, msg)
+}
+
 // pausedFromChangefeedState maps a live changefeed state to the `paused`
 // attribute. ok is false for states with no meaningful answer (FAILED, ERROR,
 // DELETING, DELETED, missing or unrecognised), where the caller keeps what it
@@ -1217,7 +1228,7 @@ func dedicatedChangefeedStateRefreshFunc(ctx context.Context, changefeedId strin
 		if changefeed.State == nil {
 			return nil, "", fmt.Errorf("changefeed %s has no state", changefeedId)
 		}
-		if *changefeed.State == tidbcloud.ChangefeedStateFailed || *changefeed.State == tidbcloud.ChangefeedStateError {
+		if isUnhealthyChangefeedState(changefeed.State) {
 			msg := ""
 			if changefeed.Error != nil {
 				msg = *changefeed.Error
