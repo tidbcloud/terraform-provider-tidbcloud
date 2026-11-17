@@ -978,6 +978,61 @@ resource "terraform_data" "mysql" {
 	})
 }
 
+// TestUTDedicatedChangefeedResourceUnknownCapacityPlans plans an update of a
+// paused changefeed whose replication_capacity comes from another resource
+// and is unknown until apply. It resolves to the current capacity, so nothing
+// is scaled and the plan must not be rejected as a scale while paused.
+func TestUTDedicatedChangefeedResourceUnknownCapacityPlans(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testUTDedicatedChangefeedResourceMysqlExprConfig("", `"test-changefeed-mysql"`, `"4rcu"`, "paused = true", testUTChangefeedMysqlObject),
+			},
+			{
+				Config: testUTDedicatedChangefeedResourceMysqlExprConfig(`
+resource "terraform_data" "capacity" {
+	input = "4rcu"
+}
+`, `"test-changefeed-mysql"`, "terraform_data.capacity.output", "paused = true", testUTChangefeedMysqlObject),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectUnknownValue(changefeedResourceName, tfjsonpath.New("replication_capacity"))},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "replication_capacity", "4rcu"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
+					func(_ *terraform.State) error {
+						if store.scaleCalls != 0 {
+							return fmt.Errorf("an unchanged capacity was scaled: ScaleChangefeed called %d times", store.scaleCalls)
+						}
+						return nil
+					},
+				),
+			},
+			// A capacity that resolves to another value is still rejected,
+			// at apply.
+			{
+				Config: testUTDedicatedChangefeedResourceMysqlExprConfig(`
+resource "terraform_data" "capacity" {
+	input = "8rcu"
+}
+`, `"test-changefeed-mysql"`, "terraform_data.capacity.output", "paused = true", testUTChangefeedMysqlObject),
+				ExpectError: regexp.MustCompile(`Error running apply[\s\S]*paused and stays paused`),
+			},
+		},
+	})
+}
+
 // TestAccDedicatedChangefeedResource exercises the full changefeed lifecycle
 // against a live cluster. It requires a running TiDB Cloud Dedicated cluster
 // and a Kafka broker reachable from it, so it is gated behind extra

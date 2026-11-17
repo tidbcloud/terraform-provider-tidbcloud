@@ -718,7 +718,9 @@ func (r *dedicatedChangefeedResource) ModifyPlan(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if planPaused.IsUnknown() {
+	// An unknown capacity may resolve to the current one; Update repeats the
+	// check once it is known.
+	if planPaused.IsUnknown() || planCapacity.IsUnknown() {
 		return
 	}
 	capacityChanging := !planCapacity.Equal(stateCapacity)
