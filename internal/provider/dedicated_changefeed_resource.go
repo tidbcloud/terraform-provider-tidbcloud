@@ -30,8 +30,9 @@ const (
 )
 
 var (
-	_ resource.Resource               = &dedicatedChangefeedResource{}
-	_ resource.ResourceWithModifyPlan = &dedicatedChangefeedResource{}
+	_ resource.Resource                   = &dedicatedChangefeedResource{}
+	_ resource.ResourceWithModifyPlan     = &dedicatedChangefeedResource{}
+	_ resource.ResourceWithValidateConfig = &dedicatedChangefeedResource{}
 )
 
 type changefeedNetworkInfoModel struct {
@@ -995,28 +996,59 @@ func (r dedicatedChangefeedResource) ImportState(ctx context.Context, req resour
 	resource.ImportStatePassthroughID(ctx, path.Root("changefeed_id"), req, resp)
 }
 
-// validateChangefeedDownstream ensures exactly the downstream configuration
-// matching downstream_type is present. The check cannot be expressed with plan
-// modifiers because it spans multiple attributes.
+// ValidateConfig reports a downstream block that does not match
+// downstream_type when the configuration is validated or planned. A value that
+// is still unknown is not judged: Create and Update repeat the check on the
+// known plan.
+func (r *dedicatedChangefeedResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var downstreamType types.String
+	var kafka, mysql types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("downstream_type"), &downstreamType)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("kafka"), &kafka)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("mysql"), &mysql)...)
+	if resp.Diagnostics.HasError() || downstreamType.IsUnknown() {
+		return
+	}
+	configured := func(o types.Object) types.Bool {
+		if o.IsUnknown() {
+			return types.BoolUnknown()
+		}
+		return types.BoolValue(!o.IsNull())
+	}
+	if err := changefeedDownstreamError(downstreamType.ValueString(), configured(kafka), configured(mysql)); err != nil {
+		resp.Diagnostics.AddError("Invalid Configuration", err.Error())
+	}
+}
+
+// validateChangefeedDownstream is the apply-time form of the ValidateConfig
+// check, on a fully known plan.
 func validateChangefeedDownstream(data *dedicatedChangefeedResourceData) error {
-	switch data.DownstreamType.ValueString() {
+	return changefeedDownstreamError(data.DownstreamType.ValueString(), types.BoolValue(data.Kafka != nil), types.BoolValue(data.Mysql != nil))
+}
+
+// changefeedDownstreamError ensures exactly the downstream configuration
+// matching downstream_type is configured. kafka and mysql say whether the
+// block is configured; an unknown one is not judged.
+func changefeedDownstreamError(downstreamType string, kafka, mysql types.Bool) error {
+	missing := func(b types.Bool) bool { return !b.IsUnknown() && !b.ValueBool() }
+	switch downstreamType {
 	case tidbcloud.ChangefeedDownstreamTypeKafka:
-		if data.Kafka == nil {
+		if missing(kafka) {
 			return fmt.Errorf("`kafka` must be configured when `downstream_type` is %q", tidbcloud.ChangefeedDownstreamTypeKafka)
 		}
-		if data.Mysql != nil {
+		if mysql.ValueBool() {
 			return fmt.Errorf("`mysql` must not be configured when `downstream_type` is %q", tidbcloud.ChangefeedDownstreamTypeKafka)
 		}
 	case tidbcloud.ChangefeedDownstreamTypeMySQL:
-		if data.Mysql == nil {
+		if missing(mysql) {
 			return fmt.Errorf("`mysql` must be configured when `downstream_type` is %q", tidbcloud.ChangefeedDownstreamTypeMySQL)
 		}
-		if data.Kafka != nil {
+		if kafka.ValueBool() {
 			return fmt.Errorf("`kafka` must not be configured when `downstream_type` is %q", tidbcloud.ChangefeedDownstreamTypeMySQL)
 		}
 	default:
 		return fmt.Errorf("unsupported `downstream_type` %q; available values: %q, %q",
-			data.DownstreamType.ValueString(), tidbcloud.ChangefeedDownstreamTypeKafka, tidbcloud.ChangefeedDownstreamTypeMySQL)
+			downstreamType, tidbcloud.ChangefeedDownstreamTypeKafka, tidbcloud.ChangefeedDownstreamTypeMySQL)
 	}
 	return nil
 }

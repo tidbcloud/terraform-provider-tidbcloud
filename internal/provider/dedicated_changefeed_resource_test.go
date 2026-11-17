@@ -393,7 +393,58 @@ func TestUTDedicatedChangefeedResource(t *testing.T) {
 	})
 }
 
+// TestUTDedicatedChangefeedResourceDownstreamMismatch checks that a
+// downstream block that does not match downstream_type is rejected when the
+// configuration is planned, before anything is applied.
 func TestUTDedicatedChangefeedResourceDownstreamMismatch(t *testing.T) {
+	setupTestEnv()
+
+	for _, tc := range []struct {
+		name        string
+		config      string
+		expectError string
+	}{
+		{
+			name:        "MYSQL without mysql",
+			config:      testUTDedicatedChangefeedResourceMysqlExprConfig("", `"test-changefeed"`, `"4rcu"`, "", "null"),
+			expectError: "`mysql` must be configured",
+		},
+		{
+			name:        "KAFKA with mysql",
+			config:      testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", "mysql = "+testUTChangefeedMysqlObject),
+			expectError: "`mysql` must not be configured",
+		},
+		{
+			name:        "MYSQL with kafka",
+			config:      testUTDedicatedChangefeedResourceMysqlExprConfig("", `"test-changefeed"`, `"4rcu"`, "kafka = "+testUTChangefeedKafkaObject, testUTChangefeedMysqlObject),
+			expectError: "`kafka` must not be configured",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s, _ := newChangefeedMock(t)
+			defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+				return s, nil
+			})()
+
+			resource.Test(t, resource.TestCase{
+				IsUnitTest:               true,
+				PreCheck:                 func() { testAccPreCheck(t) },
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config:      tc.config,
+						ExpectError: regexp.MustCompile(`Error running pre-apply plan[\s\S]*` + regexp.QuoteMeta(tc.expectError)),
+					},
+				},
+			})
+		})
+	}
+}
+
+// TestUTDedicatedChangefeedResourceUnknownDownstreamPlans creates a changefeed
+// whose mysql object comes from another resource: while it is unknown, the
+// plan-time check must not take it for missing.
+func TestUTDedicatedChangefeedResourceUnknownDownstreamPlans(t *testing.T) {
 	setupTestEnv()
 
 	s, _ := newChangefeedMock(t)
@@ -401,27 +452,22 @@ func TestUTDedicatedChangefeedResourceDownstreamMismatch(t *testing.T) {
 		return s, nil
 	})()
 
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
 	resource.Test(t, resource.TestCase{
 		IsUnitTest:               true,
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: `
-resource "tidbcloud_dedicated_changefeed" "test" {
-	cluster_id           = "10001"
-	name                 = "test-changefeed"
-	replication_capacity = "4rcu"
-	downstream_type      = "MYSQL"
-	network_info = {
-		network_type = "NETWORK_TYPE_PUBLIC"
-	}
-	start_position = {
-		mode = "FROM_NOW"
-	}
+				Config: testUTDedicatedChangefeedResourceMysqlExprConfig(`
+resource "terraform_data" "mysql" {
+	input = `+testUTChangefeedMysqlObject+`
 }
-`,
-				ExpectError: regexp.MustCompile("`mysql` must be configured"),
+`, `"test-changefeed-mysql"`, `"4rcu"`, "", "terraform_data.mysql.output"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectUnknownValue(changefeedResourceName, tfjsonpath.New("mysql"))},
+				},
+				Check: resource.TestCheckResourceAttr(changefeedResourceName, "mysql.connection.username", "app-writer"),
 			},
 		},
 	})
@@ -1148,6 +1194,25 @@ const testUTChangefeedMysqlObject = `{
 			endpoint = "mysql.example.com:3306"
 			username = "app-writer"
 			password = "pw-secret"
+		}
+	}`
+
+const testUTChangefeedKafkaObject = `{
+		broker = {
+			version          = "KAFKA_VERSION_3XX"
+			broker_endpoints = "broker1:9092"
+		}
+		authentication = {
+			auth_type = "DISABLE"
+		}
+		data_format = {
+			protocol = "PROTOCOL_CANAL_JSON"
+		}
+		topic_partition_config = {
+			dispatch_type      = "DISPATCH_TYPE_ONE_TOPIC"
+			default_topic      = "tidb-cdc"
+			replication_factor = 3
+			partition_num      = 6
 		}
 	}`
 
