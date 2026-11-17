@@ -32,6 +32,8 @@ type changefeedStore struct {
 	// failGet makes GetChangefeed return an error, for exercising the
 	// create-succeeded-but-read-failed path.
 	failGet bool
+	// failPause makes PauseChangefeed return an error.
+	failPause bool
 	// advanceCheckpoint moves the checkpoint on every GetChangefeed, as a
 	// replicating changefeed does.
 	advanceCheckpoint bool
@@ -115,6 +117,9 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 
 	s.EXPECT().PauseChangefeed(gomock.Any(), changefeedId).DoAndReturn(
 		func(_ context.Context, _ string) error {
+			if store.failPause {
+				return &tidbcloud.ChangefeedAPIError{StatusCode: http.StatusInternalServerError}
+			}
 			store.pauseCalls++
 			store.changefeed.State = Ptr(tidbcloud.ChangefeedStatePaused)
 			return nil
@@ -477,6 +482,79 @@ func TestUTDedicatedChangefeedResourceCreateKeepsStateOnReadFailure(t *testing.T
 	// Two deletes prove step 1 persisted state: one for the tainted replace,
 	// one for the framework's final destroy. Without the persisted state the
 	// first changefeed is never tracked, so only the final destroy deletes.
+	if store.deleteCalls != 2 {
+		t.Fatalf("expected 2 DeleteChangefeed calls (tainted replace + destroy), got %d", store.deleteCalls)
+	}
+}
+
+// TestUTDedicatedChangefeedResourceCreatePaused creates a changefeed with
+// paused = true: Create waits for RUNNING, pauses once and waits for PAUSED.
+func TestUTDedicatedChangefeedResourceCreatePaused(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", "paused = true"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "changefeed_id", "cf-1"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "true"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
+					func(_ *terraform.State) error {
+						if store.pauseCalls != 1 || store.resumeCalls != 0 {
+							return fmt.Errorf("expected 1 PauseChangefeed and 0 ResumeChangefeed calls, got %d and %d", store.pauseCalls, store.resumeCalls)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// TestUTDedicatedChangefeedResourceCreatePausedPauseFailure fails the pause of
+// a paused = true create: the apply must fail and keep the created changefeed
+// in (tainted) state, so the next apply replaces it instead of creating a
+// second one.
+func TestUTDedicatedChangefeedResourceCreatePausedPauseFailure(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				PreConfig:   func() { store.failPause = true },
+				Config:      testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", "paused = true"),
+				ExpectError: regexp.MustCompile("Unable to call PauseChangefeed"),
+			},
+			{
+				PreConfig: func() { store.failPause = false },
+				Config:    testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", "paused = true"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "true"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
+				),
+			},
+		},
+	})
+	// One delete for the tainted replace, one for the final destroy.
 	if store.deleteCalls != 2 {
 		t.Fatalf("expected 2 DeleteChangefeed calls (tainted replace + destroy), got %d", store.deleteCalls)
 	}
