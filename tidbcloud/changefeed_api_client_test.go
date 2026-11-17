@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
@@ -13,6 +14,41 @@ func newTestChangefeedDelegate(srv *httptest.Server) *DedicatedClientDelegate {
 	return &DedicatedClientDelegate{
 		httpClient:        srv.Client(),
 		changefeedBaseURL: srv.URL + DedicatedAPIBasePath,
+	}
+}
+
+// The changefeed requests carry the digest credentials, so the delegate's
+// HTTP client must apply the same redirect policy as the other API clients.
+func TestChangefeedClientRedirectPolicy(t *testing.T) {
+	client, err := NewDedicatedClientDelegate("fake-public", "fake-private", "https://api.example", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkRedirect := client.(*DedicatedClientDelegate).httpClient.CheckRedirect
+	if checkRedirect == nil {
+		t.Fatal("the changefeed HTTP client follows redirects with the default policy")
+	}
+	initial := &http.Request{URL: &url.URL{Scheme: "https", Host: "api.example", Path: "/v1beta1/changefeeds/cf-1"}}
+	for _, tc := range []struct {
+		name    string
+		target  string
+		allowed bool
+	}{
+		{"same host over http", "http://api.example/v1beta1/changefeeds/cf-1", false},
+		{"different host", "https://other.example/v1beta1/changefeeds/cf-1", false},
+		{"different port", "https://api.example:8443/v1beta1/changefeeds/cf-1", false},
+		{"same host and port", "https://api.example/v1beta1/changefeeds/cf-2", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			target, err := url.Parse(tc.target)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = checkRedirect(&http.Request{URL: target}, []*http.Request{initial})
+			if (err == nil) != tc.allowed {
+				t.Errorf("error = %v, want redirect allowed = %t", err, tc.allowed)
+			}
+		})
 	}
 }
 

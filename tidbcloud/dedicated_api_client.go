@@ -111,7 +111,7 @@ func NewDedicatedClientDelegate(publicKey string, privateKey string, dedicatedEn
 	}
 	return &DedicatedClientDelegate{
 		dc:                dc,
-		httpClient:        &http.Client{Transport: transport},
+		httpClient:        newAPIHTTPClient(transport),
 		changefeedBaseURL: fmt.Sprintf("%s://%s%s", dedicatedURL.Scheme, dedicatedURL.Host, DedicatedAPIBasePath),
 	}, nil
 }
