@@ -21,8 +21,11 @@ import (
 )
 
 const (
-	changefeedTimeout      = 30 * time.Minute
-	changefeedPollInterval = 10 * time.Second
+	changefeedTimeout = 30 * time.Minute
+	// changefeedRecoveryTimeout bounds the wait before the best-effort resume
+	// of a changefeed left paused by an interrupted update.
+	changefeedRecoveryTimeout = 5 * time.Minute
+	changefeedPollInterval    = 10 * time.Second
 )
 
 var (
@@ -811,32 +814,31 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 			return
 		}
 		if isDownstreamConfigChanging || desiredPaused {
-			if !r.pauseChangefeed(ctx, changefeedId, &resp.Diagnostics) {
+			if err := r.provider.DedicatedClient.PauseChangefeed(ctx, changefeedId); err != nil {
+				resp.Diagnostics.AddError("Pause Error", fmt.Sprintf("Unable to call PauseChangefeed, got error: %s", err))
 				return
 			}
-		}
-		if isDownstreamConfigChanging {
 			// Best-effort recovery: never leave a feed paused that this update
-			// paused only for the edit.
+			// paused only for the edit. It covers every failure after the
+			// pause is accepted, the wait for PAUSED included.
 			resumed := desiredPaused
 			defer func() {
-				if resumed {
-					return
-				}
-				if err := r.provider.DedicatedClient.ResumeChangefeed(ctx, changefeedId); err != nil {
-					resp.Diagnostics.AddWarning(
-						"Changefeed left paused",
-						fmt.Sprintf("The downstream-config edit failed and the automatic resume of changefeed %s also failed: %s. Resume it manually or re-run terraform apply.", changefeedId, err),
-					)
+				if !resumed {
+					r.resumeTemporarilyPausedChangefeed(ctx, changefeedId, &resp.Diagnostics)
 				}
 			}()
-			if !r.editChangefeedDownstreamConfig(ctx, changefeedId, &plan, &resp.Diagnostics) {
+			if !r.waitChangefeedPaused(ctx, changefeedId, &resp.Diagnostics) {
 				return
 			}
-			if !desiredPaused {
-				resumed = true
-				if !r.resumeChangefeed(ctx, changefeedId, &resp.Diagnostics) {
+			if isDownstreamConfigChanging {
+				if !r.editChangefeedDownstreamConfig(ctx, changefeedId, &plan, &resp.Diagnostics) {
 					return
+				}
+				if !desiredPaused {
+					resumed = true
+					if !r.resumeChangefeed(ctx, changefeedId, &resp.Diagnostics) {
+						return
+					}
 				}
 			}
 		}
@@ -858,20 +860,35 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 	resp.Diagnostics.Append(diags...)
 }
 
-// pauseChangefeed pauses a running changefeed and waits for PAUSED.
-func (r dedicatedChangefeedResource) pauseChangefeed(ctx context.Context, changefeedId string, diags *diag.Diagnostics) bool {
-	if err := r.provider.DedicatedClient.PauseChangefeed(ctx, changefeedId); err != nil {
-		diags.AddError("Pause Error", fmt.Sprintf("Unable to call PauseChangefeed, got error: %s", err))
-		return false
-	}
+// waitChangefeedPaused waits for a changefeed whose pause was accepted to
+// reach PAUSED.
+func (r dedicatedChangefeedResource) waitChangefeedPaused(ctx context.Context, changefeedId string, diags *diag.Diagnostics) bool {
 	if _, err := WaitDedicatedChangefeedState(ctx, changefeedTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
-		[]string{tidbcloud.ChangefeedStatePausing, tidbcloud.ChangefeedStateRunning, tidbcloud.ChangefeedStateWarning},
+		changefeedPausingStates,
 		[]string{tidbcloud.ChangefeedStatePaused},
 	); err != nil {
 		diags.AddError("Pause Error", fmt.Sprintf("Changefeed %s is not paused, get error: %s", changefeedId, err))
 		return false
 	}
 	return true
+}
+
+// resumeTemporarilyPausedChangefeed resumes a changefeed that an update paused
+// only for a downstream edit and could not finish. A failure is reported as a
+// warning next to the error that interrupted the update.
+func (r dedicatedChangefeedResource) resumeTemporarilyPausedChangefeed(ctx context.Context, changefeedId string, diags *diag.Diagnostics) {
+	// The pause may still be in flight when its wait is what failed; give it
+	// a bounded chance to settle, since a resume needs the PAUSED state.
+	_, _ = WaitDedicatedChangefeedState(ctx, changefeedRecoveryTimeout, changefeedPollInterval, changefeedId, r.provider.DedicatedClient,
+		changefeedPausingStates,
+		[]string{tidbcloud.ChangefeedStatePaused},
+	)
+	if err := r.provider.DedicatedClient.ResumeChangefeed(ctx, changefeedId); err != nil {
+		diags.AddWarning(
+			"Changefeed left paused",
+			fmt.Sprintf("Changefeed %s was paused for a downstream-config edit that did not complete, and the automatic resume failed: %s. Resume it out of band, or set paused = false and re-run terraform apply: with paused unset, an apply leaves a paused changefeed paused.", changefeedId, err),
+		)
+	}
 }
 
 // resumeChangefeed resumes a paused changefeed and waits for RUNNING.
@@ -1093,6 +1110,9 @@ var (
 	// changefeedRunningStates are the states a changefeed is in once it is
 	// replicating.
 	changefeedRunningStates = []string{tidbcloud.ChangefeedStateRunning, tidbcloud.ChangefeedStateWarning}
+	// changefeedPausingStates are the states a changefeed passes through after
+	// its pause is accepted, before it is PAUSED.
+	changefeedPausingStates = []string{tidbcloud.ChangefeedStatePausing, tidbcloud.ChangefeedStateRunning, tidbcloud.ChangefeedStateWarning}
 	// changefeedSteadyStates are the states an Update can start sequencing from.
 	changefeedSteadyStates = []string{tidbcloud.ChangefeedStateRunning, tidbcloud.ChangefeedStateWarning, tidbcloud.ChangefeedStatePaused}
 	// changefeedTransitionalStates are in-flight operations to wait out.

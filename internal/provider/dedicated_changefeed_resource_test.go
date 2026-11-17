@@ -34,6 +34,10 @@ type changefeedStore struct {
 	failGet bool
 	// failPause makes PauseChangefeed return an error.
 	failPause bool
+	// failGetAfterPause makes the first GetChangefeed after each accepted
+	// PauseChangefeed return an error, as a transient read failure would.
+	failGetAfterPause bool
+	failNextGet       bool
 	// advanceCheckpoint moves the checkpoint on every GetChangefeed, as a
 	// replicating changefeed does.
 	advanceCheckpoint bool
@@ -91,7 +95,8 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 
 	s.EXPECT().GetChangefeed(gomock.Any(), changefeedId).DoAndReturn(
 		func(_ context.Context, _ string) (*tidbcloud.Changefeed, error) {
-			if store.failGet {
+			if store.failGet || store.failNextGet {
+				store.failNextGet = false
 				return nil, &tidbcloud.ChangefeedAPIError{StatusCode: http.StatusInternalServerError}
 			}
 			if store.deleted {
@@ -140,6 +145,7 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 			}
 			store.pauseCalls++
 			store.changefeed.State = Ptr(tidbcloud.ChangefeedStatePaused)
+			store.failNextGet = store.failGetAfterPause
 			return nil
 		}).AnyTimes()
 
@@ -874,6 +880,53 @@ func TestUTDedicatedChangefeedResourceEditFailureResumes(t *testing.T) {
 				},
 				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+				),
+			},
+		},
+	})
+}
+
+// TestUTDedicatedChangefeedResourcePauseWaitFailureResumes fails the read that
+// follows the temporary pause of a downstream edit, with paused unset: the
+// pause was accepted, so the recovery must resume the changefeed. Left paused,
+// the retried apply would take the paused state for the unmanaged one and
+// never resume it.
+func TestUTDedicatedChangefeedResourcePauseWaitFailureResumes(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+			},
+			{
+				PreConfig:   func() { store.failGetAfterPause = true },
+				Config:      testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc-v2", ""),
+				ExpectError: regexp.MustCompile("is not paused"),
+			},
+			// The retried apply edits a running changefeed and leaves it
+			// running.
+			{
+				PreConfig: func() {
+					store.failGetAfterPause = false
+					if store.pauseCalls != 1 || store.resumeCalls != 1 {
+						t.Errorf("expected the failed apply to pause and resume once, got %d PauseChangefeed and %d ResumeChangefeed calls", store.pauseCalls, store.resumeCalls)
+					}
+				},
+				Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc-v2", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "kafka.topic_partition_config.default_topic", "tidb-cdc-v2"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "paused", "false"),
 					resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
 				),
 			},
