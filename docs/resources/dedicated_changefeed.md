@@ -98,7 +98,7 @@ resource "tidbcloud_dedicated_changefeed" "mysql_example" {
 - `cluster_id` (String) The ID of the cluster.
 - `downstream_type` (String) The downstream type of the changefeed. Available values: `KAFKA`, `MYSQL`.
 - `name` (String) The user-defined name of the changefeed.
-- `network_info` (Attributes) The network configuration for the downstream connection. (see [below for nested schema](#nestedatt--network_info))
+- `network_info` (Attributes) The network configuration for the downstream connection. To connect through a private endpoint configured in the TiDB Cloud console, set `network_type` to `NETWORK_TYPE_PRIVATE_LINK` with `sink_endpoint_id` and `ports`. A changefeed that reaches such an endpoint by its address under another network type is not counted as using it, and TiDB Cloud deletes a private endpoint after 30 days without use. (see [below for nested schema](#nestedatt--network_info))
 - `replication_capacity` (String) The replication capacity (RCU) of the changefeed, for example `4rcu`. Changing it scales the changefeed via an independent ScaleChangefeed call that requires the RUNNING state. The scale is sequenced with a pause-state change in the same apply (resume, then scale; or scale, then pause). The only combination that is rejected, at plan time, is changing it on a changefeed that is paused and stays paused.
 - `start_position` (Attributes) The start position for the changefeed. (see [below for nested schema](#nestedatt--start_position))
 

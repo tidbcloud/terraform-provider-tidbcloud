@@ -221,7 +221,7 @@ func (r *dedicatedChangefeedResource) Schema(_ context.Context, _ resource.Schem
 				},
 			},
 			"network_info": schema.SingleNestedAttribute{
-				MarkdownDescription: "The network configuration for the downstream connection.",
+				MarkdownDescription: "The network configuration for the downstream connection. To connect through a private endpoint configured in the TiDB Cloud console, set `network_type` to `NETWORK_TYPE_PRIVATE_LINK` with `sink_endpoint_id` and `ports`. A changefeed that reaches such an endpoint by its address under another network type is not counted as using it, and TiDB Cloud deletes a private endpoint after 30 days without use.",
 				Required:            true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.RequiresReplace(),
