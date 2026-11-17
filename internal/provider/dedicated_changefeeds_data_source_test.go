@@ -77,6 +77,7 @@ data "tidbcloud_dedicated_changefeed" "test" {
 					resource.TestCheckResourceAttr(dataSourceName, "name", "test-changefeed"),
 					resource.TestCheckResourceAttr(dataSourceName, "downstream_type", "KAFKA"),
 					resource.TestCheckResourceAttr(dataSourceName, "state", "RUNNING"),
+					resource.TestCheckResourceAttr(dataSourceName, "paused", "false"),
 					resource.TestCheckResourceAttr(dataSourceName, "kafka.broker.broker_endpoints", "broker1:9092"),
 					resource.TestCheckResourceAttr(dataSourceName, "kafka.topic_partition_config.partition_num", "6"),
 					resource.TestCheckNoResourceAttr(dataSourceName, "mysql"),
@@ -101,9 +102,12 @@ func TestUTDedicatedChangefeedsDataSource(t *testing.T) {
 			if params.ClusterId != "10001" {
 				return &tidbcloud.ListChangefeedsResponse{}, nil
 			}
+			paused, failed := testUTChangefeed(), testUTChangefeed()
+			paused.Id, paused.State = Ptr("cf-2"), Ptr(tidbcloud.ChangefeedStatePaused)
+			failed.Id, failed.State = Ptr("cf-3"), Ptr(tidbcloud.ChangefeedStateFailed)
 			return &tidbcloud.ListChangefeedsResponse{
-				Changefeeds: []tidbcloud.Changefeed{*testUTChangefeed()},
-				TotalSize:   Ptr(int32(1)),
+				Changefeeds: []tidbcloud.Changefeed{*testUTChangefeed(), *paused, *failed},
+				TotalSize:   Ptr(int32(3)),
 			}, nil
 		}).AnyTimes()
 
@@ -120,10 +124,14 @@ data "tidbcloud_dedicated_changefeeds" "test" {
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, "changefeeds.#", "1"),
+					resource.TestCheckResourceAttr(dataSourceName, "changefeeds.#", "3"),
 					resource.TestCheckResourceAttr(dataSourceName, "changefeeds.0.changefeed_id", "cf-1"),
 					resource.TestCheckResourceAttr(dataSourceName, "changefeeds.0.name", "test-changefeed"),
 					resource.TestCheckResourceAttr(dataSourceName, "changefeeds.0.state", "RUNNING"),
+					resource.TestCheckResourceAttr(dataSourceName, "changefeeds.0.paused", "false"),
+					resource.TestCheckResourceAttr(dataSourceName, "changefeeds.1.paused", "true"),
+					// FAILED gives no paused answer.
+					resource.TestCheckNoResourceAttr(dataSourceName, "changefeeds.2.paused"),
 				),
 			},
 		},

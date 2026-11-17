@@ -24,6 +24,7 @@ type ChangefeedItem struct {
 	ReplicationCapacity types.String `tfsdk:"replication_capacity"`
 	DownstreamType      types.String `tfsdk:"downstream_type"`
 	State               types.String `tfsdk:"state"`
+	Paused              types.Bool   `tfsdk:"paused"`
 	CreateTime          types.String `tfsdk:"create_time"`
 	CheckpointTso       types.String `tfsdk:"checkpoint_tso"`
 	CheckpointTs        types.String `tfsdk:"checkpoint_ts"`
@@ -57,7 +58,7 @@ func (d *dedicatedChangefeedsDataSource) Configure(_ context.Context, req dataso
 
 func (d *dedicatedChangefeedsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "dedicated changefeeds data source",
+		MarkdownDescription: "dedicated changefeeds data source. Lists the changefeeds of a cluster, of every downstream type, without their downstream configuration. The `tidbcloud_dedicated_changefeed` data source reads the configuration of a single changefeed, for the `KAFKA` and `MYSQL` downstream types only.",
 		Attributes: map[string]schema.Attribute{
 			"cluster_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the cluster.",
@@ -90,6 +91,10 @@ func (d *dedicatedChangefeedsDataSource) Schema(_ context.Context, _ datasource.
 						},
 						"state": schema.StringAttribute{
 							MarkdownDescription: "The current state of the changefeed.",
+							Computed:            true,
+						},
+						"paused": schema.BoolAttribute{
+							MarkdownDescription: changefeedPausedDataSourceDescription,
 							Computed:            true,
 						},
 						"create_time": schema.StringAttribute{
@@ -138,6 +143,7 @@ func (d *dedicatedChangefeedsDataSource) Read(ctx context.Context, req datasourc
 			ReplicationCapacity: types.StringValue(changefeed.ReplicationCapacity),
 			DownstreamType:      types.StringValue(changefeed.DownstreamType),
 			State:               types.StringPointerValue(changefeed.State),
+			Paused:              changefeedPausedValue(changefeed.State),
 			CreateTime:          types.StringPointerValue(changefeed.CreateTime),
 			CheckpointTso:       types.StringPointerValue(changefeed.CheckpointTso),
 			CheckpointTs:        types.StringPointerValue(changefeed.CheckpointTs),

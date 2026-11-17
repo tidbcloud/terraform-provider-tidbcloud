@@ -3,12 +3,12 @@
 page_title: "tidbcloud_dedicated_changefeed Data Source - terraform-provider-tidbcloud"
 subcategory: ""
 description: |-
-  dedicated changefeed data source
+  dedicated changefeed data source. Only the KAFKA and MYSQL downstream configurations are exposed: for a changefeed with another downstream type (S3, GCS, AZURE_BLOB) both kafka and mysql are null, and the Avro schema registry configuration of a Kafka changefeed is not exposed.
 ---
 
 # tidbcloud_dedicated_changefeed (Data Source)
 
-dedicated changefeed data source
+dedicated changefeed data source. Only the `KAFKA` and `MYSQL` downstream configurations are exposed: for a changefeed with another downstream type (`S3`, `GCS`, `AZURE_BLOB`) both `kafka` and `mysql` are null, and the Avro schema registry configuration of a Kafka changefeed is not exposed.
 
 ## Example Usage
 
@@ -41,6 +41,7 @@ output "output" {
 - `mysql` (Attributes) The MySQL downstream configuration. The password is input-only and never returned by the API. (see [below for nested schema](#nestedatt--mysql))
 - `name` (String) The user-defined name of the changefeed.
 - `network_info` (Attributes) The network configuration for the downstream connection. (see [below for nested schema](#nestedatt--network_info))
+- `paused` (Boolean) Whether the changefeed is paused, derived from `state`: `PAUSED`, `PAUSING` and `EDITING` read as `true`. Null when the state gives no answer (`FAILED`, `ERROR`, `DELETING`, `DELETED`).
 - `replication_capacity` (String) The replication capacity (RCU) of the changefeed.
 - `start_position` (Attributes) The start position for the changefeed. (see [below for nested schema](#nestedatt--start_position))
 - `state` (String) The current state of the changefeed.

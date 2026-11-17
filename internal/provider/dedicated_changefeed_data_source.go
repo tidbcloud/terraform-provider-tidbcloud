@@ -16,6 +16,7 @@ type dedicatedChangefeedDataSourceData struct {
 	Name                types.String                  `tfsdk:"name"`
 	ReplicationCapacity types.String                  `tfsdk:"replication_capacity"`
 	DownstreamType      types.String                  `tfsdk:"downstream_type"`
+	Paused              types.Bool                    `tfsdk:"paused"`
 	NetworkInfo         *changefeedNetworkInfoModel   `tfsdk:"network_info"`
 	StartPosition       *changefeedStartPositionModel `tfsdk:"start_position"`
 	TableConfig         *changefeedTableConfigModel   `tfsdk:"table_config"`
@@ -55,7 +56,7 @@ func (d *dedicatedChangefeedDataSource) Configure(_ context.Context, req datasou
 
 func (d *dedicatedChangefeedDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "dedicated changefeed data source",
+		MarkdownDescription: "dedicated changefeed data source. Only the `KAFKA` and `MYSQL` downstream configurations are exposed: for a changefeed with another downstream type (`S3`, `GCS`, `AZURE_BLOB`) both `kafka` and `mysql` are null, and the Avro schema registry configuration of a Kafka changefeed is not exposed.",
 		Attributes: map[string]schema.Attribute{
 			"changefeed_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the changefeed.",
@@ -75,6 +76,10 @@ func (d *dedicatedChangefeedDataSource) Schema(_ context.Context, _ datasource.S
 			},
 			"downstream_type": schema.StringAttribute{
 				MarkdownDescription: "The downstream type of the changefeed.",
+				Computed:            true,
+			},
+			"paused": schema.BoolAttribute{
+				MarkdownDescription: changefeedPausedDataSourceDescription,
 				Computed:            true,
 			},
 			"network_info": schema.SingleNestedAttribute{
@@ -402,6 +407,7 @@ func (d *dedicatedChangefeedDataSource) Read(ctx context.Context, req datasource
 	data.Name = types.StringValue(changefeed.Name)
 	data.ReplicationCapacity = types.StringValue(changefeed.ReplicationCapacity)
 	data.DownstreamType = types.StringValue(changefeed.DownstreamType)
+	data.Paused = changefeedPausedValue(changefeed.State)
 	data.NetworkInfo = networkInfoAPIToModel(ctx, changefeed.NetworkInfo)
 	data.StartPosition = startPositionAPIToModel(changefeed.StartPosition)
 	data.TableConfig = tableConfigAPIToModel(ctx, changefeed.TableConfig)
@@ -415,4 +421,15 @@ func (d *dedicatedChangefeedDataSource) Read(ctx context.Context, req datasource
 
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
+}
+
+const changefeedPausedDataSourceDescription = "Whether the changefeed is paused, derived from `state`: `PAUSED`, `PAUSING` and `EDITING` read as `true`. Null when the state gives no answer (`FAILED`, `ERROR`, `DELETING`, `DELETED`)."
+
+// changefeedPausedValue maps a live changefeed state to the data sources'
+// paused attribute; null for the states pausedFromChangefeedState cannot answer.
+func changefeedPausedValue(state *string) types.Bool {
+	if paused, ok := pausedFromChangefeedState(state); ok {
+		return types.BoolValue(paused)
+	}
+	return types.BoolNull()
 }

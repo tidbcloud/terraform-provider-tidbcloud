@@ -3,12 +3,12 @@
 page_title: "tidbcloud_dedicated_changefeeds Data Source - terraform-provider-tidbcloud"
 subcategory: ""
 description: |-
-  dedicated changefeeds data source
+  dedicated changefeeds data source. Lists the changefeeds of a cluster, of every downstream type, without their downstream configuration. The tidbcloud_dedicated_changefeed data source reads the configuration of a single changefeed, for the KAFKA and MYSQL downstream types only.
 ---
 
 # tidbcloud_dedicated_changefeeds (Data Source)
 
-dedicated changefeeds data source
+dedicated changefeeds data source. Lists the changefeeds of a cluster, of every downstream type, without their downstream configuration. The `tidbcloud_dedicated_changefeed` data source reads the configuration of a single changefeed, for the `KAFKA` and `MYSQL` downstream types only.
 
 ## Example Usage
 
@@ -49,5 +49,6 @@ Read-Only:
 - `downstream_type` (String) The downstream type of the changefeed.
 - `error` (String) The error message when the changefeed is in the `FAILED` or `ERROR` state.
 - `name` (String) The user-defined name of the changefeed.
+- `paused` (Boolean) Whether the changefeed is paused, derived from `state`: `PAUSED`, `PAUSING` and `EDITING` read as `true`. Null when the state gives no answer (`FAILED`, `ERROR`, `DELETING`, `DELETED`).
 - `replication_capacity` (String) The replication capacity (RCU) of the changefeed.
 - `state` (String) The current state of the changefeed.
