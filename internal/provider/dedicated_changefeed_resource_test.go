@@ -50,6 +50,24 @@ func (s *changefeedStore) get() *tidbcloud.Changefeed {
 	return &cf
 }
 
+// withoutChangefeedPasswords returns the downstream configs as the API stores
+// and returns them: without the input-only passwords.
+func withoutChangefeedPasswords(kafka *tidbcloud.ChangefeedKafkaConfig, mysql *tidbcloud.ChangefeedMySQLConfig) (*tidbcloud.ChangefeedKafkaConfig, *tidbcloud.ChangefeedMySQLConfig) {
+	if kafka != nil && kafka.Authentication != nil {
+		k, auth := *kafka, *kafka.Authentication
+		auth.Password = nil
+		k.Authentication = &auth
+		kafka = &k
+	}
+	if mysql != nil && mysql.Connection != nil {
+		m, conn := *mysql, *mysql.Connection
+		conn.Password = nil
+		m.Connection = &conn
+		mysql = &m
+	}
+	return kafka, mysql
+}
+
 func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, *changefeedStore) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
@@ -61,6 +79,7 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 	s.EXPECT().CreateChangefeed(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, body *tidbcloud.CreateChangefeedRequest) (*tidbcloud.Changefeed, error) {
 			store.changefeed = *body.Changefeed
+			store.changefeed.Kafka, store.changefeed.Mysql = withoutChangefeedPasswords(body.Changefeed.Kafka, body.Changefeed.Mysql)
 			store.changefeed.Id = Ptr(changefeedId)
 			store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning)
 			store.changefeed.CreateTime = Ptr("2026-01-01T00:00:00Z")
@@ -110,8 +129,7 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 				return nil, &tidbcloud.ChangefeedAPIError{StatusCode: http.StatusInternalServerError}
 			}
 			store.changefeed.TableConfig = body.TableConfig
-			store.changefeed.Kafka = body.Kafka
-			store.changefeed.Mysql = body.Mysql
+			store.changefeed.Kafka, store.changefeed.Mysql = withoutChangefeedPasswords(body.Kafka, body.Mysql)
 			return store.get(), nil
 		}).AnyTimes()
 
@@ -728,6 +746,52 @@ func TestUTDedicatedChangefeedResourceDownstreamDrift(t *testing.T) {
 	})
 }
 
+// TestUTDedicatedChangefeedResourceKafkaSaslPassword creates a Kafka
+// changefeed with SASL credentials. The API never returns the password, so it
+// must be kept from the prior state on every read, without a diff.
+func TestUTDedicatedChangefeedResourceKafkaSaslPassword(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	checkCredentials := resource.ComposeAggregateTestCheckFunc(
+		resource.TestCheckResourceAttr(changefeedResourceName, "kafka.authentication.auth_type", "SASL_PLAIN"),
+		resource.TestCheckResourceAttr(changefeedResourceName, "kafka.authentication.username", "cdc-writer"),
+		resource.TestCheckResourceAttr(changefeedResourceName, "kafka.authentication.password", "kafka-secret"),
+		func(_ *terraform.State) error {
+			if got := store.changefeed.Kafka.Authentication.Password; got != nil {
+				return fmt.Errorf("the fake API must not return the password, got %q", *got)
+			}
+			return nil
+		},
+	)
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testUTDedicatedChangefeedResourceKafkaSaslConfig(),
+				Check:  checkCredentials,
+			},
+			{
+				RefreshState: true,
+				Check:        checkCredentials,
+			},
+			{
+				Config: testUTDedicatedChangefeedResourceKafkaSaslConfig(),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
 // TestUTDedicatedChangefeedResourceServerDefaultNoDiff guards the other half
 // of the read-time reconciliation: an attribute the configuration leaves
 // unset (kafka.broker.use_tls) that the API starts reporting with a
@@ -873,6 +937,43 @@ resource "tidbcloud_dedicated_changefeed" "test" {
 	}
 }
 `, username)
+}
+
+func testUTDedicatedChangefeedResourceKafkaSaslConfig() string {
+	return `
+resource "tidbcloud_dedicated_changefeed" "test" {
+	cluster_id           = "10001"
+	name                 = "test-changefeed-sasl"
+	replication_capacity = "4rcu"
+	downstream_type      = "KAFKA"
+	network_info = {
+		network_type = "NETWORK_TYPE_PUBLIC"
+	}
+	start_position = {
+		mode = "FROM_NOW"
+	}
+	kafka = {
+		broker = {
+			version          = "KAFKA_VERSION_3XX"
+			broker_endpoints = "broker1:9092,broker2:9092"
+		}
+		authentication = {
+			auth_type = "SASL_PLAIN"
+			username  = "cdc-writer"
+			password  = "kafka-secret"
+		}
+		data_format = {
+			protocol = "PROTOCOL_CANAL_JSON"
+		}
+		topic_partition_config = {
+			dispatch_type      = "DISPATCH_TYPE_ONE_TOPIC"
+			default_topic      = "tidb-cdc"
+			replication_factor = 3
+			partition_num      = 6
+		}
+	}
+}
+`
 }
 
 func testUTDedicatedChangefeedResourceConfig(replicationCapacity, defaultTopic, extra string) string {
