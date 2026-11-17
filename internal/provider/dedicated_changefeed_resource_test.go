@@ -1033,6 +1033,48 @@ resource "terraform_data" "capacity" {
 	})
 }
 
+// TestUTDedicatedChangefeedResourcePausedReplacement renames a paused
+// changefeed and changes its capacity in the same apply. The rename replaces
+// the changefeed, so nothing is scaled in place and the restriction on scaling
+// a paused changefeed does not apply.
+func TestUTDedicatedChangefeedResourcePausedReplacement(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testUTDedicatedChangefeedResourceMysqlExprConfig("", `"test-changefeed-mysql"`, `"4rcu"`, "paused = true", testUTChangefeedMysqlObject),
+			},
+			{
+				Config: testUTDedicatedChangefeedResourceMysqlExprConfig("", `"test-changefeed-mysql-v2"`, `"8rcu"`, "paused = true", testUTChangefeedMysqlObject),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(changefeedResourceName, plancheck.ResourceActionReplace)},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "name", "test-changefeed-mysql-v2"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "replication_capacity", "8rcu"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
+					func(_ *terraform.State) error {
+						if store.scaleCalls != 0 || store.deleteCalls != 1 {
+							return fmt.Errorf("expected a replacement without a scale, got %d ScaleChangefeed and %d DeleteChangefeed calls", store.scaleCalls, store.deleteCalls)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
 // TestAccDedicatedChangefeedResource exercises the full changefeed lifecycle
 // against a live cluster. It requires a running TiDB Cloud Dedicated cluster
 // and a Kafka broker reachable from it, so it is gated behind extra

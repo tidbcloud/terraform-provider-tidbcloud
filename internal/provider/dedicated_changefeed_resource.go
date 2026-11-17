@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -696,14 +697,19 @@ func scaleRequiresRunningError(capacityChanging, currentlyPaused, willBePaused b
 	return nil
 }
 
+// changefeedReplaceAttributes are the attributes the schema marks
+// RequiresReplace. ModifyPlan is not told which attributes require
+// replacement, so it compares them itself.
+var changefeedReplaceAttributes = []string{"cluster_id", "name", "downstream_type", "network_info", "start_position"}
+
 // ModifyPlan rejects the replication_capacity (RCU) change that cannot be
 // sequenced at PLAN time, so the user sees the constraint before apply
 // (ScaleChangefeed would otherwise fail at apply with a 400 "current status
 // paused, not allowed to Scale"). The current pause state is the refreshed
 // state, which Read derives from the live changefeed.
 func (r *dedicatedChangefeedResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	// Only meaningful on update: skip create (no prior capacity to change) and
-	// destroy (no plan).
+	// Only meaningful on an in-place update: skip create (no prior capacity to
+	// change) and destroy (no plan).
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
 		return
 	}
@@ -722,6 +728,19 @@ func (r *dedicatedChangefeedResource) ModifyPlan(ctx context.Context, req resour
 	// check once it is known.
 	if planPaused.IsUnknown() || planCapacity.IsUnknown() {
 		return
+	}
+	// A replacement scales nothing in place: the new changefeed is created
+	// with the planned capacity.
+	for _, name := range changefeedReplaceAttributes {
+		var planned, prior attr.Value
+		resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root(name), &planned)...)
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root(name), &prior)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if !planned.Equal(prior) {
+			return
+		}
 	}
 	capacityChanging := !planCapacity.Equal(stateCapacity)
 	if err := scaleRequiresRunningError(capacityChanging, statePaused.ValueBool(), planPaused.ValueBool()); err != nil {
