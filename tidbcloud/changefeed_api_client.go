@@ -283,9 +283,12 @@ func (d *DedicatedClientDelegate) CreateChangefeed(ctx context.Context, body *Cr
 	return &out, nil
 }
 
+// GetChangefeed bypasses the API-side cache: the state waiters, the update
+// sequencing and the reported checkpoint all need the live changefeed.
 func (d *DedicatedClientDelegate) GetChangefeed(ctx context.Context, changefeedId string) (*Changefeed, error) {
 	var out Changefeed
-	if err := d.doChangefeedRequest(ctx, http.MethodGet, "/changefeeds/"+url.PathEscape(changefeedId), nil, nil, &out); err != nil {
+	query := url.Values{"invalidateCache": {"true"}}
+	if err := d.doChangefeedRequest(ctx, http.MethodGet, "/changefeeds/"+url.PathEscape(changefeedId), query, nil, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

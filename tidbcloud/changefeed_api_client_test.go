@@ -75,8 +75,8 @@ func TestChangefeedRequestsHitExpectedEndpoints(t *testing.T) {
 	if cf.Id == nil || *cf.Id != "cf-1" || cf.State == nil || *cf.State != ChangefeedStateRunning {
 		t.Errorf("GetChangefeed returned unexpected changefeed: %+v", cf)
 	}
-	if last.method != http.MethodGet || last.path != "/v1beta1/changefeeds/cf-1" {
-		t.Errorf("GetChangefeed hit %s %s", last.method, last.path)
+	if last.method != http.MethodGet || last.path != "/v1beta1/changefeeds/cf-1" || last.query != "invalidateCache=true" {
+		t.Errorf("GetChangefeed hit %s %s?%s", last.method, last.path, last.query)
 	}
 
 	pageSize := int32(10)
