@@ -707,17 +707,22 @@ func (r *dedicatedChangefeedResource) ModifyPlan(ctx context.Context, req resour
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
 		return
 	}
-	var plan, state dedicatedChangefeedResourceData
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	// Read only what the check needs: decoding the whole plan fails while a
+	// nested object is still unknown.
+	var planPaused, statePaused types.Bool
+	var planCapacity, stateCapacity types.String
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("paused"), &planPaused)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("paused"), &statePaused)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("replication_capacity"), &planCapacity)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("replication_capacity"), &stateCapacity)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if plan.Paused.IsUnknown() {
+	if planPaused.IsUnknown() {
 		return
 	}
-	capacityChanging := !plan.ReplicationCapacity.Equal(state.ReplicationCapacity)
-	if err := scaleRequiresRunningError(capacityChanging, state.Paused.ValueBool(), plan.Paused.ValueBool()); err != nil {
+	capacityChanging := !planCapacity.Equal(stateCapacity)
+	if err := scaleRequiresRunningError(capacityChanging, statePaused.ValueBool(), planPaused.ValueBool()); err != nil {
 		resp.Diagnostics.AddAttributeError(path.Root("replication_capacity"), "Invalid Update", err.Error())
 	}
 }

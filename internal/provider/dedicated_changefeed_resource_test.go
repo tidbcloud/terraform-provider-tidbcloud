@@ -934,6 +934,50 @@ func TestUTDedicatedChangefeedResourcePauseWaitFailureResumes(t *testing.T) {
 	})
 }
 
+// TestUTDedicatedChangefeedResourceUnknownNestedConfigPlans plans an update
+// whose mysql object comes from another resource and is unknown until apply.
+func TestUTDedicatedChangefeedResourceUnknownNestedConfigPlans(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testUTDedicatedChangefeedResourceMysqlExprConfig("", `"test-changefeed-mysql"`, `"4rcu"`, "", testUTChangefeedMysqlObject),
+			},
+			// The object resolves to the same value, so the apply edits
+			// nothing.
+			{
+				Config: testUTDedicatedChangefeedResourceMysqlExprConfig(`
+resource "terraform_data" "mysql" {
+	input = `+testUTChangefeedMysqlObject+`
+}
+`, `"test-changefeed-mysql"`, `"4rcu"`, "", "terraform_data.mysql.output"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectUnknownValue(changefeedResourceName, tfjsonpath.New("mysql"))},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(changefeedResourceName, "mysql.connection.username", "app-writer"),
+					func(_ *terraform.State) error {
+						if store.pauseCalls != 0 {
+							return fmt.Errorf("an unchanged downstream config triggered an edit: PauseChangefeed called %d times", store.pauseCalls)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
 // TestAccDedicatedChangefeedResource exercises the full changefeed lifecycle
 // against a live cluster. It requires a running TiDB Cloud Dedicated cluster
 // and a Kafka broker reachable from it, so it is gated behind extra
@@ -990,6 +1034,37 @@ resource "tidbcloud_dedicated_changefeed" "test" {
 	}
 }
 `, username)
+}
+
+const testUTChangefeedMysqlObject = `{
+		connection = {
+			endpoint = "mysql.example.com:3306"
+			username = "app-writer"
+			password = "pw-secret"
+		}
+	}`
+
+// testUTDedicatedChangefeedResourceMysqlExprConfig renders a MySQL changefeed
+// whose name, replication_capacity and mysql are HCL expressions, so a test
+// can derive them from the resources declared in prefix.
+func testUTDedicatedChangefeedResourceMysqlExprConfig(prefix, name, replicationCapacity, extra, mysql string) string {
+	return fmt.Sprintf(`
+%s
+resource "tidbcloud_dedicated_changefeed" "test" {
+	cluster_id           = "10001"
+	name                 = %s
+	replication_capacity = %s
+	downstream_type      = "MYSQL"
+	%s
+	network_info = {
+		network_type = "NETWORK_TYPE_PUBLIC"
+	}
+	start_position = {
+		mode = "FROM_NOW"
+	}
+	mysql = %s
+}
+`, prefix, name, replicationCapacity, extra, mysql)
 }
 
 func testUTDedicatedChangefeedResourceKafkaSaslConfig() string {
