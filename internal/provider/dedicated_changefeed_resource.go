@@ -202,7 +202,7 @@ func (r *dedicatedChangefeedResource) Schema(_ context.Context, _ resource.Schem
 				},
 			},
 			"replication_capacity": schema.StringAttribute{
-				MarkdownDescription: "The replication capacity (RCU) of the changefeed, for example `4rcu`. Changing it scales the changefeed via an independent ScaleChangefeed call that requires the RUNNING state. The scale is sequenced with a pause-state change in the same apply (resume, then scale; or scale, then pause). The only combination that is rejected, at plan time, is changing it on a changefeed that is paused and stays paused.",
+				MarkdownDescription: "The replication capacity (RCU) of the changefeed, for example `4rcu`. Changing it scales the changefeed via an independent ScaleChangefeed call that requires the RUNNING state. The scale is sequenced with a pause-state change in the same apply (resume, then scale; or scale, then pause). The only combination that is rejected is changing it on a changefeed that is paused and stays paused: the plan warns about it, and the apply fails before it calls the API.",
 				Required:            true,
 			},
 			"downstream_type": schema.StringAttribute{
@@ -696,11 +696,11 @@ func scaleRequiresRunningError(capacityChanging, currentlyPaused, willBePaused b
 // replacement, so it compares them itself.
 var changefeedReplaceAttributes = []string{"cluster_id", "name", "downstream_type", "network_info", "start_position"}
 
-// ModifyPlan rejects the replication_capacity (RCU) change that cannot be
-// sequenced at PLAN time, so the user sees the constraint before apply
-// (ScaleChangefeed would otherwise fail at apply with a 400 "current status
-// paused, not allowed to Scale"). The current pause state is the refreshed
-// state, which Read derives from the live changefeed.
+// ModifyPlan warns at plan time about the replication_capacity (RCU) change
+// that cannot be sequenced, so the user sees the constraint before apply. It
+// is a warning because Terraform can replace the changefeed without telling
+// the provider (replace_triggered_by, -replace), and a replacement scales
+// nothing in place. Update rejects the in-place change against the live state.
 func (r *dedicatedChangefeedResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	// Only meaningful on an in-place update: skip create (no prior capacity to
 	// change) and destroy (no plan).
@@ -723,8 +723,7 @@ func (r *dedicatedChangefeedResource) ModifyPlan(ctx context.Context, req resour
 	if planPaused.IsUnknown() || planCapacity.IsUnknown() {
 		return
 	}
-	// A replacement scales nothing in place: the new changefeed is created
-	// with the planned capacity.
+	// A change to one of these attributes is a replacement for certain.
 	for _, name := range changefeedReplaceAttributes {
 		var planned, prior attr.Value
 		resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root(name), &planned)...)
@@ -738,7 +737,8 @@ func (r *dedicatedChangefeedResource) ModifyPlan(ctx context.Context, req resour
 	}
 	capacityChanging := !planCapacity.Equal(stateCapacity)
 	if err := scaleRequiresRunningError(capacityChanging, statePaused.ValueBool(), planPaused.ValueBool()); err != nil {
-		resp.Diagnostics.AddAttributeError(path.Root("replication_capacity"), "Invalid Update", err.Error())
+		resp.Diagnostics.AddAttributeWarning(path.Root("replication_capacity"), "Scaling a paused changefeed fails at apply",
+			err.Error()+". This warning does not apply when the plan replaces the changefeed: the new changefeed is created with the planned capacity.")
 	}
 }
 
@@ -803,8 +803,8 @@ func (r dedicatedChangefeedResource) Update(ctx context.Context, req resource.Up
 	if !configPaused.IsNull() && !configPaused.IsUnknown() {
 		desiredPaused = configPaused.ValueBool()
 	}
-	// ModifyPlan checks the same against the refreshed state; this guards the
-	// feed having been paused since.
+	// ModifyPlan only warns about this, since it cannot tell a replacement
+	// from an in-place change. Nothing has been sent to the API yet.
 	if err := scaleRequiresRunningError(isCapacityChanging, livePaused, desiredPaused); err != nil {
 		resp.Diagnostics.AddError("Invalid Update", err.Error())
 		return

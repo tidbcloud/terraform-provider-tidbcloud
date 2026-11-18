@@ -316,7 +316,7 @@ func TestUTDedicatedChangefeedResource(t *testing.T) {
 				),
 			},
 			// The one combination that cannot be sequenced — scaling a feed
-			// that is paused and stays paused — is rejected at plan time
+			// that is paused and stays paused — is rejected by the apply
 			{
 				Config:      testUTDedicatedChangefeedResourceConfig("32rcu", "tidb-cdc-v5", "paused = true"),
 				ExpectError: regexp.MustCompile(`paused and stays paused`),
@@ -1189,6 +1189,60 @@ func TestUTDedicatedChangefeedResourcePausedReplacement(t *testing.T) {
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(changefeedResourceName, "name", "test-changefeed-mysql-v2"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "replication_capacity", "8rcu"),
+					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
+					func(_ *terraform.State) error {
+						if store.scaleCalls != 0 || store.deleteCalls != 1 {
+							return fmt.Errorf("expected a replacement without a scale, got %d ScaleChangefeed and %d DeleteChangefeed calls", store.scaleCalls, store.deleteCalls)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+// TestUTDedicatedChangefeedResourcePausedForcedReplacement replaces a paused
+// changefeed through replace_triggered_by while its replication_capacity
+// changes. No attribute that requires replacement changes, so the provider
+// cannot tell the replacement from an in-place scale at plan time and must
+// not fail the plan.
+func TestUTDedicatedChangefeedResourcePausedForcedReplacement(t *testing.T) {
+	setupTestEnv()
+
+	s, store := newChangefeedMock(t)
+	defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+		return s, nil
+	})()
+
+	trigger := func(input string) string {
+		return `
+resource "terraform_data" "trigger" {
+	input = "` + input + `"
+}
+`
+	}
+	extra := `paused = true
+	lifecycle {
+		replace_triggered_by = [terraform_data.trigger]
+	}`
+
+	changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+	resource.Test(t, resource.TestCase{
+		IsUnitTest:               true,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testUTDedicatedChangefeedResourceMysqlExprConfig(trigger("v1"), `"test-changefeed-mysql"`, `"4rcu"`, extra, testUTChangefeedMysqlObject),
+			},
+			{
+				Config: testUTDedicatedChangefeedResourceMysqlExprConfig(trigger("v2"), `"test-changefeed-mysql"`, `"8rcu"`, extra, testUTChangefeedMysqlObject),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(changefeedResourceName, plancheck.ResourceActionReplace)},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(changefeedResourceName, "replication_capacity", "8rcu"),
 					resource.TestCheckResourceAttr(changefeedResourceName, "state", "PAUSED"),
 					func(_ *terraform.State) error {
