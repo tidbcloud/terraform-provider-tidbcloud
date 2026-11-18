@@ -38,6 +38,11 @@ type changefeedStore struct {
 	// PauseChangefeed return an error, as a transient read failure would.
 	failGetAfterPause bool
 	failNextGet       bool
+	// failNextResume makes the next ResumeChangefeed return an error. With
+	// resumeAcceptedOnFailure the API still accepts that request, as when
+	// only the response is lost.
+	failNextResume          bool
+	resumeAcceptedOnFailure bool
 	// advanceCheckpoint moves the checkpoint on every GetChangefeed, as a
 	// replicating changefeed does.
 	advanceCheckpoint bool
@@ -152,6 +157,13 @@ func newChangefeedMock(t *testing.T) (*mockClient.MockTiDBCloudDedicatedClient, 
 	s.EXPECT().ResumeChangefeed(gomock.Any(), changefeedId).DoAndReturn(
 		func(_ context.Context, _ string) error {
 			store.resumeCalls++
+			if store.failNextResume {
+				store.failNextResume = false
+				if store.resumeAcceptedOnFailure {
+					store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning)
+				}
+				return &tidbcloud.ChangefeedAPIError{StatusCode: http.StatusInternalServerError}
+			}
 			store.changefeed.State = Ptr(tidbcloud.ChangefeedStateRunning)
 			return nil
 		}).AnyTimes()
@@ -988,6 +1000,66 @@ func TestUTDedicatedChangefeedResourcePauseWaitFailureResumes(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestUTDedicatedChangefeedResourceResumeFailureRecovers fails the first
+// resume that follows a downstream edit, with paused unset. The edit has
+// landed, so the retried apply has nothing to change and would leave the
+// changefeed paused: the failed apply itself must get it running again.
+func TestUTDedicatedChangefeedResourceResumeFailureRecovers(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		accepted    bool
+		resumeCalls int
+	}{
+		// The request never reached the API: the recovery resumes again.
+		{name: "rejected", accepted: false, resumeCalls: 2},
+		// Only the response was lost: the changefeed is already running and
+		// is not resumed a second time.
+		{name: "accepted", accepted: true, resumeCalls: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			setupTestEnv()
+
+			s, store := newChangefeedMock(t)
+			defer HookGlobal(&NewDedicatedClient, func(publicKey string, privateKey string, dedicatedEndpoint string, userAgent string) (tidbcloud.TiDBCloudDedicatedClient, error) {
+				return s, nil
+			})()
+
+			changefeedResourceName := "tidbcloud_dedicated_changefeed.test"
+			resource.Test(t, resource.TestCase{
+				IsUnitTest:               true,
+				PreCheck:                 func() { testAccPreCheck(t) },
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc", ""),
+					},
+					{
+						PreConfig: func() {
+							store.failNextResume = true
+							store.resumeAcceptedOnFailure = tc.accepted
+						},
+						Config:      testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc-v2", ""),
+						ExpectError: regexp.MustCompile("Unable to call ResumeChangefeed"),
+					},
+					{
+						PreConfig: func() {
+							if store.resumeCalls != tc.resumeCalls {
+								t.Errorf("expected %d ResumeChangefeed calls in the failed apply, got %d", tc.resumeCalls, store.resumeCalls)
+							}
+						},
+						Config: testUTDedicatedChangefeedResourceConfig("4rcu", "tidb-cdc-v2", ""),
+						Check: resource.ComposeAggregateTestCheckFunc(
+							resource.TestCheckResourceAttr(changefeedResourceName, "kafka.topic_partition_config.default_topic", "tidb-cdc-v2"),
+							resource.TestCheckResourceAttr(changefeedResourceName, "paused", "false"),
+							resource.TestCheckResourceAttr(changefeedResourceName, "state", "RUNNING"),
+						),
+					},
+				},
+			})
+		})
+	}
 }
 
 // TestUTDedicatedChangefeedResourceUnknownNestedConfigPlans plans an update
